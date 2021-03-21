@@ -1,0 +1,30 @@
+{
+	"Interaction_Title"	: "Brink_Boeker",
+	"Output_Filename"	: "bb_SP",
+	"SHO_Parameters" : {
+		"A_mass" 	: 4, 
+		"hbar_omega": 23.8, 
+		"b_length"  : 1.3204
+	},
+	"Valence_Space" : { 
+		"Q_Number" : [1, 103, 101],
+		"QN_Energies" : []
+	},
+	"Core"		: {
+		"protons" 	: 0,
+		"neutrons"	: 0
+	},
+	"Force_Parameters" : {
+		"Brink_Boeker" : {
+			"mu_length" 	: [0.7,	1.4],
+			"Wigner"		: [714.085, -72.612],
+			"Majorana"		: [-443.085, -44.79],
+			"Bartlett"		: [0.0,	0.0],
+			"Heisenberg"	: [0.0,	0.0]
+		},
+		"Tensor" : {},
+		"Spin_Orbit" : {},
+		"Multipole_Expansion" : {},
+		"SDI" : {} 
+	}
+}
