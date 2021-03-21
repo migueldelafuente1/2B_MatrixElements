@@ -10,10 +10,6 @@ Created on Wed Sep 26 17:57:34 2018
 
 from sys import argv
 
-# import Input_Output as io
-# import BM_brackets as bm
-# import matrix_elements as me
-
 from helpers.TBME_Runner import TBME_Runner
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
     QN_2body_LS_Coupling, QN_1body_jj, QN_2body_jj_JT_Coupling
