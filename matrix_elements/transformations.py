@@ -17,6 +17,17 @@ from helpers.Helpers import angular_condition, fact
 from helpers.integrals import talmiIntegral
 from matrix_elements.BM_brackets import BM_Bracket
 
+#===============================================================================
+# Global dictionary for B coefficient memorization pattern
+# Index : comma separated indexes string: 'n,l,N,L,n_q,l_q,p'
+
+def _B_coeff_memo_accessor(n, l, N, L, n_q, l_q, p):
+    return ','.join(map(lambda x: str(x), [n, l, N, L, n_q, l_q, p]))
+
+_B_Coefficient_Memo = {}
+
+#===============================================================================
+
 class _TalmiTransformationBase(_TwoBodyMatrixElement):
     
     COUPLING = CouplingSchemeEnum.L
@@ -74,6 +85,9 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         :constant        <float>  MeV
         :n_power         <int>
         """
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
         
         params_and_defaults = {
             SHO_Parameters.b_length       : 1,
@@ -93,18 +107,16 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
                         "Required parameter [{}]: got None".format(param))
                 value = default
             
-            if ((param == CentralMEParameters.potential) 
-                and (value not in PotentialForms.members())):
-                raise MatrixElementException("Potential name is not defined in"
-                    "PotentialForms Enumeration, got: [{}]".format(value))
-            
-            #setattr(cls, param, value)
-            # TODO: set this parameters in PARAMS_FORCE or PARAMS_SHO attributes
+            if (param == CentralMEParameters.potential):
+                value = value.lower()
+                if (value not in PotentialForms.members()):
+                    raise MatrixElementException("Potential name is not defined "
+                        "in PotentialForms Enumeration, got: [{}]".format(value))
+
             if param in SHO_Parameters.members():
                 cls.PARAMS_SHO[param] = value
             else:
                 cls.PARAMS_FORCE[param] = value
-        
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = []
@@ -169,17 +181,6 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     @classmethod
     def _calculateIntegrals(cls, n_integrals =1):
         
-#         args = [
-#             CentralMEParameters.potential,
-#             SHO_Parameters.b_length,
-#             CentralMEParameters.mu_length,
-#             CentralMEParameters.n_power
-#         ]
-#         args = [getattr(cls, arg) for arg in args]
-#         
-#         args = [cls.PARAMS_FORCE.get(arg) for arg in args]
-#         args.append(cls.PARAMS_SHO.get(SHO_Parameters.b_length))
-        
         args = [
             cls.PARAMS_FORCE.get(CentralMEParameters.potential),
             cls.PARAMS_SHO.get(SHO_Parameters.b_length),
@@ -220,15 +221,28 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         _dummy_me._l_q = l_q
         _dummy_me._p   = p
         
-        return _dummy_me._B_coefficient(b_param=1)
-        
-        
+        return _dummy_me._B_coefficient_evaluation(b_param=1)
+    
     
     def _B_coefficient(self, b_param=None):
+        """ _Memorization Pattern for B coefficients. """
         
-        ## SHO normalization coefficients for WF
-        # TODO: Connect with input class parameters
-        b_param = 1 if not b_param else b_param
+        if not b_param:
+            b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
+        
+        tpl = (self._n, self._l, self._N, self._L, self._n_q, self._l_q, self._p)
+        tpl = _B_coeff_memo_accessor(*tpl)
+        
+        global _B_Coefficient_Memo
+        
+        if not tpl in _B_Coefficient_Memo:
+            _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation(b_param)
+            
+        return _B_Coefficient_Memo[tpl]
+    
+    def _B_coefficient_evaluation(self, b_param=None):
+        """ SHO normalization coefficients for WF """
+        
         # parity condition
         if(((self._l + self._l_q)%2)!=0):
             return 0
@@ -504,7 +518,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 if self.isNullValue(bmb_ket):
                     continue
                 
-                _b_coeff    = self._B_coefficient()
+                _b_coeff = self._B_coefficient(self.PARAMS_SHO.get(SHO_Parameters.b_length))
                 _com_coeff = self._interactionConstantsForCOM_Iteration()
                 
                 sum_ += _com_coeff * bmb_bra * bmb_ket * _b_coeff
@@ -524,12 +538,117 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
     Algotithm to run over only valid N,L, n,n', l,l' and p obtained directly, 
     more efficient with less loops and conditionals.
     """
-    pass
-#     def __checkInputArguments(self, *args, **kwargs):
-#         _TwoBodyMatrixElement.__checkInputArguments(self, *args, **kwargs)    
+    
+    def _interactionSeries(self):
+        """
+        Final Method.!!
+        C_[X](n1,n2, l1,l2, (n1,n2, l1,l2)' L, L', ..., p)
+        carry valid values, call delta and common constants
+        """
+        bmb_bra = BM_Bracket(self._n, self._l, 
+                                 self._N, self._L, 
+                                 self.bra.n1, self.bra.l1, 
+                                 self.bra.n2, self.bra.l2, 
+                                 self._L_bra)
+        if self.isNullValue(bmb_bra):
+            return 0.0
+        
+        bmb_ket = BM_Bracket(self._n_q, self._l_q,
+                             self._N, self._L,
+                             self.ket.n1, self.ket.l1,
+                             self.ket.n2, self.ket.l2,
+                             self._L_ket)
+        if self.isNullValue(bmb_ket):
+            return 0.0
+        
+        _b_coeff    = self._B_coefficient()
+        _com_coeff = self._interactionConstantsForCOM_Iteration()
+        
+        # TODO: comment when not debugging
+        if self.DEBUG_MODE:
+            self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
+        
+        return _com_coeff * bmb_bra * bmb_ket * _b_coeff
+    
+    def _getBigLambdaMinimum(self, lambda_, rho):
+        
+        big_Lambda_min = lambda_ 
+             
+        if (rho - lambda_) % 2:
+            if (lambda_ == 0):
+                return None
+            else:
+                big_Lambda_min += 1
+                
+        return big_Lambda_min
+    
+    def _BrodyMoshinskyTransformation(self):
+        """
+        ##  WARNING: This method is final. Do not overwrite!!
+        
+        Sum over valid p-Talmi integrals range (Energy + Ang. momentum + parity 
+        conservation laws). Call implemented Talmi Coefficients for 
+        Brody-Moshinsky transformation
+        """
+        ## TODO: Not Tested
+        
+        ## Notation: big_Lambda = L + l, big_N = N + n
+        rho = self.rho_bra
+        lambda_ = self._L_bra
+        rho_q   = self.rho_ket
+        lambda_q = self._L_ket
+        
+        big_Lambda_min = self._getBigLambdaMinimum(lambda_, rho)
+        big_Lambda_q_min = self._getBigLambdaMinimum(lambda_q, rho_q)
+        
+        if (big_Lambda_min is None) or (big_Lambda_q_min is None):
+            return 0.0
+        
+        sum_ = 0.0
+        for big_N in range((rho - big_Lambda_min)//2 +1):
+            for big_N_q in range((rho_q - big_Lambda_q_min)//2 +1):
+                
+                big_Lambda = rho - 2*big_N
+                big_Lambda_q = rho_q - 2*big_N_q
+                
+                l_max = min(lambda_ + (big_Lambda - big_Lambda_min)//2,
+                            lambda_q + (big_Lambda_q - big_Lambda_q_min)//2)
+                l_min = big_Lambda - l_max 
+                
+                if (l_max - l_min) > lambda_ or (l_max < 0):
+                    # TODO: Maybe unnecessary, add breakpoint
+                    _ = 0
+                    continue
+                
+                for N in range(big_N +1):
+                    self._N = N
+                    
+                    for l in range(l_min, l_max +1):#big_Lambda + l_min +1):
+                        
+                        self._l = l
+                        self._n = big_N - N
+                        self._L = big_Lambda - l
+                        self._l_q = big_Lambda_q - big_Lambda + l
+                        self._n_q = self._n + (rho - rho_q + l - self._l_q)//2
+                        
+                        aux = (N, self._L, self._n, l, (self._n_q, self._l_q))
+                        if (self._n_q < 0) or (self._l_q < 0):
+                            # TODO: Maybe unnecessary, add breakpoint
+                            _ = 0
+                            continue
+                        
+                        p_min = (l + self._l_q)//2
+                        p_max = self._n+self._n_q + (l+self._l_q)//2
+                        for p in range(p_min, p_max +1):
+                            self._p = p
+            
+                            sum_ += self.talmiIntegral() * self._interactionSeries()
+                        
+            
+        return self._globalInteractionCoefficient() * sum_
     
 
-
+# class TalmiTransformation(_TalmiTransformation_MinimalIter):
 class TalmiTransformation(_TalmiTransformation_SecureIter):
     
     """ 

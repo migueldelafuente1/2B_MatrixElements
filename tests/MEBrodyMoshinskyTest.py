@@ -15,6 +15,9 @@ from matrix_elements.TensorForces import TensorForce
 from matrix_elements.SpinOrbitForces import SpinOrbitForce
 from pandas.core.computation.expressions import evaluate
 import time
+from matrix_elements.transformations import _TalmiTransformationBase
+from matrix_elements.BM_brackets import _BMB_Memo
+from sys import getsizeof
 
 #         sp_state_1   = QN_1body_radial(1, 2)
 #         sp_state_2   = QN_1body_radial(1, 3)
@@ -72,6 +75,8 @@ class Test(unittest.TestCase):
         print()
         print("[{}]us/me [{}] me/s -> [{}] MEs calculated:: [{}] seconds"
               .format(*args))
+        print('dim of BMB memo:', len(_BMB_Memo), 
+              ', size:', getsizeof(_BMB_Memo)//(4*(1024)), 'KB')
     
     def __printCodeForTable(self, bra, ket, J, force):
         code_ = '({}_V{}_{})_L{}S{}J{}'
@@ -86,8 +91,7 @@ class Test(unittest.TestCase):
         
         fails = []
         _fail_msg_template = "<{} |V |{}> got [{}] != [{}]"
-        
-        
+                
         for bra, ket, J, force, correct_value in list_bmbs:
             
             if force == ForceParameters.Central:
@@ -95,6 +99,7 @@ class Test(unittest.TestCase):
                     potential = PotentialForms.Power,
                     mu_length = 1,
                     n_power=0)
+                CentralForce.DEBUG_MODE = True
                 me = CentralForce(bra, ket, run_it=False)
                 result_ = me.value
                 me_str = self.__printCodeForTable(bra, ket, J, force)
@@ -104,6 +109,7 @@ class Test(unittest.TestCase):
                     potential = PotentialForms.Power,
                     mu_length = 1,
                     n_power=0)
+                TensorForce.DEBUG_MODE = True
                 me = TensorForce(bra, ket, J, run_it=False)
                 result_ = me.value
                 me_str = self.__printCodeForTable(bra, ket, J, force)
@@ -113,6 +119,7 @@ class Test(unittest.TestCase):
                     potential = PotentialForms.Power,
                     mu_length = 1,
                     n_power=0)
+                SpinOrbitForce.DEBUG_MODE = True
                 me = SpinOrbitForce(bra, ket, J, run_it=False)
                 result_ = me.value
                 me_str = self.__printCodeForTable(bra, ket, J, force)
@@ -145,9 +152,12 @@ class Test(unittest.TestCase):
 #             (QN_2body_LS_Coupling(QN_1body_radial(2,0), QN_1body_radial(0,2), 2, 1),
 #              QN_2body_LS_Coupling(QN_1body_radial(0,1), QN_1body_radial(1,3), 2, 1),
 #              3, ForceParameters.Tensor, 0.01079898),
-            (QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(2,2), 2, 1),
-             QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(2,2), 2, 1),
-             2, ForceParameters.Spin_Orbit, 0.01079898)
+            (QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(3,2), 2, 1),
+             QN_2body_LS_Coupling(QN_1body_radial(2,1), QN_1body_radial(3,3), 2, 1),
+             3, ForceParameters.Tensor, 0.01079898),
+#             (QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(2,2), 2, 1),
+#              QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(2,2), 2, 1),
+#              2, ForceParameters.Spin_Orbit, 0.01079898)
         ]
         
         self._checkSpecificMEs(benchmarks)

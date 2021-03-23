@@ -132,7 +132,7 @@ class TensorForce(TalmiTransformation):#):
         phase = (-1)**(1 + self.rho_bra - self.J)
         factor = np.sqrt(8*(2*self._L_bra + 1)*(2*self._L_ket + 1))
         
-        return phase * factor
+        return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):

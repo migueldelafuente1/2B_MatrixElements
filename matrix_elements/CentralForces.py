@@ -85,7 +85,7 @@ class CentralForce(TalmiTransformation):
     
     def _globalInteractionCoefficient(self):
         # no special interaction constant for the Central ME
-        return 1
+        return self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME

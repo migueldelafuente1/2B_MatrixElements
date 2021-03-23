@@ -129,7 +129,7 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         phase = (-1)**(self._S_bra + self._L_bra - self.J)
         factor = np.sqrt((2*self._L_bra + 1)*(2*self._L_ket + 1))
         
-        return phase * factor
+        return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):

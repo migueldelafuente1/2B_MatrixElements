@@ -4,11 +4,12 @@ Created on Mar 11, 2021
 @author: Miguel
 '''
 import unittest
-from matrix_elements.BM_brackets import BM_Bracket
+from matrix_elements.BM_brackets import BM_Bracket, _BMB_Memo
 from helpers.Helpers import angular_condition, fact
 
 import numpy as np
 import time
+from sys import getsizeof
 
 class FactorialTestCase(unittest.TestCase):
     
@@ -16,7 +17,7 @@ class FactorialTestCase(unittest.TestCase):
     
     def test_basefactorials(self):
         
-        examples = [i for i in range(202)]
+        examples = [i for i in range(100)]
         
         tmp_fail = "[{}]! = [{}]. Got [{}]"
         
@@ -61,11 +62,11 @@ class BrodyMoshinskyBracketsTestCase(unittest.TestCase):
         fails = []
         _fail_msg_template = "[!= {}] (lambda={}) nlNL{} nlNL_prima{}, got: [{}]"
         for lambda_ in range(max_lambda):
-            for nlNL in self._allPossibleQNforARho(rho):
-                for nlNL_prima in self._allPossibleQNforARho(rho):
+            for nlNL in self._allPossibleQNforARho(rho, lambda_):
+                for nlNL_prima in self._allPossibleQNforARho(rho, lambda_):
                     
                     orthogonality = []
-                    for n1l1n2l2 in self._allPossibleQNforARho(rho):
+                    for n1l1n2l2 in self._allPossibleQNforARho(rho, lambda_):
 
                         aux = BM_Bracket(*nlNL, *n1l1n2l2, lambda_) \
                             * BM_Bracket(*nlNL_prima, *n1l1n2l2, lambda_)
@@ -111,9 +112,9 @@ class BrodyMoshinskyBracketsTestCase(unittest.TestCase):
     def test_checkCompletnessConditionForBMB_rho4(self):
         self._checkCompletnessConditionForBMB(4)
          
-#     def test_checkCompletnessConditionForBMB_rho5(self):
-#         self._checkCompletnessConditionForBMB(5)
-#          
+    def test_checkCompletnessConditionForBMB_rho5(self):
+        self._checkCompletnessConditionForBMB(5)
+#           
 #     def test_checkCompletnessConditionForBMB_rho6(self):
 #         self._checkCompletnessConditionForBMB(6)
     
@@ -130,11 +131,11 @@ class BrodyMoshinskyBracketsTestCase(unittest.TestCase):
         fails = []
         _fail_msg_template = "[!= {}] (lambda={}) nlNL{} nlNL_prima{}, got: [{}]"
         for lambda_ in range(max_lambda):
-            for n1l1n2l2 in self._allPossibleQNforARho(rho):
-                for n1l1n2l2_prima in self._allPossibleQNforARho(rho):
+            for n1l1n2l2 in self._allPossibleQNforARho(rho, lambda_):
+                for n1l1n2l2_prima in self._allPossibleQNforARho(rho, lambda_):
                     
                     orthogonality = []
-                    for nlNL in self._allPossibleQNforARho(rho):
+                    for nlNL in self._allPossibleQNforARho(rho, lambda_):
 
                         aux = BM_Bracket(*nlNL, *n1l1n2l2, lambda_) \
                             * BM_Bracket(*nlNL, *n1l1n2l2_prima, lambda_)
@@ -178,14 +179,14 @@ class BrodyMoshinskyBracketsTestCase(unittest.TestCase):
     def test_check_InverseCompletnessConditionForBMB_rho4(self):
         self._check_InverseCompletnessConditionForBMB(4)
      
-#     def test_check_InverseCompletnessConditionForBMB_rho5(self):
-#         self._check_InverseCompletnessConditionForBMB(5)
-#      
-#     def test_check_InverseCompletnessConditionForBMB_rho6(self):
-#         self._check_InverseCompletnessConditionForBMB(6)
-#       
-#     def test_check_InverseCompletnessConditionForBMB_rho10(self):
-#         self._check_InverseCompletnessConditionForBMB(10)
+    def test_check_InverseCompletnessConditionForBMB_rho5(self):
+        self._check_InverseCompletnessConditionForBMB(5)
+      
+    def test_check_InverseCompletnessConditionForBMB_rho6(self):
+        self._check_InverseCompletnessConditionForBMB(6)
+       
+    def test_check_InverseCompletnessConditionForBMB_rho10(self):
+        self._check_InverseCompletnessConditionForBMB(10)
     
     def _checkSpecificBMBs(self, list_bmbs):
         """
@@ -259,14 +260,22 @@ class BrodyMoshinskyBracketsTestCase(unittest.TestCase):
         """
         
         total_time = time.time() - self._tik
+        try:
+            period_ = round(1e+6 * total_time/self._numberBMBs, 3)
+            bmb_per_sec = round(self._numberBMBs/total_time, 1)
+        except ZeroDivisionError as e:
+            period_ = '--'
+            bmb_per_sec = '--'
         
-        args = (round(1e+6 * total_time/self._numberBMBs, 3),
-                round(self._numberBMBs/total_time, 1),
+        args = (period_,
+                bmb_per_sec,
                 self._numberBMBs,
                 round(total_time, 6))
         print()
         print("[{}]us/bmb [{}] bmbs/s -> [{}] BMBs calculated:: [{}] seconds"
               .format(*args))
+        print('dim of BMB memo:', len(_BMB_Memo), 
+              ', size:', getsizeof(_BMB_Memo)//(4*(1024)), 'KB')
 
 
 

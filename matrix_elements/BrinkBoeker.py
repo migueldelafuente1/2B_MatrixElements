@@ -24,7 +24,10 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         
         
         """
-        #super(BrinkBoeker, cls).setInteractionParameters(*args, **kwargs)
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+
         for param in SHO_Parameters.members():
             cls.PARAMS_SHO[param] = float(kwargs.get(param))
         
@@ -91,7 +94,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
                 cls.PARAMS_FORCE.get(CentralMEParameters.potential),
                 cls.PARAMS_SHO.get(SHO_Parameters.b_length),
                 cls.PARAMS_FORCE[part].get(CentralMEParameters.mu_length),
-                cls.PARAMS_FORCE[part].get(CentralMEParameters.n_power),
+                cls.PARAMS_FORCE[part].get(CentralMEParameters.n_power)
             ]
             
             for p in range(cls._integrals_p_max + 1, 

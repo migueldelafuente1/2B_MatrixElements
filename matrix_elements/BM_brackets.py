@@ -139,10 +139,73 @@ def _A_coeff(l1, l, l2, L, x):
     
     return const * aux_sum
 
+#===============================================================================
+# BMB coefficients by Memorization Pattern
+#===============================================================================
+#
+# Global dictionary for BMB coefficients memorization pattern
+# Index : comma separated indexes string: 'n,l,N,L,n1,l1,n2,l2,lambda'
+# 
+# Size in dynamic memory (acceptable), includes negative indexes.
+# 25   K bmb_s -> 320   KB
+# 120  K bmb_s -> 1.25  MB
+# 1000 K bmb_s -> 10.5  MB
+#
+#===============================================================================
 
-def BM_Bracket00(n, l, N, L, l1, l2, lambda_):
-    """ Limit of the recurrence relation n1=n2=0 """   
+def _BMB_memo_accessor(n, l, N, L, n1, l1, n2, l2, lambda_):
+    return ','.join(map(lambda x: str(x), [n, l, N, L, n1, l1, n2, l2, lambda_]))
 
+_BMB_Memo = {}
+
+def BM_Bracket(n, l, N, L, n1, l1, n2, l2, lambda_):
+    """ _Memorization Pattern for Brody-Moshinsky coefficients. """
+    
+    args = (n, l, N, L, n1, l1, n2, l2, lambda_)
+    tpl = _BMB_memo_accessor(*args)
+    
+    global _BMB_Memo
+    
+    if not tpl in _BMB_Memo:
+        if (n1 == 0) and (n2 == 0):
+            args = (n, l, N, L, l1, l2, lambda_)
+            _BMB_Memo[tpl] = _BM_Bracket00_evaluation(*args)
+        else:
+            _BMB_Memo[tpl] = _BM_bracket_evaluation(*args)
+        
+    return _BMB_Memo[tpl]
+
+def BM_Bracket00(n,l,N,L, l1,l2, lambda_):
+    """ _Memorization Pattern for Brody-Moshinsky coefficients. """
+    return BM_Bracket(n, l, N, L, 0, l1, 0, l2, lambda_)
+
+#===============================================================================
+def _BMB_initial_comprobations(n, l, N, L, n1, l1, n2, l2, lambda_):
+    
+    # Non-negative conditions over constants
+    if((n<0) or (l<0) or (N<0) or (L<0)):
+        return 0
+    if((n1<0) or (l1<0) or (n2<0) or (l1<0) or (lambda_<0)):
+        return 0
+    
+    # Energy condition
+    if (2*(n1 + n2) + l1 + l2) != (2*(n + N) + l + L):
+        return 0 
+    # Angular momentum conservation
+    if (abs(l1 - l2) > lambda_) or ((l1 + l2) < lambda_):
+        return 0
+    if (abs(l - L) > lambda_) or ((l + L) < lambda_):
+        return 0
+    
+    return 1
+
+# def BM_Bracket00(n,l,N,L, l1,l2, lambda_):
+def _BM_Bracket00_evaluation(n, l, N, L, l1, l2, lambda_):
+    """ Limit of the recurrence relation n1=n2=0 """
+     
+    if _BMB_initial_comprobations(n, l, N, L, 0, l1, 0, l2, lambda_) == 0:
+        return 0
+    
     const = ((fact(l1) + fact(l2) + fact(n + l) + fact(N + L)) -
              (fact(2*l1) + fact(2*l2) + fact(n) + fact(N) +
               fact(2*(n + l) + 1) + fact(2*(N + L) + 1)))
@@ -161,26 +224,15 @@ def BM_Bracket00(n, l, N, L, l1, l2, lambda_):
     return np.exp(0.5 * const) * aux_sum * ((-1)**(n + l + L - lambda_))
 
 
-def BM_Bracket(n, l, N, L, n1, l1, n2, l2, lambda_):
+# def BM_Bracket(n, l, N, L, n1, l1, n2, l2, lambda_):
+def _BM_bracket_evaluation(n, l, N, L, n1, l1, n2, l2, lambda_):
     """ 
     Brody Moshinsky Transformation brackets:
         <n,l,N,L | n1,l1,n2,l2 (lambda, mu=0)>
     """
     
-    # Non-negative conditions over constants
-    if((n<0) or (l<0) or (N<0) or (L<0)):
+    if _BMB_initial_comprobations(n, l, N, L, n1, l1, n2, l2, lambda_) == 0:
         return 0
-    if((n1<0) or (l1<0) or (n2<0) or (l1<0) or (lambda_<0)):
-        return 0
-    
-    # Energy condition
-    if (2*(n1 + n2) + l1 + l2) != (2*(n + N) + l + L):
-        return 0 
-    # Angular momentum conservation
-    if (abs(l1 - l2) > lambda_) or ((l1 + l2) < lambda_):
-        return 0
-    if (abs(l - L) > lambda_) or ((l + L) < lambda_):
-        return 0    
     
     # RECURRENCE RELATIONS
     # there are only 6 non-zero combinations of n'l'N'L' 
@@ -230,3 +282,6 @@ def BM_Bracket(n, l, N, L, n1, l1, n2, l2, lambda_):
         
     return ValueError("Error in BM Braket <(nlNL){}, (n,l)12{} (lambda={})>"
                       .format((n,l,N,L), (n1,l1, n2,l2), lambda_))
+
+
+
