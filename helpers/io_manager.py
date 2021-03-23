@@ -285,15 +285,21 @@ class _XMLParser(_Parser):
                 for param in ForceVariablesDict[force].members():
                     param_elem = force_elem.find(param)
                     if param_elem == None:
-                        raise ParserException("missing parameter [{}] in Force:"
-                                              " [{}]".format(param, force))
+                        print("WARNING {}!: missing parameter [{}] in Force [{}]"
+                              .format(self.__class__, param, force))
+                        continue
                     params[param] = param_elem.attrib
                 
                 if len(params) == 0:
                     # If no parameters for a tag with not 'active' attribute, skip
                     continue
                 
-                force_dict[force] = params
+                # Assume there are different types of the same type of interaction
+                # m.e (Central: Coulomb + Yukawa + ...)
+                if force in force_dict:
+                    force_dict[force].append(params)
+                else:
+                    force_dict[force] = [params]
                 
             #skip non active forces
         

@@ -16,13 +16,14 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
     :n_power    auxiliary parameter for power dependent potentials
     """
     # TODO: Might implement potential args by Enum and select them in the switch
+    #potential = potential.lower()
     
     if potential == PotentialForms.Gaussian:
         return b_param / (1 + (b_param/mu_param)**2)**(p+1.5)
     
     elif potential == PotentialForms.Coulomb:
         # mu_param_param must be fixed for the nucleus (Z)
-        return mu_param * (b_param**2) * np.exp(gamma_half_int(p + 1.5))
+        return mu_param * (b_param**2) * np.exp(gamma_half_int(2*p + 3))
     
     elif potential == PotentialForms.Yukawa:
         sum_ = 0.
@@ -38,7 +39,7 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
             sum_ += (-1)**(2*p + 1 - i) * np.exp(aux)
             
         sum_ *= mu_param * (b_param**2) * np.exp((b_param/(2*mu_param))**2) 
-        sum_ /= np.exp(gamma_half_int(p + 1.5))
+        sum_ /= np.exp(gamma_half_int(2*p + 3))
         
         return sum_
     

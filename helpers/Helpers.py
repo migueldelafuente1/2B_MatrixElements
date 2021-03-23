@@ -47,19 +47,23 @@ double_fact_build(200)
 
     
 def gamma_half_int_build(max_order_fact):
-    
+    """ Gamma n over 2: [G(1/2), G(2/2), G(3/2), ...]"""
     global _gamma_half_int
     
     if not _gamma_half_int:
-        _gamma_half_int = [np.log(np.sqrt(0.5))]
-        min_order = 1
+        _gamma_half_int = [np.log(np.sqrt(np.pi)), 0, 
+                           np.log(0.5*np.sqrt(np.pi)), 0]
+        min_order = 4
     else:
         min_order = len(_gamma_half_int)
     
     for i in range(min_order, max_order_fact + 1):
-        _gamma_half_int.append(_gamma_half_int[i-1] + np.log(i + 0.5))
+        if i % 2 == 0:
+            _gamma_half_int.append(_gamma_half_int[i-2] + np.log((i - 1)/2))
+        else:
+            _gamma_half_int.append(_gamma_half_int[i-2] + np.log((i - 1)//2))
     
-    _FACTORIAL_DIM = max_order_fact
+    #_FACTORIAL_DIM = max_order_fact
     # !! logarithm values for the factorial !!
 
 gamma_half_int_build(100)
@@ -84,8 +88,11 @@ def double_factorial(i):
 def gamma_half_int(i):
     """
     Gamma_Function ( n + 1/2 ) = (2n - 1)!! sqrt(pi) / 2^n
+    : i     <integer>  the value over 2: i=n -> (n+1)/2
     """
-    return _gamma_half_int[i]
+    if (i <= 0):
+        raise ValueError("Gamma Function G(n/2) need n >= 1, got: {}".format(i))
+    return _gamma_half_int[i - 1]
 
 #===============================================================================
 # 

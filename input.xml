@@ -1,12 +1,12 @@
 <input>
-	<Interaction_Title name="Brink Boeker" details=""/>
-	<Output_Filename>bb_SPSD</Output_Filename>
+	<Interaction_Title name="TBME_Runner" details=""/>
+	<Output_Filename>central_SPSDshell.sho</Output_Filename>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
 			   are not required parameters, define values only if explicit 
 			   setting.
 			-->
-		<A_mass>4</A_mass>
+		<A_mass>8</A_mass>
 		<hbar_omega units='MeV'>23.8</hbar_omega>
 		<b_length units='fm'>1.3204</b_length>
 	</SHO_Parameters>
@@ -16,7 +16,7 @@
 		<Q_Number sp_state='101' sp_energy=''/>
 		<Q_Number sp_state='103' sp_energy=''/>
 		
-		<!--Q_Number sp_state='205' sp_energy=''/-->
+		<Q_Number sp_state='205' sp_energy=''/>
 		<!--Q_Number sp_state='1003' sp_energy=''/-->
 		<!--Q_Number sp_state='203' sp_energy=''/-->
 		<!--Q_Number sp_state='307' sp_energy=''/-->
@@ -33,12 +33,12 @@
 		<!--Q_Number sp_state='511' sp_energy=''/-->
 	</Valence_Space>
 	<Core>
-		<protons>50</protons>
-		<neutrons>50</neutrons>
+		<protons>2</protons>
+		<neutrons>2</neutrons>
 		<innert_core name=''/>
 	</Core>
 	<Force_Parameters>
-		<Brink_Boeker active='True'>
+		<Brink_Boeker active='False'>
 			<!-- Brink-Boeker force: 
 				Effective force mediated by 2 gaussians of length :mu fm.
 				Gaussian radial functions are shared by a central term (Wigner)
@@ -60,6 +60,15 @@
 			<constant	value='1.0' 	units='MeV'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
+		</Central>
+		<Central active='True'>
+			<!-- Central force potential,
+				Shaped as exponential, gaussian, power term, yukawa or coulomb 
+				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
+				-->
+			<potential 	name='coulomb'/>
+			<constant	value='1.44163' units='MeV'/>
+			<mu_length	value='1.0' 	units='fm'/>
 		</Central>
 		<Tensor active='False'>
 			<!-- Tensor Force.

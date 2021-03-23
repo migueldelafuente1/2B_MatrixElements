@@ -334,8 +334,7 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
     def norm(self):
         """ Norm of a 2 body antisymmetric wave function """
         delta = 0
-        
-        if(self.n1 == self.n2) and (self.l1 == self.l2) and (self.j1 == self.j2):
+        if self.nucleonsAreInThesameOrbit():
             delta = 1
         
         return np.sqrt(1 - delta*((-1)**(self.T + self.J))) / (1 + delta)
@@ -391,7 +390,7 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
         
     
     def __str__(self):
-        return "[{}1, {}2, (J:{}),(T:{})]".format(self.sp_state_1.__str__(), 
+        return "[{}1,{}2,(J:{}T:{})]".format(self.sp_state_1.__str__(), 
                                                   self.sp_state_2.__str__(), 
                                                   self.J, self.T)
     

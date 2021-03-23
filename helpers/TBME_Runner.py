@@ -14,6 +14,7 @@ from itertools import combinations_with_replacement
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling
 from copy import deepcopy
 from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus
+import os
 
 
 class TBME_Runner(object):
@@ -64,7 +65,7 @@ class TBME_Runner(object):
         _root = tree.getroot()
         
         self.input_obj = CalculationArgs(_root)
-        self.filename_output  = self.RESULT_FOLDER + self.input_obj.getFilename()
+        self.filename_output  = self.RESULT_FOLDER +'/'+ self.input_obj.getFilename()
         
         
     def _computeForValenceSpaceJTCoupled(self, force=''):
@@ -134,22 +135,26 @@ class TBME_Runner(object):
         """
         # TODO: Read the self.input_obj.Fore_Parameters and implement the 
         # parameters in the Matrix Element Class.
-        _ = 0
         _forcesAttr = ip.Force_Parameters
         times_ = {}
-        for force, params in getattr(self.input_obj, _forcesAttr).items():
-            
-            tic_ = time.time()
-            sho_params = getattr(self.input_obj, ip.SHO_Parameters)
-            
-            self.tbme_class = switchMatrixElementType(force)
-            self.tbme_class.setInteractionParameters(**params, **sho_params)
-            
-            self._computeForValenceSpaceJTCoupled(force)
-            times_[force] = round(time.time() - tic_, 4)
-            print(" Force [{}] m.e. calculated: [{}]s".format(force, times_[force]))
-            
-            self.resultsByInteraction[force] = deepcopy(self.results)
+        for force, force_list in getattr(self.input_obj, _forcesAttr).items():
+            i = 0
+            for params in force_list:
+                force_str = force+str(i) if len(force_list) > 1 else force
+                
+                tic_ = time.time()
+                sho_params = getattr(self.input_obj, ip.SHO_Parameters)
+                
+                self.tbme_class = switchMatrixElementType(force)
+                self.tbme_class.setInteractionParameters(**params, **sho_params)
+                
+                self._computeForValenceSpaceJTCoupled(force)
+                times_[force_str] = round(time.time() - tic_, 4)
+                print(" Force [{}] m.e. calculated: [{}]s"
+                      .format(force, times_[force_str]))
+                
+                self.resultsByInteraction[force_str] = deepcopy(self.results)
+                i += 1
         
         print("Finished computation, Total time (s): [", sum(times_.values()),"]=")
         print("\n".join(["\t"+str(t)+"s" for t in times_.items()]))
@@ -253,6 +258,11 @@ class TBME_Runner(object):
         return str_me_space 
                 
     def printMatrixElementsFile(self):
+        
+
+        ## create directory for the output
+        if not os.path.exists(self.RESULT_FOLDER):
+            os.mkdir(self.RESULT_FOLDER)
         
         strings_ = self._headerFileWriting()
         

@@ -127,4 +127,4 @@ class CouplingSchemeEnum(Enum):
     T   = 'Total Isospin'
 
 # TODO: Method to implement a folder for the results
-OUTPUT_FOLDER = ''#'\results'
+OUTPUT_FOLDER = 'results'
