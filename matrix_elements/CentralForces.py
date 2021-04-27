@@ -104,7 +104,15 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
 
     def _run(self):
         _TwoBodyMatrixElement_JTCoupled._run(self)
+    
+    def _deltaConditionsForCOM_Iteration(self):
         
+        #return True
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
+    
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
         return (self._S_bra, )

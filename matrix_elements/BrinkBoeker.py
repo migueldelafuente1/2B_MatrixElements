@@ -84,6 +84,22 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         
         return True
     
+    def _deltaConditionsForCOM_Iteration(self):
+        
+        #return True
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
+#         if self.bra.nucleonsAreInThesameOrbit():
+#             if ((self._S_bra + self.T + self._l) % 2 == 0):
+#                 return False
+#         if self.ket.nucleonsAreInThesameOrbit():
+#             if ((self._S_ket + self.T + self._l_q) % 2 == 0):
+#                 return False
+#         
+#         return True
+    
     @classmethod
     def _calculateIntegrals(cls, n_integrals=1):
         """
@@ -138,9 +154,13 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
             radial_energy = self.centerOfMassMatrixElementEvaluation()
             
             # Exchange Part
-            _L_aux = (self._L_bra == self._L_ket) * (-1)**(self._L_bra)
-            _S_aux = (self._S_bra == self._S_ket) * (-1)**(self._S_bra)
+#             _L_aux = (self._L_bra == self._L_ket) * (-1)**(self._L_bra)
+#             _S_aux = (self._S_bra == self._S_ket) * (-1)**(self._S_bra)
+            
+            #_L_aux = (-1)**(self._L_bra)
+            _S_aux = (-1)**(self._S_bra)
             _T_aux = (-1)**(self.T)
+            _L_aux = -1 * _S_aux * _T_aux
             
             exchange_energy = (
                 self.PARAMS_FORCE[i].get(bb_p.Wigner),

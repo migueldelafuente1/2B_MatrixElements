@@ -19,9 +19,11 @@ class MatrixElementException(BaseException):
 
 class _TwoBodyMatrixElement:
     '''
-    Abstract class to be implemented according to reduced (and way)
+    Abstract class to be implemented according to reduced matrix element
     
     <Bra(1,2) | V(1,2) [lambda, mu]| Ket(1,2)>
+    
+    don't care M, Mt, Ml or Ms in further implementations
     '''
     
     PARAMS_FORCE = {}
@@ -159,15 +161,18 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         
         # construct the exchange ket
         phase, exchanged_ket = self.ket.exchange()
-#         exch_2bme = _TwoBodyMatrixElement_JTCoupled(self.bra, exchanged_ket)
-        #a = self.__class__
+        
         exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
         
         direct = self._non_antisymmetrized_ME()
         exchan = exch_2bme._non_antisymmetrized_ME()
         self._value =  direct - (phase * exchan)
         
-        self._value *= self.bra.norm() * self.ket.norm() * (2*self.J + 1)
+        # value is always M=0, M_T=0
+        
+        self._value *= self.bra.norm() * self.ket.norm()
+        # / (2*self.J + 1) 
+        # Wigner Echart theorem only applies for non reduced m.e.
         
     
     def _LScoupled_MatrixElement(self):

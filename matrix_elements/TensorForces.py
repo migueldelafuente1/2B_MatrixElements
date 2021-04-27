@@ -173,6 +173,14 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
             return []
         return (1, )
     
+    def _deltaConditionsForCOM_Iteration(self):
+        
+        #return True
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
+    
     def _validKetTotalAngularMomentums(self):
         """ 
         Return ket states <tuple> of the total angular momentum, depending of 

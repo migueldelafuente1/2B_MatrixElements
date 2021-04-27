@@ -14,9 +14,10 @@ from helpers.TBME_Runner import TBME_Runner
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
     QN_2body_LS_Coupling, QN_1body_jj, QN_2body_jj_JT_Coupling
 
+from matrix_elements.BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce
-from helpers.Enums import PotentialForms
-from matrix_elements.SpinOrbitForces import SpinOrbitForce
+from helpers.Enums import PotentialForms, SHO_Parameters
+from matrix_elements.SpinOrbitForces import SpinOrbitForce, ShortRangeSpinOrbit_JTScheme
 
 
 if __name__ == "__main__":
@@ -50,17 +51,31 @@ if __name__ == "__main__":
 #         df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_Tensor_2d2d)L2S1J2'))
 #         BrinkBoeker.setInteractionParameters()
         
-        from matrix_elements.BrinkBoeker import BrinkBoeker
-        from helpers.Enums import SHO_Parameters
         
+        from helpers.Enums import ForceParameters, CentralMEParameters
+                
         ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,3), 
-                                       QN_1body_jj(0,1,3), 1, 0)
-        bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                       QN_1body_jj(0,1,1), 1, 0)
+                                       QN_1body_jj(0,1,3), 2, 1)
+        bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,3), 
+                                       QN_1body_jj(0,1,3), 2, 1)
         
 #         BrinkBoeker.setInteractionParameters(
 #             SHO_Parameters.b_length = 1, SHO_Parameters.hbar_omega = 1)
         
+        kwargs = {
+            SHO_Parameters.b_length     : 1,
+            SHO_Parameters.hbar_omega   : 1,
+            CentralMEParameters.potential   : PotentialForms.Power,
+            CentralMEParameters.constant    : 1,
+            CentralMEParameters.mu_length   : 1,
+            CentralMEParameters.n_power     : 0
+        }
+        
+        ShortRangeSpinOrbit_JTScheme.setInteractionParameters(**kwargs)
+        
+        me = ShortRangeSpinOrbit_JTScheme(bra_, ket_, run_it=True)
+        result_ = me.value
+        print("me: ", me.value)
 
         _runner = TBME_Runner(filename='input.xml')
         _runner.run()

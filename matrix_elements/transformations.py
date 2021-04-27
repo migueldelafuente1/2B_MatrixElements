@@ -292,6 +292,18 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         raise MatrixElementException("Abstract Method, Implement me!")
         return 
     
+    def _deltaConditionsForCOM_Iteration(self):
+        """
+        Define if non null requirements on LS coupled J(and T) Matrix Element, 
+        while doing the center of mass decomposition (n,l,n',l', N, L indexes 
+        involved). 
+        
+        TODO: Check parity depending on the total wave function (J,T dependence)
+        
+        return True when conditions are fulfilled.
+        """
+        raise MatrixElementException("Abstract Method, Implement me!")
+    
     def _interactionSeries(self):
         """
         Final Method.!!
@@ -507,7 +519,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 self._n_q += (self.rho_ket - self.rho_bra + 
                               self._l  - self._l_q) // 2
                 
-                if self._n_q < 0:
+                if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
                     continue
                 
                 bmb_ket = BM_Bracket(self._n_q, self._l_q,
@@ -546,10 +558,10 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
         carry valid values, call delta and common constants
         """
         bmb_bra = BM_Bracket(self._n, self._l, 
-                                 self._N, self._L, 
-                                 self.bra.n1, self.bra.l1, 
-                                 self.bra.n2, self.bra.l2, 
-                                 self._L_bra)
+                             self._N, self._L, 
+                             self.bra.n1, self.bra.l1, 
+                             self.bra.n2, self.bra.l2, 
+                             self._L_bra)
         if self.isNullValue(bmb_bra):
             return 0.0
         
@@ -632,7 +644,8 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
                         self._n_q = self._n + (rho - rho_q + l - self._l_q)//2
                         
                         aux = (N, self._L, self._n, l, (self._n_q, self._l_q))
-                        if (self._n_q < 0) or (self._l_q < 0):
+                        if ((self._n_q < 0) or (self._l_q < 0) 
+                            or not self._deltaConditionsForCOM_Iteration()):
                             # TODO: Maybe unnecessary, add breakpoint
                             _ = 0
                             continue

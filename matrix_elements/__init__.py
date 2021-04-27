@@ -3,7 +3,7 @@ from helpers.Enums import ForceParameters
 from .BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme
 from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme
-from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme
+from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, ShortRangeSpinOrbit_JTScheme
 
 
 def switchMatrixElementType(force):
@@ -18,8 +18,12 @@ def switchMatrixElementType(force):
         return BrinkBoeker
     elif force == ForceParameters.Central:
         return CentralForce_JTScheme
-    elif force == ForceParameters.Spin_Orbit:
+    
+    elif force == ForceParameters.SpinOrbit:
         return SpinOrbitForce_JTScheme
+    elif force == ForceParameters.SpinOrbitShortRange:
+        return ShortRangeSpinOrbit_JTScheme
+    
     elif force == ForceParameters.Tensor:
         return TensorForce_JTScheme
     else:

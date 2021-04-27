@@ -114,7 +114,7 @@ class Test(unittest.TestCase):
                 result_ = me.value
                 me_str = self.__printCodeForTable(bra, ket, J, force)
                 
-            elif force == ForceParameters.Spin_Orbit:
+            elif force == ForceParameters.SpinOrbit:
                 SpinOrbitForce.setInteractionParameters(
                     potential = PotentialForms.Power,
                     mu_length = 1,
