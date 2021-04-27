@@ -97,7 +97,7 @@ def gamma_half_int(i):
 #===============================================================================
 # 
 #===============================================================================
-from sympy.physics.wigner import wigner_9j, racah
+from sympy.physics.wigner import wigner_9j, racah, clebsch_gordan
 
 def safe_wigner_9j(*args):
     """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the arguments don't fulfill the triangle
@@ -115,6 +115,17 @@ def safe_racah(*args):
     except ValueError or AttributeError:
         return 0
     
+def safe_clebsch_gordan(*args):
+    """
+    :args   j1, j2, j3,   m1, m2, m3
+    
+    Calculates the Clebsch-Gordan coefficient
+    < j1 m1, j2 m2 | j3 m3 >.
+    
+    Return float value for Zero Clebsh-Gordan coefficient, avoid Zero object
+    """
+    return float(clebsch_gordan(*args))
+
 #===============================================================================
 # 
 #===============================================================================

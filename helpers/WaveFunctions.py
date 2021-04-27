@@ -69,7 +69,7 @@ class QN_1body_radial(_WaveFunction):
         assert abs(m) <= l, AttributeError("3rd component cannot exceed L number")
         
     def __str__(self):
-        return "(n:{}, l:{})".format(self.n, self.l)
+        return "(n:{}, l:{}, m:{})".format(self.n, self.l, self.m_l)
     
     @property
     def shellState(self):
@@ -97,6 +97,7 @@ class QN_1body_jj(_WaveFunction):
         self.n = n
         self.l = l
         self.j = j
+        self.m = m
     
     def __checkQNArguments(self, n, l, j, m):
         
@@ -200,7 +201,7 @@ class QN_2body_L_Coupling(_WaveFunction):
         # CG coefficients: when permutation of two elements:
         #     <j1,m1,j2,m2|j,m>=(-)^(j1+j2-j)<j2,m2, j1,m1|j,m>
         return (
-            (-1)**(self.l1+ self.l2 - (self.L + self.S)) ,
+            (-1)**(self.l1+ self.l2 - (self.L)) ,
             QN_2body_L_Coupling(self.sp_state_2, self.sp_state_1, self.L, self.ML)
             )
     
@@ -391,11 +392,28 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
     
     def __str__(self):
         return "[{}1,{}2,(J:{}T:{})]".format(self.sp_state_1.__str__(), 
-                                                  self.sp_state_2.__str__(), 
-                                                  self.J, self.T)
+                                             self.sp_state_2.__str__(), 
+                                             self.J, self.T)
     
     @property
     def shellStatesNotation(self):
         return self.sp_state_1.shellState + ' ' + self.sp_state_2.shellState
-
-
+    
+    def __eq__(self, other, also_3rd_components=False):
+        """ 
+        Compare this wave function with other, true if quantum numbers match
+        """
+        if other.__class__ != self.__class__:
+            raise WaveFunctionException("Cannot compare {} with this object {}, "
+                "only same objects".format(other.__class__, self.__class__))
+        if self.n1 == other.n1 and self.n2 == other.n2:
+            if self.l1 == other.l1 and self.l2 == other.l2:
+                if self.j1 == other.j1 and self.j2 == other.j2:
+                    if also_3rd_components:
+                        if self.M == other.M and self.MT == other.MT:
+                            return True
+                    else:
+                        return True
+                    
+        return False
+        

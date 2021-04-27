@@ -41,7 +41,8 @@ class ForceParameters(Enum):
     SDI = 'SDI'
     Central = 'Central'
     Tensor  = 'Tensor'
-    Spin_Orbit = 'Spin_Orbit'
+    SpinOrbit = 'SpinOrbit'
+    SpinOrbitShortRange = 'SpinOrbitShortRange'
     Brink_Boeker = 'Brink_Boeker'
     Multipole_Expansion = 'Multipole_Expansion'
 
@@ -78,7 +79,8 @@ ForceVariablesDict = {
     ForceParameters.Brink_Boeker : BrinkBoekerParameters,
     ForceParameters.Central : CentralMEParameters,
     ForceParameters.Tensor  : CentralMEParameters,
-    ForceParameters.Spin_Orbit : CentralMEParameters,
+    ForceParameters.SpinOrbit : CentralMEParameters,
+    ForceParameters.SpinOrbitShortRange : CentralMEParameters,
     ForceParameters.SDI : None,
     ForceParameters.Multipole_Expansion: None,
 }
@@ -88,7 +90,8 @@ ForceVariablesMatrixElementDict = {
     ForceParameters.Brink_Boeker : 'BrinkBoeker',
     ForceParameters.Central      : 'CentralForce',
     ForceParameters.Tensor       : 'TensorForce',
-    ForceParameters.Spin_Orbit   : 'SpinOrbitForce'
+    ForceParameters.SpinOrbit    : 'SpinOrbitForce',
+    ForceParameters.SpinOrbitShortRange    : 'SpinOrbitShortRange'
 }
 
 class AttributeArgs(Enum):

@@ -221,7 +221,11 @@ class TBME_Runner(object):
                 else:
                     values.append("{: .6f}".format(mat_elem))
             else:
-                values.append("{: .6f}".format(mat_elem))
+                try:
+                    values.append("{: .6f}".format(mat_elem))
+                except TypeError as tp:
+                    # TODO: 
+                    pass
         return all_null, values
     
     def _write2BME_JTBlock(self, bra1, bra2, ket1, ket2, T_vals):
