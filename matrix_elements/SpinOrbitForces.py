@@ -4,16 +4,17 @@ Created on Mar 8, 2021
 @author: Miguel
 '''
 import numpy as np
-from sympy.physics.wigner import racah
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters
 from helpers.Enums import AttributeArgs, SHO_Parameters
-from helpers.Helpers import safe_racah
+from helpers.Helpers import safe_racah, safe_clebsch_gordan
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException
 from matrix_elements.transformations import TalmiTransformation
-from helpers.WaveFunctions import QN_2body_LS_Coupling
+from helpers.WaveFunctions import QN_2body_LS_Coupling, QN_1body_radial
+from helpers.integrals import _SpinOrbitPartialIntegral
+from copy import deepcopy
 
 class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled, 
     
@@ -141,8 +142,6 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
             return 0
         
         return factor * np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
-    
-    
 
 
 
@@ -155,8 +154,17 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
 
-    def _run(self):
-        _TwoBodyMatrixElement_JTCoupled._run(self)
+#     def _run(self):
+#         # TODO: No necessary  _overwriting (that calls directly to that class)
+#         _TwoBodyMatrixElement_JTCoupled._run(self)
+    
+    def _deltaConditionsForCOM_Iteration(self):
+        
+        #return True
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
     
     def _validKetTotalSpins(self):
         """ 
@@ -184,3 +192,178 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
         return self.centerOfMassMatrixElementEvaluation()
+
+
+
+
+
+
+
+class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
+    
+    """
+    Short Range Approximation of Spin Orbit force:
+          -i W_LS(r) *(p1-p2)* x delta(r1-r2) (p1-p2) * (s1 + s2)
+          
+    decoupling of the JT reduced m.e. and direct evaluation from gradient formula
+    and recurrence relations.
+    """
+    
+    _PARAMETERS_SETTED = False
+    
+    def _diagonalMatrixElement_Test(self):
+        """ 
+        Analytic value for diagonal and same orbit matrix elements:
+            Moshinsky, Nucl. Phys 8, 19-40 (1958)
+            
+        Method called after checking S'=S= 1
+        """
+        if not hasattr(self, 'test_value_diagonal'):
+            self.test_value_diagonal = [{}, {}]
+        
+        if self._L_bra != self._L_ket or self._L_bra % 2 == 0:
+            return
+        elif (self.bra.n1 != self.bra.n2) and (self.bra.l1 != self.bra.l2):
+            return
+        else:
+            # fool the __eq__ method for jj functions (doesn't matter their js)
+            aux_bra = deepcopy(self.bra)
+            aux_ket = deepcopy(self.ket)
+            
+            aux_bra.j1 = aux_bra.j2 
+            aux_ket.j1 = aux_bra.j1
+            aux_ket.j2 = aux_bra.j1
+            
+            if not aux_bra == aux_ket:
+                return 
+        
+        l = self.bra.l1
+        L = self._L_bra
+        
+        aux = safe_racah(L, L, 1, 1, 1, self.J) * np.sqrt(6)\
+            * (-1**(L+1+self.J)) /3
+        
+        int_R4 = 1 # TODO: calculate
+        
+        aux_l = np.sqrt((2*L + 1)/(L*(L + 1)))
+        aux_l *= ((l + 1)*(2*l + 3)*((2*l + 1)**3)
+                  * (safe_clebsch_gordan((l+1), l, L, 0,0,0)**2)
+                  * (safe_racah(l,(l+1), L,L, 1,l)**2)
+                  * int_R4
+                  )
+        
+        key_ = str(aux_bra)
+        
+        self.test_value_diagonal[0][key_] = aux * aux_l
+        self.test_value_diagonal[1][key_] = aux_l
+    
+    def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (JT)>
+        This matrix element don't call directly to centerOfMassMatrixElementEvaluation
+        since this name is reserved for the center of mass transformation.
+        
+        This overwrite acts on gradient-tensor 
+        """
+        # the spin matrix element is 0 unless S=S'=1
+        skip, spin_me = self._totalSpinTensorMatrixElement()
+        if skip:
+            return 0
+        
+        self._diagonalMatrixElement_Test()
+        
+        factor = safe_racah(self._L_bra, self._L_ket, 
+                            self._S_bra, self._S_ket,
+                            1, self.J)
+        factor *= np.sqrt(2*self.J + 1)
+        # phase resulting from wigner-eckart and the racah_W to 6j coefficients
+        factor *= (-1)**(self._S_ket + self._L_bra + self.J)
+        
+        if (self.isNullValue(factor) 
+            or not self.deltaConditionsForGlobalQN()
+            or ((self._L_ket + self._L_bra) % 2 != 1)): # parity condition
+            # same delta conditions act here, since tensor is rank 1
+            return 0
+        
+        factor *= self.PARAMS_FORCE.get(CentralMEParameters.constant)
+        aux = factor * spin_me * self._L_tensor_MatrixElement()
+        return  aux
+    
+    def _L_tensor_MatrixElement(self):
+        """
+        Tensor that acts on the cross (velocity dependent) product on SHO wave 
+        functions
+            T^(1) = -i W_LS(r) *[(p1-p2)* x delta(r1-r2) (p1-p2)]^(q)
+        
+        performs the invert Wigner_Eckart theorem (by getting only the m.e. 
+        for q=0, then M'=-M) and the uncoupling decomposition for the matrix 
+        element (l, m_l)
+        """
+        # TODO: The result of this element can be compared with Moshinski
+        # Create checkpoint to unitest diagonal matrix elements
+        
+        factor = np.sqrt(2*self._L_bra + 1) \
+            / safe_clebsch_gordan(self._L_bra, 1, self._L_ket,0, 0, 0)
+        
+        qn_cc1 = QN_1body_radial(self.bra.n1, self.bra.l1) # will be conjugate
+        qn_cc2 = QN_1body_radial(self.bra.n2, self.bra.l2) # will be conjugate
+        qn_3 = QN_1body_radial(self.ket.n1, self.ket.l1)
+        qn_4 = QN_1body_radial(self.ket.n2, self.ket.l2)
+        
+        # LS decoupling ensure the L =(l1 + l2) != 0 geometric condition
+        sum_ = 0
+        for m1 in range(-self.bra.l1, -self.bra.l1 +1):
+            
+            if abs(m1) > self.bra.l2:
+                continue
+            m2 = -m1
+            _clg_bra = safe_clebsch_gordan(self.bra.l1 ,self.bra.l2, self._L_bra,
+                                           m1, m2, 0)
+            qn_cc1.m_l = m1
+            qn_cc2.m_l = m2
+            # ket part 
+            for m3 in range(-self.ket.l1, -self.ket.l1 +1):
+                
+                if abs(m3) > self.ket.l2:
+                    continue
+                m4 = -m3
+                _clg_ket = safe_clebsch_gordan(self.ket.l1, self.ket.l2, self._L_ket,
+                                               m3, m4 ,0)
+                qn_3.m_l = m3
+                qn_4.m_l = m4
+                
+                aux  = self._gradientMEIntegral(qn_cc1, qn_cc2, qn_3, qn_4)
+                aux -= self._gradientMEIntegral(qn_cc2, qn_cc1, qn_3, qn_4)
+                aux -= self._gradientMEIntegral(qn_cc1, qn_cc2, qn_4, qn_3)
+                aux += self._gradientMEIntegral(qn_cc2, qn_cc1, qn_4, qn_3)
+                
+                sum_ += _clg_bra * _clg_ket * aux
+        
+        return factor * sum_
+    
+    def _gradientMEIntegral(self, qn_cc_i, qn_cc_j, qn_k, qn_j):
+        """
+        I(q=0)[ij][kl] ~ (j*)k(grad(i,+1)* grad(k,-1) - grad(i,-1)* grad(k,+1))
+        
+        calls _SpinOrbitPartialIntegral evaluation.
+        """
+        # prepare the class arguments:
+        if not self._PARAMETERS_SETTED:
+            
+            args = [
+                self.PARAMS_FORCE.get(CentralMEParameters.potential),
+                self.PARAMS_SHO.get(SHO_Parameters.b_length),
+                self.PARAMS_FORCE.get(CentralMEParameters.mu_length),
+                self.PARAMS_FORCE.get(CentralMEParameters.n_power),
+            ]
+            _SpinOrbitPartialIntegral.setInteractionParameters(*args)
+            
+            self._PARAMETERS_SETTED = True
+            
+        return _SpinOrbitPartialIntegral(qn_cc_i, qn_cc_j, qn_k, qn_j).value()
+        
+        
+    
+    
+         
+        
