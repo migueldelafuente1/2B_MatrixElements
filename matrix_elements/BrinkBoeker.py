@@ -28,8 +28,10 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         if cls.PARAMS_FORCE:
             cls.PARAMS_FORCE = {}
 
-        for param in SHO_Parameters.members():
-            cls.PARAMS_SHO[param] = float(kwargs.get(param))
+#         for param in SHO_Parameters.members():
+#             cls.PARAMS_SHO[param] = float(kwargs.get(param))
+        _b = SHO_Parameters.b_length
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))# * np.sqrt(2)
         
         part_1 = AttributeArgs.ForceArgs.Brink_Boeker.part_1
         part_2 = AttributeArgs.ForceArgs.Brink_Boeker.part_2
@@ -86,7 +88,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
     
     def _deltaConditionsForCOM_Iteration(self):
         
-        #return True
+        return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
@@ -108,7 +110,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         for part in (0, 1): 
             args = [
                 cls.PARAMS_FORCE.get(CentralMEParameters.potential),
-                cls.PARAMS_SHO.get(SHO_Parameters.b_length),
+                cls.PARAMS_SHO.get(SHO_Parameters.b_length), # * np.sqrt(2), # 
                 cls.PARAMS_FORCE[part].get(CentralMEParameters.mu_length),
                 cls.PARAMS_FORCE[part].get(CentralMEParameters.n_power)
             ]
@@ -137,7 +139,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         Radial Brody-Moshinsky transformation, direct implementation for  
         central force.
         """
-        return self._BrodyMoshinskyTransformation()
+        return np.sqrt(2*self._L_bra + 1) * self._BrodyMoshinskyTransformation()
     
     
     def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
@@ -145,19 +147,17 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
         aux_sum = 0.0
-        
+        if self._L_bra == 1:
+            _=0
         # Sum of gaussians and projection operators
         for i in range(2):
             self._part = i
             
             # Radial Part for Gauss Integral (L == lambda)
             radial_energy = self.centerOfMassMatrixElementEvaluation()
+            #print(f"<{self._L_bra} ||exp(m{i})|| {self._L_ket}> = {radial_energy}")
             
             # Exchange Part
-#             _L_aux = (self._L_bra == self._L_ket) * (-1)**(self._L_bra)
-#             _S_aux = (self._S_bra == self._S_ket) * (-1)**(self._S_bra)
-            
-            #_L_aux = (-1)**(self._L_bra)
             _S_aux = (-1)**(self._S_bra)
             _T_aux = (-1)**(self.T)
             _L_aux = -1 * _S_aux * _T_aux
@@ -172,7 +172,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
             # Add up
             aux_sum += radial_energy * sum(exchange_energy)
         
-        return aux_sum
+        return aux_sum 
             
 
 

@@ -4,9 +4,10 @@ Created on Mar 12, 2021
 @author: Miguel
 '''
 import numpy as np
+
 from helpers.Enums import PotentialForms
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
-    safe_clebsch_gordan
+    safe_clebsch_gordan, double_factorial
 
 class IntegralException(BaseException):
     pass
@@ -23,7 +24,9 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
     #potential = potential.lower()
     
     if potential == PotentialForms.Gaussian:
-        return b_param / (1 + (b_param/mu_param)**2)**(p+1.5)
+        
+#         return b_param *((1/mu_param)**2 / (1 + 2*(b_param/mu_param)**2))**(p+1.5)
+        return (b_param**3) / (1 + 2*(b_param/mu_param)**2)**(p+1.5)
     
     elif potential == PotentialForms.Coulomb:
         # mu_param_param must be fixed for the nucleus (Z)
@@ -61,6 +64,39 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
                         .format(potential, PotentialForms.members()))
 
 
+def gaussianIntegralQuadrature(function, a, b, order, *args, **kwargs):
+    """ 
+    Evaluate integral of <function> object, of 1 variable and parameters:
+        Args:
+    :function  <function> f(x, *args, **kwargs)
+    :a         <float> lower limit
+    :b         <float> upper limit
+    :order     <int>   order of the quadrature
+    
+    *args and **kwargs will be passed to the function (check argument introduction
+        in case of several function management)
+    """
+    
+    if not 'roots_legendre' in globals():
+        from scipy.special import roots_legendre
+    A = (b - a) / 2
+    B = (b + a) / 2
+    
+    x_i, w_i = roots_legendre(order, mu=False)
+    x_i = A*x_i + B
+    
+    #integral = A * sum(w_i * function(x_i, *args, **kwargs))
+    #return integral
+    
+    integral = 0.0
+    for i in range(len(x_i)):
+        integral += w_i[i] * function(x_i[i], *args, **kwargs)
+    
+    #print("order", order, "=",integral)
+    return A * integral
+    
+    
+
 #===============================================================================
 #     SPIN ORBIT INTEGRAL FOR GOGNY D1S
 #===============================================================================
@@ -89,6 +125,8 @@ class _SpinOrbitPartialIntegral:
         self.wf_j = qqnn_j
         self.wf_k = qqnn_k
         self.wf_l = qqnn_l
+        
+        self._testing_valid_qqnn_DpDp_positive()
     
     @classmethod
     def setInteractionParameters(cls, *args):
@@ -127,6 +165,39 @@ class _SpinOrbitPartialIntegral:
         cls._a_coeff_nkl_memo   = {}
         cls._baseIntegrals_memo = {}
     
+    
+    def _testing_valid_qqnn_DpDp_positive(self):
+        if hasattr(self, 'valid_qqnn'):
+            return
+        
+        l1, m1, l2, m2 = self.wf_i.l, self.wf_i.m_l, self.wf_j.l, self.wf_j.m_l
+        l3, m3, l4, m4 = self.wf_k.l, self.wf_k.m_l, self.wf_l.l, self.wf_l.m_l
+        
+        self.valid_qqnn = set()
+        
+        for m1 in range(-l1, l1+1):
+            m1_q = m1 + 1
+            l1_q = l1 + 1
+            
+            for m2 in range(-l2, l2+1):
+                
+                M = m1_q + m2
+                
+                for m3 in range(-l3, l3+1):
+                    m3_q = m3 - 1
+                    l3_q = l3 + 1
+                    
+                    for m4 in range(-l4, l4+1):
+                        
+                        M_q = m3_q + m4
+                        
+                        if ((l1_q + l2)%2 == (l3_q + l4)%2):
+                            if M == M_q:
+                                aux = (l1, m1, l3, m3, m2, m4)
+                                self.valid_qqnn.add(aux)
+        _=0
+        
+    
     #===========================================================================
     # run 
     #===========================================================================
@@ -150,6 +221,13 @@ class _SpinOrbitPartialIntegral:
         self._G_k_pm = self._gradientCoeff(1, 0, l_k, m_k)
         self._G_k_mp = self._gradientCoeff(0, 1, l_k, m_k)
         self._G_k_mm = self._gradientCoeff(0, 0, l_k, m_k)
+        
+        #TODO: checker to be removed
+#         if (((l_i, m_i, l_k, m_k)==(1, -1, 1, 1)) 
+#             and ((self.wf_j.m_l, self.wf_l.m_l)==(1, 1)) ):
+#             _=0
+        if (l_i, m_i, l_k, m_k, self.wf_j.m_l, self.wf_l.m_l) in self.valid_qqnn:
+            _=0
         
         sum_ = 0
         sum_ += self._differentialPartRecouplingAndIntegtals(1, 1)
@@ -221,8 +299,8 @@ class _SpinOrbitPartialIntegral:
         l_i, m_i = self.wf_i.l, self.wf_i.m_l
         l_k, m_k = self.wf_k.l, self.wf_k.m_l
          
-        l_i = l_i + 1 if diff_opp_i else l_i - 1
-        l_k = l_k + 1 if diff_opp_k else l_k - 1
+#         l_i = l_i + 1 if diff_opp_i else l_i - 1
+#         l_k = l_k + 1 if diff_opp_k else l_k - 1
         
         # product of coefficients from the gradient formula 
         # [a1 = GiGk_positive](coupling of Ys) - [a2 = GiGk_negat](coupling o Ys)
@@ -512,3 +590,101 @@ class _SpinOrbitPartialIntegral:
 #                 ck1 = np.sqrt(self.wf_k.n + self.wf_k.l + 0.5)
 #                 ck2 = np.sqrt(self.wf_k.n + 1)
     
+    
+class _RadialIntegralsLS():
+    
+    """
+    From T. Gonzalez Llarena thesis developments
+    
+    """
+    
+    def _TalmiIntegral(self, p, p_q, l1, l2, l1_q, l2_q):
+        
+        # l1 + l2 + l1_q + l2_q is even
+        N = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
+        
+        return np.exp(gamma_half_int(2*N + 1)) / (2**(N + 1.5))
+    
+    def __sum_aux_denominator(self, n1, l1, n2, l2, p, k):
+        
+        denominator = sum(
+            [fact(k), fact(n1 - k), fact(p - k), fact(n2 + k - p),
+            double_factorial(2*(k + l1) + 1), 
+            double_factorial(2*(p - k + l2) + 1)]
+        )
+        
+        return np.exp(denominator)
+    
+    def _B_coeff(self, n1, l1, n2, l2, p):
+        
+        sum_ = 0
+        
+        k_max = min(p, n1)
+        k_min = max(0, p - n2)
+        for k in range(k_min, k_max +1):
+            sum_ += 1 / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
+        
+        return 4*(np.pi**2)*(2**(l1 + l2 + 2 + p)) * ((-1)**(n1 + n2 + p)) * sum_
+    
+    def _D_coeff(self, n1, l1, n2, l2, p):
+        
+        sum_ = 0
+        
+        k_max = min(p, n1)
+        k_min = max(0, p - n2)
+        for k in range(k_min, k_max +1):
+            sum_ += (2*k + l1) / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
+        
+        return 4*(np.pi**2)*(2**(l1 + l2 + 2 + p)) * ((-1)**(n1 + n2 + p)) * sum_ 
+    
+    def _norm_coeff(self, wf):
+        """ Also extracted from Apendix D.1 of the thesis """
+                
+        aux = fact(wf.n) + gamma_half_int(2*(wf.n + wf.l) + 3)
+        
+        return ((-1)**wf.n) * np.sqrt(np.exp(aux) / (2 * (np.pi**3)))       
+    
+    
+    @staticmethod
+    def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket): 
+        """
+        type_integral:
+            [1] differential type:  d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
+            [2] normal type      :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
+        """
+        self = _RadialIntegralsLS()
+        return self._integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket)
+        
+    
+    def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket):
+        
+        assert type_integral in (1, 2), "type_integral can only be 1 or 2"
+        
+        n1_q, l1_q = wf1_bra.n, wf1_bra.l
+        n2_q, l2_q = wf2_bra.n, wf2_bra.l
+        n1, l1 = wf1_ket.n, wf1_ket.l
+        n2, l2 = wf2_ket.n, wf2_ket.l
+        
+        sum_ = 0
+        
+        for p_q in range(n1_q+n2_q +1):
+            
+            if type_integral == 1:
+                bra_coeff = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+            else:
+                bra_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+            
+            for p in range(n1+n2 +1):
+                ket_coeff = self._B_coeff(n1, l1, n2, l2, p)
+                
+                I_ = self._TalmiIntegral(p, p_q, l1, l2, l1_q, l2_q)
+                sum_ += bra_coeff * ket_coeff * I_
+        
+        
+        norm_fact = np.prod([self._norm_coeff(wf) for wf in 
+                                        (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
+        return  norm_fact * sum_
+                
+            
+            
+        

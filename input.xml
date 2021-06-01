@@ -1,53 +1,61 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
-	<Output_Filename>shortRangeSpinOrbit.sho</Output_Filename>
+	<Output_Parameters>
+		<Output_Filename>bb_4He</Output_Filename>
+		<Hamil_Type>4</Hamil_Type>
+		<COM_correction>0</COM_correction>
+	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
 			   are not required parameters, define values only if explicit 
 			   setting.
 			-->
-		<A_mass>8</A_mass>
-		<hbar_omega units='MeV'>23.8</hbar_omega>
-		<b_length units='fm'>1.3204</b_length>
+		<A_mass>4</A_mass>
+		<hbar_omega units='MeV'>25.8373</hbar_omega>
+		<b_length units='fm'>1.2662</b_length>
+		<!--hbar_omega units='MeV'>13.921</hbar_omega-->
+		<!--b_length units='fm'>1.726</b_length-->
 	</SHO_Parameters>
-	<Valence_Space>
-		<!--Q_Number sp_state='001' sp_energy=''/-->
+	<Valence_Space l_great_than_10='True'>
+		<Q_Number sp_state='001' sp_energy=''/>
 		
-		<!--Q_Number sp_state='101' sp_energy=''/-->
-		<!--Q_Number sp_state='103' sp_energy=''/-->
+		<Q_Number sp_state='101' sp_energy=''/>
+		<Q_Number sp_state='103' sp_energy=''/>
 		
-		<Q_Number sp_state='205' sp_energy=''/>
-		<Q_Number sp_state='1003' sp_energy=''/>
-		<Q_Number sp_state='203' sp_energy=''/>
+		<!--Q_Number sp_state='205' sp_energy=''/-->
+		<!--Q_Number sp_state='10001' sp_energy=''/-->
+		<!--Q_Number sp_state='203' sp_energy=''/-->
 		<!--Q_Number sp_state='307' sp_energy=''/-->
 		
-		<!--Q_Number sp_state='1103' sp_energy=''/-->
+		<!--Q_Number sp_state='10103' sp_energy=''/-->
 		<!--Q_Number sp_state='305' sp_energy=''/-->
-		<!--Q_Number sp_state='1101' sp_energy=''/-->
+		<!--Q_Number sp_state='10101' sp_energy=''/-->
 		<!--Q_Number sp_state='409' sp_energy=''/-->
 		
-		<!--Q_Number sp_state='1205' sp_energy=''/-->
+		<!--Q_Number sp_state='10205' sp_energy=''/-->
 		<!--Q_Number sp_state='407' sp_energy=''/-->
-		<!--Q_Number sp_state='2001' sp_energy=''/-->
-		<!--Q_Number sp_state='1203' sp_energy=''/-->
+		<!--Q_Number sp_state='20001' sp_energy=''/-->
+		<!--Q_Number sp_state='10203' sp_energy=''/-->
 		<!--Q_Number sp_state='511' sp_energy=''/-->
 	</Valence_Space>
 	<Core>
-		<protons>2</protons>
-		<neutrons>2</neutrons>
+		<protons>0</protons>
+		<neutrons>0</neutrons>
 		<innert_core name=''/>
 	</Core>
 	<Force_Parameters>
-		<Brink_Boeker active='False'>
+		<Brink_Boeker active='True'>
 			<!-- Brink-Boeker force: 
 				Effective force mediated by 2 gaussians of length :mu fm.
 				Gaussian radial functions are shared by a central term (Wigner)
 				and the three permutation operations:
 					Spatial (Majorana), spin (Bartlett) and isospin (Heisenberg)
 				 -->
-			<mu_length 	part_1='0.7' 		part_2='1.4' 		units='fm'/>
-			<Wigner		part_1='-595.55' 	part_2='-72.21' 	units='MeV'/>
-			<Majorana	part_1='206.05'		part_2='68.4'		units='MeV'/>
+			<mu_length 	part_1='0.7' 	part_2='1.0' 		units='fm'/>
+			<Wigner		part_1='0.0' 	part_2='-30.0' 	units='MeV'/>
+			<Majorana	part_1='0.0'	part_2='0.0'		units='MeV'/>
+			<!--Wigner		part_1='595.55' 	part_2='-72.21' 	units='MeV'/-->
+			<!--Majorana	part_1='-206.05'	part_2='-68.4'		units='MeV'/-->
 			<Bartlett 	part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 			<Heisenberg part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 		</Brink_Boeker>
@@ -87,19 +95,19 @@
 				gaussian, power term, yukawa or coulomb potential functions 
 				f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
 				-->
-			<potential 	name='yukawa'/>
-			<constant	value='1.0' 	units='MeV'/>
+			<potential 	name='gaussian'/>
+			<constant	value='130.0' 	units='MeV'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbit>
-		<SpinOrbitShortRange active='True'>
+		<SpinOrbitShortRange active='False'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
 				f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
 				-->
 			<potential 	name='power'/>
-			<constant	value='1.0' 	units='MeV*fm^-5'/>
+			<constant	value='115.0' 	units='MeV*fm^-5'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>

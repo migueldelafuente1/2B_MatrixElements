@@ -3,6 +3,26 @@ Created on Feb 25, 2021
 
 @author: Miguel
 '''
+#===============================================================================
+#%% Constants
+#===============================================================================
+class Constants:
+    HBAR      = 6.582119e-22    # MeV s
+    HBAR_C    = 197.326963      # MeV fm
+    
+    M_PROTON  = 938.272088      # MeV/c2
+    M_NEUTRON = 939.565420      # MeV/c2
+    M_NUCLEON = 931.494028      # MeV/c2
+    M_ELECTRON= 0.51099891      # MeV/c2
+    
+    ALPHA     = 7.297353e-3
+    e_CHARGE  = 1.602176e-19   # C
+
+
+#===============================================================================
+# %% Factorials, Double Factorials and GammaFunction Value Storing
+#===============================================================================
+
 import numpy as np
 
 _fact = []
@@ -15,6 +35,10 @@ def fact_build(max_order_fact):
     global _fact
     global _FACTORIAL_DIM
     
+    if _FACTORIAL_DIM > -1:
+        print("::::   Calling Factorial build: from [{}] to [{}]   ::::"
+              .format(_FACTORIAL_DIM, _FACTORIAL_DIM + max_order_fact + 1))
+    
     if not _fact:
         _fact = [np.log(1)]
         min_order = 1
@@ -24,7 +48,7 @@ def fact_build(max_order_fact):
     for i in range(min_order, max_order_fact + 1):
         _fact.append(_fact[i-1] + np.log(i))
     
-    _FACTORIAL_DIM = max_order_fact
+    _FACTORIAL_DIM = min_order + max_order_fact
     # !! logarithm values for the factorial !!
 
 def double_fact_build(max_order_fact):
@@ -95,27 +119,29 @@ def gamma_half_int(i):
     return _gamma_half_int[i - 1]
 
 #===============================================================================
-# 
+#%%     sympy angular momentum fucntions
 #===============================================================================
-from sympy.physics.wigner import wigner_9j, racah, clebsch_gordan
+from sympy.physics.wigner import wigner_9j, racah, clebsch_gordan, wigner_3j
 
 def safe_wigner_9j(*args):
     """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the arguments don't fulfill the triangle
     relation. """
+    if args == (2, 0.5, 1.5, 2, 0.5, 1.5, 1, 1, 2):
+        _=0
     try: 
         return float(wigner_9j(*args, prec=None))
     except ValueError or AttributeError:
         return 0
     
-def safe_racah(*args):
+def safe_racah(a, b, c, d, ee, ff):
     """ Avoid the ValueError whenever the arguments don't fulfill the triangle
     relation. """
     try: 
-        return float(racah(*args, prec=None))
+        return float(racah(a, b, c, d, ee, ff, prec=None))
     except ValueError or AttributeError:
         return 0
     
-def safe_clebsch_gordan(*args):
+def safe_clebsch_gordan(j1, j2, j3, m1, m2, m3):
     """
     :args   j1, j2, j3,   m1, m2, m3
     
@@ -124,7 +150,16 @@ def safe_clebsch_gordan(*args):
     
     Return float value for Zero Clebsh-Gordan coefficient, avoid Zero object
     """
-    return float(clebsch_gordan(*args))
+    return float(clebsch_gordan(j1, j2, j3, m1, m2, m3))
+
+def safe_3j_symbols(j1, j2, j3, m1, m2, m3):
+    """
+    :args     j_1, j_2, j_3, m_1, m_2, m_3
+    
+    Calculates the Clebsch-Gordan coefficient for the base 
+    < j1 m1, j2 m2 | j3 m3 >.
+    """
+    return float(wigner_3j(j1, j2, j3, m1, m2, m3))
 
 #===============================================================================
 # 
@@ -226,7 +261,7 @@ def getCoreNucleus(Z, N):
 valenceSpacesDict = {
     'S'   : ('001',),
     'P'   : ('103','101'),
-    'SD'  : ('205', '1003', '203'),
+    'SD'  : ('205', '1001', '203'),
     'F'   : ('307',),
     'PF'  : ('1103', '305', '1101'),
     'G'   : ('409',),
@@ -235,6 +270,20 @@ valenceSpacesDict = {
     'PFH' : ('509', '1307', '1305', '2103', '2101'),
     'I'   : ('613',),
     'SDGI': ('1409', '2205', '611', '1407', '3001', '2203'),
+    'J'   : ('715',)
+    }
+valenceSpacesDict_l_ge10 = {
+    'S'   : ('001',),
+    'P'   : ('103','101'),
+    'SD'  : ('205', '10001', '203'),
+    'F'   : ('307',),
+    'PF'  : ('10103', '305', '10101'),
+    'G'   : ('409',),
+    'SDG' : ('10205', '407', '20001', '10203'),
+    'H'   : ('511',),
+    'PFH' : ('509', '10307', '10305', '20103', '20101'),
+    'I'   : ('613',),
+    'SDGI': ('10409', '20205', '611', '10407', '30001', '20203'),
     'J'   : ('715',)
     }
 

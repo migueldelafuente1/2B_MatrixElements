@@ -19,10 +19,10 @@ from matrix_elements.BM_brackets import BM_Bracket
 
 #===============================================================================
 # Global dictionary for B coefficient memorization pattern
-# Index : comma separated indexes string: 'n,l,N,L,n_q,l_q,p'
+# Index : comma separated indexes string: 'n,l,n_q,l_q,p'
 
-def _B_coeff_memo_accessor(n, l, N, L, n_q, l_q, p):
-    return ','.join(map(lambda x: str(x), [n, l, N, L, n_q, l_q, p]))
+def _B_coeff_memo_accessor(n, l, n_q, l_q, p):
+    return ','.join(map(lambda x: str(x), [n, l, n_q, l_q, p]))
 
 _B_Coefficient_Memo = {}
 
@@ -114,6 +114,11 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
                         "in PotentialForms Enumeration, got: [{}]".format(value))
 
             if param in SHO_Parameters.members():
+                if param == SHO_Parameters.b_length:
+                    # In the center of mass system, b_length = b_length / sqrt_(2)
+                    value *= np.sqrt(1) 
+                    ## NO b_rel = sqrt_(2)*b !!, trasnformation taken into account
+                    ## for the Talmi integrals and the B_nlp coefficients
                 cls.PARAMS_SHO[param] = value
             else:
                 cls.PARAMS_FORCE[param] = value
@@ -151,7 +156,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         return self._parity_ket        
         
     #===========================================================================
-    # % ABSTRACT METHODS
+    # % COMMON METHODS
     #===========================================================================
     
     def __checkInputArguments(self, bra, ket):
@@ -204,7 +209,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         return self._talmiIntegrals.__getitem__(self._p)
     
     @staticmethod
-    def BCoefficient(n, l, n_q, l_q, p):
+    def BCoefficient(n, l, n_q, l_q, p, b_param=1):
         """ 
         @static method to access B(n,l, n', l', p) coefficients. 
         Testing Purposes, Do not use it inner calculations
@@ -221,7 +226,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         _dummy_me._l_q = l_q
         _dummy_me._p   = p
         
-        return _dummy_me._B_coefficient_evaluation(b_param=1)
+        return _dummy_me._B_coefficient_evaluation(b_param=b_param)
     
     
     def _B_coefficient(self, b_param=None):
@@ -230,14 +235,18 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         if not b_param:
             b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
         
-        tpl = (self._n, self._l, self._N, self._L, self._n_q, self._l_q, self._p)
+#         tpl = (self._n, self._l, self._N, self._L, self._n_q, self._l_q, self._p)
+        tpl = (self._n, self._l, self._n_q, self._l_q, self._p)
         tpl = _B_coeff_memo_accessor(*tpl)
+        ## TODO: B(nl,n'l', p) coefficients are symmetric by nl <-> n'l'
+        #tpl2 = (self._n_q, self._l_q, self._n, self._l, self._p)
+        #tpl2 = _B_coeff_memo_accessor(*tpl2)
         
         global _B_Coefficient_Memo
         
         if not tpl in _B_Coefficient_Memo:
             _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation(b_param)
-            
+        # remove = _B_Coefficient_Memo[tpl]
         return _B_Coefficient_Memo[tpl]
     
     def _B_coefficient_evaluation(self, b_param=None):
@@ -277,6 +286,10 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
             aux_sum += np.exp(const_k)
         
         return const * aux_sum
+    
+    #===========================================================================
+    # % ABSTRACT METHODS
+    #===========================================================================
     
     def _interactionConstantsForCOM_Iteration(self):
         """ 
@@ -329,7 +342,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         for p in range(max(self.rho_bra, self.rho_ket) +1):
             self._p = p
             
-            sum_ += self.talmiIntegral() * self._interactionSeries()
+            sum_ += self._interactionSeries() * self.talmiIntegral()
             
         return self._globalInteractionCoefficient() * sum_
     
@@ -504,11 +517,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
             
             self._n, self._l, self._N, self._L = qqnn_bra
             
-            bmb_bra = BM_Bracket(self._n, self._l, 
-                                 self._N, self._L, 
-                                 self.bra.n1, self.bra.l1, 
-                                 self.bra.n2, self.bra.l2, 
-                                 self._L_bra)
+            bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, self._L_bra)
             if self.isNullValue(bmb_bra):
                 continue
             
@@ -516,17 +525,12 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 self._l_q = l_q
                 
                 self._n_q = self._n
-                self._n_q += (self.rho_ket - self.rho_bra + 
-                              self._l  - self._l_q) // 2
+                self._n_q += (self.rho_ket - self.rho_bra + self._l  - self._l_q) // 2
                 
                 if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
                     continue
                 
-                bmb_ket = BM_Bracket(self._n_q, self._l_q,
-                                     self._N, self._L,
-                                     self.ket.n1, self.ket.l1,
-                                     self.ket.n2, self.ket.l2,
-                                     self._L_ket)
+                bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, self._L_ket)
                 if self.isNullValue(bmb_ket):
                     continue
                 

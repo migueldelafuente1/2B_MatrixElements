@@ -121,6 +121,11 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         self.J = bra.J
         self.T = bra.T
         
+        self._L_bra = None
+        self._L_ket = None
+        self._S_bra = None
+        self._S_ket = None
+        
         if (bra.J != ket.J) or (bra.T != ket.T):
             print("Bra JT [{}]doesn't match with ket's JT [{}]"
                   .format(bra.J, bra.T, ket.J, ket.T))
@@ -248,6 +253,8 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
                 self._S_ket = S_ket
                 
                 for L in range(L_min, L_max +1):
+                    if L==1:
+                        _=0
                     self._L_bra = L
                     
                     for L_ket in self._validKetTotalAngularMomentums():

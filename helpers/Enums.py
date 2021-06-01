@@ -22,11 +22,16 @@ class Enum(object):
 
 class InputParts(Enum):
     Interaction_Title = 'Interaction_Title'
-    Output_Filename = 'Output_Filename'
+    Output_Parameters = 'Output_Parameters'
     SHO_Parameters = 'SHO_Parameters'
     Valence_Space = 'Valence_Space'
     Core = 'Core'
     Force_Parameters = 'Force_Parameters'
+
+class Output_Parameters(Enum):
+    Output_Filename = 'Output_Filename'
+    Hamil_Type      = 'Hamil_Type'
+    COM_correction  = 'COM_correction'
 
 class SHO_Parameters(Enum):
     A_Mass      = 'A_mass'
@@ -36,6 +41,7 @@ class SHO_Parameters(Enum):
 class ValenceSpaceParameters(Enum):
     Q_Number   = 'Q_Number'
     QN_Energies = 'QN_Energies'
+    l_great_than_10 = 'l_great_than_10'
 
 class ForceParameters(Enum):
     SDI = 'SDI'
@@ -131,3 +137,11 @@ class CouplingSchemeEnum(Enum):
 
 # TODO: Method to implement a folder for the results
 OUTPUT_FOLDER = 'results'
+
+class OutputFileTypes(Enum):
+    sho     = '.sho'
+    oneBody = '.01b'
+    twoBody = '.2b'
+    centerOfMass = '.com'
+    
+

@@ -69,7 +69,9 @@ class QN_1body_radial(_WaveFunction):
         assert abs(m) <= l, AttributeError("3rd component cannot exceed L number")
         
     def __str__(self):
-        return "(n:{}, l:{}, m:{})".format(self.n, self.l, self.m_l)
+        if self.m_l == 0:
+            return "(n:{},l:{})".format(self.n, self.l)
+        return "(n:{},l:{},m:{})".format(self.n, self.l, self.m_l)
     
     @property
     def shellState(self):
@@ -119,7 +121,19 @@ class QN_1body_jj(_WaveFunction):
     
     @property
     def AntoineStrIndex(self):
+        """ Classic Antoine_ shell model index for l<10 """
         aux = str(1000*self.n + 100*self.l + self.j)
+        if aux == '1':
+            return '001'
+        return aux
+    
+    @property
+    def AntoineStrIndex_l_greatThan10(self):
+        """ 
+        Same property but for matrix elements that involve s.h.o states with
+        l > 10 (n=1 =10000)
+        """
+        aux = str(10000*self.n + 100*self.l + self.j)
         if aux == '1':
             return '001'
         return aux
@@ -130,7 +144,7 @@ class QN_1body_jj(_WaveFunction):
     
     def __str__(self):
         # TODO: Or Antoine format
-        return "(n:{}, l:{}, j:{}/2)".format(self.n, self.l, self.j)
+        return "(n:{},l:{},j:{}/2)".format(self.n, self.l, self.j)
     
     
             
@@ -186,9 +200,9 @@ class QN_2body_L_Coupling(_WaveFunction):
         
         if False in _types:
             raise AttributeError("Invalid argument types given"
-            ": [|sp_1>={}, |sp_1>={}, JTMMt={}]. \nSingle particle w.f. must be"
+            ": [|sp_1>={}, |sp_1>={}, LML={},{}]. \nSingle particle w.f. must be"
             "1body SHO radial objects; L,ML must be integers."
-            .format((str(sp_1), str(sp_2), L, ML)))
+            .format(str(sp_1), str(sp_2), L, ML))
         
         assert L >= 0, AttributeError("Negative argument/s given: L={}".format(L))
     
@@ -206,7 +220,7 @@ class QN_2body_L_Coupling(_WaveFunction):
             )
     
     def __str__(self):
-        return "[{}1, {}2, (L:{})]".format(self.sp_state_1.__str__(), 
+        return "[{}, {}, (L:{})]".format(self.sp_state_1.__str__(), 
                                            self.sp_state_2.__str__(), 
                                            self.L)
     @property
@@ -249,9 +263,9 @@ class QN_2body_LS_Coupling(QN_2body_L_Coupling):
         
         if False in _types:
             raise AttributeError("Invalid argument types given"
-            ": [|sp_1>={}, |sp_1>={}, JTMMt={}]. \nSingle particle w.f. must be"
+            ": [|sp_1>={}, |sp_1>={}, LS={},{}]. \nSingle particle w.f. must be"
             "1body SHO radial objects; L,ML must be integers."
-            .format((str(sp_1), str(sp_2), L, S)))
+            .format(str(sp_1), str(sp_2), L, S))
         
         assert L >= 0, AttributeError("Negative argument/s given: L={}".format(L))
         assert S >= 0, AttributeError("Negative argument/s given: S={}".format(S))
@@ -272,7 +286,7 @@ class QN_2body_LS_Coupling(QN_2body_L_Coupling):
             )
     
     def __str__(self):
-        return "[{}1, {}2, (L:{} S:{})]".format(self.sp_state_1.__str__(), 
+        return "[{}, {}, (L:{}S:{})]".format(self.sp_state_1.__str__(), 
                                            self.sp_state_2.__str__(), 
                                            self.L, self.S)
     
@@ -325,7 +339,7 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
             raise AttributeError("Invalid argument types given"
             ": [|sp_1>={}, |sp_1>={}, JTMMt={}]. \nSingle particle w.f. must be"
             "1body jj objects, JT, M,Mt must be integers."
-            .format((str(sp_1), str(sp_2), J,T, M, MT)))
+            .format(str(sp_1), str(sp_2), (J,T, M, MT)))
         
         _sign  = [J >= 0, T >= 0]
         assert not False in _sign, AttributeError("Negative argument/s given: "
@@ -338,7 +352,8 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
         if self.nucleonsAreInThesameOrbit():
             delta = 1
         
-        return np.sqrt(1 - delta*((-1)**(self.T + self.J))) / (1 + delta)
+        return 1 /np.sqrt(1 + delta)
+        #return np.sqrt(1 - delta*((-1)**(self.T + self.J))) / (1 + delta)
     
     def exchange(self):
         """ 
@@ -388,10 +403,9 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
                 aux * 1, 
                 aux * getattr(self, 'j{}'.format(particle)))
         
-        
     
     def __str__(self):
-        return "[{}1,{}2,(J:{}T:{})]".format(self.sp_state_1.__str__(), 
+        return "[{}, {},(J:{}T:{})]".format(self.sp_state_1.__str__(), 
                                              self.sp_state_2.__str__(), 
                                              self.J, self.T)
     

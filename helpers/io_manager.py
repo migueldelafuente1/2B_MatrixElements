@@ -4,16 +4,21 @@ Created on Feb 23, 2021
 @author: Miguel
 '''
 from helpers.Enums import InputParts, SHO_Parameters, ForceParameters, Enum,\
-    AttributeArgs, ValenceSpaceParameters
+    AttributeArgs, ValenceSpaceParameters, Output_Parameters
 from helpers.Enums import ForceVariablesDict
 import xml.etree.ElementTree as et
 from helpers.WaveFunctions import QN_1body_jj
-from helpers.Helpers import valenceSpacesDict, shellSHO_Notation
+from helpers.Helpers import valenceSpacesDict, shellSHO_Notation,\
+    valenceSpacesDict_l_ge10
 
-def readAntoine(index):
-    """ 
+
+
+def readAntoine(index, l_ge_10=False):
+    """     
     returns the Quantum numbers from string Antoine's format:
         :return: [n, l, j], None if invalid
+        
+    :l_ge_10 <bool> [default=False] format for l>10.
     """
     if isinstance(index, str):
         index = int(index)
@@ -22,43 +27,60 @@ def readAntoine(index):
         return[0, 0, 1]
     else:
         if index % 2 == 1:
-            n = int((index)/1000)
-            l = int((index - (n*1000))/100)
-            j = int(index - (n*1000) - (l*100))# is 2j 
+            _n_division = 10000 if l_ge_10 else 1000
+            n = int((index)/_n_division)
+            l = int((index - (n*_n_division))/100)
+            j = int(index - (n*_n_division) - (l*100))# is 2j 
             
             if (n >= 0) and (l >= 0) and (j > 0):
                 return [n, l, j]
     
     raise Exception("Invalid state index for Antoine Format [{}]".format(index))
 
-def castAntoineFormat2Str(state):
+def castAntoineFormat2Str(state, l_ge_10=False):
     """ 
     return a string with the state index in Antoine format. Check state.
+    
+    :l_ge_10 <bool> [default=False] format for l>10. Converts l<10 to this format
     """
     if isinstance(state, QN_1body_jj):
+        if l_ge_10:
+            return state.AntoineStrIndex_l_greatThan10
         return state.AntoineStrIndex
+    
     elif isinstance(state, int):
-        readAntoine(state)
-        if state == 1:
-            return '001'
-        return str(state)
+        if l_ge_10:
+            state = readAntoine(state, l_ge_10)
+            state = str(10000*state[0] + 100*state[1] + state[2])
+        state = str(state)
     elif isinstance(state, str):
-        if state == '1':
-            return '001'
-        readAntoine(state)
-        return state
+        if l_ge_10:
+            state = readAntoine(state, l_ge_10)
+            state = str(10000*state[0] + 100*state[1] + state[2])
+    elif isinstance(state, (tuple, list)):
+        if l_ge_10:
+            state = str(10000*state[0] + 100*state[1] + state[2])
+        else:
+            state = str(1000*state[0] + 100*state[1] + state[2])
+    else:
+        raise Exception('invalid type for the state to read (onlu str, int or list)')
+    
+    if state == '1':
+        return '001'
+    return state
 
-def valenceSpaceShellNames(valence_space):
+def valenceSpaceShellNames(valence_space, l_ge_10=False):
     """
     Join the SHO major shells defining the valence space (without sense care).
-    Arg:
+        Arg:
     :valence_space Quantum numbers array (Antoine format)
+    :l_ge_10 <bool> [default=False] format for l>10.
     """
     _space = []
     states_accepted = 0
-    for shell, qqnn_shell in valenceSpacesDict.items():
+    for shell, qqnn_shell in valenceSpacesDict_l_ge10.items():
         
-        aux = [(sp, shellSHO_Notation(*readAntoine(sp)))  for sp in qqnn_shell]
+        aux = [(sp, shellSHO_Notation(*readAntoine(sp, True))) for sp in qqnn_shell]
         aux = [(sho_st , sp in valence_space) for sp, sho_st in aux]
         aux = dict(aux)
         if not False in aux.values():
@@ -90,7 +112,7 @@ class _Parser:
     def getInteractionTitle(self):
         raise ParserException('abstract method, implement me!')
     
-    def getOutputFilename(self):
+    def getOutputArgs(self):
         raise ParserException('abstract method, implement me!')
     
     def getSHOArgs(self):
@@ -122,8 +144,21 @@ class _JsonParser(_Parser):
                 AttributeArgs.details : ''}
         return vals
     
-    def getOutputFilename(self):
-        return self._data.get(InputParts.Output_Filename)
+    def getOutputArgs(self):
+        # TODO: Not tested
+        vals_dict = self._data.get(InputParts.Output_Parameters)
+        
+        for param in Output_Parameters.members():
+            if param not in vals_dict:
+                if param == Output_Parameters.Output_Filename:
+                    raise ParserException("Missing filename in {} json dictionary"
+                                          .format(InputParts.Output_Parameters))
+                vals_dict[param] = None
+                
+            else:
+                vals_dict[param] = str(vals_dict[param])
+                    
+        return vals_dict
     
     def getSHOArgs(self):
         vals_dict = self._data.get(InputParts.SHO_Parameters)
@@ -141,6 +176,7 @@ class _JsonParser(_Parser):
         _data = self._data.get(InputParts.Valence_Space)
         qn_Sts  = _data[ValenceSpaceParameters.Q_Number]
         qn_Ens  = _data.get(ValenceSpaceParameters.QN_Energies)
+        antoine_l_ge_10 = False # invalid in json format
         
         if (qn_Ens == None) or (qn_Ens == []):
             qn_Ens = ['0.0' for _ in range(len(qn_Sts))]
@@ -153,7 +189,7 @@ class _JsonParser(_Parser):
         for i in range(len(qn_Sts)):
             vals_dict[str(qn_Sts[i])] = str(qn_Ens[i])  
             
-        return vals_dict
+        return vals_dict, antoine_l_ge_10
     
     def getCore(self):
         
@@ -212,9 +248,21 @@ class _XMLParser(_Parser):
         elem = self._data.find(InputParts.Interaction_Title)        
         return elem.attrib
     
-    def getOutputFilename(self):
-        elem = self._data.find(InputParts.Output_Filename)
-        return elem.text
+    def getOutputArgs(self):
+        elem = self._data.find(InputParts.Output_Parameters)
+        
+        vals_dict = {}
+        for param in Output_Parameters.members():
+            val = elem.find(param)
+            if val == None:
+                if param == Output_Parameters.Output_Filename:
+                    raise ParserException("Missing filename in {} tag for XML input"
+                                          .format(InputParts.Output_Parameters))
+            else:
+                val = val.text
+            vals_dict[param] = val
+        
+        return vals_dict
     
     def getSHOArgs(self):
         elem = self._data.find(InputParts.SHO_Parameters)
@@ -230,18 +278,26 @@ class _XMLParser(_Parser):
         return vals_dict
     
     def getValenceSpaceArgs(self):
+        """ 
+        the Antoine format for l < 10 or l > 10 in the sho states is assumed to 
+        be correct, attribute "antoine_l_ge_10" is given to the main program to 
+        interpret the quantum numbers.
+        """
         elem = self._data.find(InputParts.Valence_Space)
+        l_ge_10 = elem.attrib.get(ValenceSpaceParameters.l_great_than_10)
+        antoine_l_ge_10 = False if l_ge_10 in ('False', None) else True
+        
         vals_dict = {}
         for _item in elem.iter(ValenceSpaceParameters.Q_Number):
             key_ = _item.attrib.get(AttributeArgs.ValenceSpaceArgs.sp_state)
             val_ = _item.attrib.get(AttributeArgs.ValenceSpaceArgs.sp_energy)
             
             if val_ in (None, ''):
-                val_ = 0.0
+                val_ = None
                 
             vals_dict[key_] = val_ 
             
-        return vals_dict
+        return vals_dict, antoine_l_ge_10
     
     def getCore(self):
         elem = self._data.find(InputParts.Core)
@@ -329,13 +385,25 @@ class CalculationArgs(object):
                                   "<xml.etree.ElementTree.Element> or <dict>"
                                   .format(input_data.__class__))
         
+        self.Interaction_Title  = None
+        self.Output_Parameters  = None
+        self.SHO_Parameters     = None
+        self.Valence_Space      = None
+        self.Core               = None
+        self.Force_Parameters   = None
         
+        self.formatAntoine_l_ge_10 = False 
+        
+        self._settingParameters()
+    
+    
+    def _settingParameters(self):
         setattr(self,
                 InputParts.Interaction_Title, 
                 self._data.getInteractionTitle())
         setattr(self,
-                InputParts.Output_Filename, 
-                self._data.getOutputFilename())
+                InputParts.Output_Parameters, 
+                self._data.getOutputArgs())
         setattr(self,
                 InputParts.SHO_Parameters, 
                 self._data.getSHOArgs())
@@ -343,24 +411,27 @@ class CalculationArgs(object):
                 InputParts.Core, 
                 self._data.getCore())
         setattr(self,
-                InputParts.Valence_Space, 
-                self._data.getValenceSpaceArgs())
-        setattr(self,
                 InputParts.Force_Parameters, 
                 self._data.getForceParameters())
         
+        val_dict, self.formatAntoine_l_ge_10 = self._data.getValenceSpaceArgs()
+        setattr(self, InputParts.Valence_Space, val_dict)
+        
         self._defineForces()
-    
+        
     def _defineForces(self):
         pass
     
     
     def getFilename(self):
         
-        outp_fn = getattr(self, InputParts.Output_Filename)
+        outp_   = getattr(self, InputParts.Output_Parameters)
+        outp_fn = outp_.get(Output_Parameters.Output_Filename)
+        
         if outp_fn:
             return outp_fn
         
+        # The next part won't run because output_filename is required for the input
         spc = getattr(self, InputParts.Valence_Space).keys()
         spc = '_'.join(valenceSpaceShellNames(spc))
         

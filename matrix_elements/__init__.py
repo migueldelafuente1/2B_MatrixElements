@@ -12,6 +12,7 @@ def switchMatrixElementType(force):
     Call from TBME_Runner automatic selection
     
     :force  From ForceParameters(Enum)
+    TODO: :scheme (J, JT)
     """
     
     if force == ForceParameters.Brink_Boeker:

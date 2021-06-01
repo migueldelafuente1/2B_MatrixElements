@@ -91,6 +91,8 @@ class CentralForce(TalmiTransformation):
         # no special internal c.o.m interaction constants for the Central ME
         return 1
     
+    def _deltaConditionsForCOM_Iteration(self):
+        return True
     
     
 
