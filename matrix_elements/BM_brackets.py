@@ -159,7 +159,9 @@ def _BMB_memo_accessor(n, l, N, L, n1, l1, n2, l2, lambda_):
 _BMB_Memo = {}
 
 def BM_Bracket(n, l, N, L, n1, l1, n2, l2, lambda_):
-    """ _Memorization Pattern for Brody-Moshinsky coefficients. """
+    """ 
+    _Memorization Pattern for Brody-Moshinsky coefficients. 
+    """
     
     args = (n, l, N, L, n1, l1, n2, l2, lambda_)
     tpl = _BMB_memo_accessor(*args)
@@ -169,16 +171,42 @@ def BM_Bracket(n, l, N, L, n1, l1, n2, l2, lambda_):
     if not tpl in _BMB_Memo:
         if (n1 == 0) and (n2 == 0):
             args = (n, l, N, L, l1, l2, lambda_)
-            _BMB_Memo[tpl] = _BM_Bracket00_evaluation(*args)
+            bmb_value = _BM_Bracket00_evaluation(*args)
         else:
-            _BMB_Memo[tpl] = _BM_bracket_evaluation(*args)
-        
+            bmb_value = _BM_bracket_evaluation(*args)
+            
+        _BMB_Memo[tpl] = bmb_value
+        _save_BMB_permutations(n, l, N, L, n1, l1, n2, l2, lambda_, bmb_value)
+    
     return _BMB_Memo[tpl]
 
 def BM_Bracket00(n,l,N,L, l1,l2, lambda_):
-    """ _Memorization Pattern for Brody-Moshinsky coefficients. """
+    """ 
+    _Memorization Pattern for Brody-Moshinsky coefficients. 
+    """
     return BM_Bracket(n, l, N, L, 0, l1, 0, l2, lambda_)
 
+def _save_BMB_permutations(n, l, N, L, n1, l1, n2, l2, lambda_, bmb_value):
+    """ 
+    # TODO: Might be useful just to return the phase and save the lower one, 
+    like done in the B_nlp coefficients
+    
+    Permutation of the pairs (nl, NL), (n1l1, n2l2) and (nlNL, nl1 nl2) 
+    lead a simple phase change, for a calculated bmb, this method save these 
+    permutations to avoid recalculate them.
+    """
+    
+    for args, phs in [((n, l, N, L, n2, l2, n1, l1, lambda_), L  - lambda_),
+                      ((N, L, n, l, n1, l1, n2, l2, lambda_), l1 - lambda_),
+                      ((N, L, n, l, n2, l2, n1, l1, lambda_), l1 + l),
+                      ((n1, l1, n2, l2, n, l, N, L, lambda_), l2 + L)]:
+    
+        tpl = _BMB_memo_accessor(*args)
+        if not tpl in _BMB_Memo:
+            _BMB_Memo[tpl] = (-1)**(phs) * bmb_value
+            
+    
+    
 #===============================================================================
 def _BMB_initial_comprobations(n, l, N, L, n1, l1, n2, l2, lambda_):
     

@@ -14,8 +14,6 @@ import numpy as np
 from helpers.Helpers import fact, gamma_half_int, safe_3j_symbols, safe_racah
 from helpers.integrals import gaussianIntegralQuadrature
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial
-from scipy.constants.constants import lb
-
 
 #===============================================================================
 # RADIAL SHO COEFFICIENTS
@@ -246,7 +244,7 @@ def _radialIntegral_over_r2(**kwargs):
             
             for k_d in range(d_st.n +1):
                 kwargs[_Args.k_d] = k_d
-                alpha_nlk_d = _sho_series_coeff(b_st, k_d)
+                alpha_nlk_d = _sho_series_coeff(d_st, k_d)
                 
                 L_bd = 2*(k_b + k_d) + (b_st.l + d_st.l) + 2
                 kwargs[_Args.L_bd] = L_bd
@@ -309,7 +307,7 @@ def _radialIntegral_over_r1(bra, ket, k, b_length, mu_param, r_Max, quad_ord):
         _Args.r_Max : r_Max,
         _Args.quad_ord : quad_ord,
         _Args.multipole_ord : k,
-        _Args.mu_b_coef : (1/(b_length**2) + 1/(mu_param**2))
+        _Args.mu_b_coef : (1/(b_length**2)) + (1/(mu_param**2))
     }
     
     sum_ = 0.
@@ -319,11 +317,12 @@ def _radialIntegral_over_r1(bra, ket, k, b_length, mu_param, r_Max, quad_ord):
         
         for k_c in range(ket.sp_state_1.n +1):
             kwargs[_Args.k_c] = k_c
-            alpha_nlk_b = _sho_series_coeff(ket.sp_state_1, k_c)
+            alpha_nlk_c = _sho_series_coeff(ket.sp_state_1, k_c)
+            
             L_ac = (2*(k_a + k_c)) + (bra.sp_state_1.l + ket.sp_state_1.l) + 2
             kwargs[_Args.L_ac] = L_ac
             
-            aux = np.exp(alpha_nlk_a + alpha_nlk_b - (L_ac * np.log(b_length)))
+            aux = np.exp(alpha_nlk_a + alpha_nlk_c - (L_ac * np.log(b_length)))
             aux *= (-1)**(k_a + k_c)
             
             sum_ += aux * gaussianIntegralQuadrature(_r1_dependentFunction, 
@@ -348,37 +347,36 @@ def _coupling_coeff(bra, ket, multipole_moment):
         return 0.0
     
     coupling  = np.sqrt(np.prod([(2*wf.l + 1) for wf in (a, b, c, d)]))
-    coupling *= (-1)**(L)
+    coupling *= (-1)**(L + b.l + d.l)
     coupling *= safe_3j_symbols(a.l, multipole_moment, c.l, 0, 0, 0)
     coupling *= safe_3j_symbols(b.l, multipole_moment, d.l, 0, 0, 0)
-    #coupling *= (-1)**(a.l + b.l + c.l + d.l) 
     coupling *= safe_racah(c.l, d.l, a.l, b.l,  L, multipole_moment)    
     
     return np.sqrt(2*L + 1) * coupling
     
 
-def _gaussian2BMatrixElement(bra, ket, b, mu_parameter, V_0=1, r_Max=10, quad_ord=10):
+def _gaussian2BMatrixElement(bra, ket, b, mu_parameter, V_0=1, r_Max=10, quad_ord=80):
     assert isinstance(bra, QN_2body_L_Coupling), "Bra <QN_2body_L_Coupling> required"
     assert isinstance(ket, QN_2body_L_Coupling), "Ket <QN_2body_L_Coupling> required"
     
     print("EVALUATION: <", bra,"||exp(-(r_12/mu)^2)||", ket, ">")
     sum_  = 0.
     # multipole_ expansion
-    for k in range(abs(bra.L - ket.L), bra.L + ket.L  +1):
+    for multipole in range(abs(bra.L - ket.L), bra.L + ket.L  +1):
         # coupling coefficients
-        mom_coupl = _coupling_coeff(bra, ket, k)
+        mom_coupl = _coupling_coeff(bra, ket, multipole)
         if abs(mom_coupl) < 1.0e-9:
-            print("\t multipole_[{:2}]   COUPL=0.0".format(k))
+            print("\t multipole_[{:2}]   COUPL=0.0".format(multipole))
             continue
         # radial integral ()
-        radial_integral = _radialIntegral_over_r1(bra, ket, k, 
+        radial_integral = _radialIntegral_over_r1(bra, ket, multipole, 
                                                   b, mu_parameter, 
                                                   r_Max, quad_ord)
         mom_matrix_element = mom_coupl * radial_integral
         sum_ += mom_matrix_element
         
         print("\t multipole_[{:2}]   COUPL={:7.6f}  RADIAL={:8.6f} = {:7.6f}"
-              .format(k, mom_coupl, radial_integral, mom_matrix_element))
+              .format(multipole, mom_coupl, radial_integral, mom_matrix_element))
     
     return  V_0 * sum_
 
@@ -388,18 +386,18 @@ def _gaussian2BMatrixElement(bra, ket, b, mu_parameter, V_0=1, r_Max=10, quad_or
 #===============================================================================
 def _ssss_r2_dependentFunction(r2, **kwargs):
     # getters
-    mu_b_coef = np.sqrt(kwargs.get(_Args.mu_b_coef))
+    mu_b_coef = kwargs.get(_Args.mu_b_coef)
     mu2 = kwargs.get(_Args.mu_param)**2
     L_bd = kwargs.get(_Args.L_bd)
     r1 = kwargs.get(_Args.r1)
     
     
-    power_ = (mu_b_coef * r2) + (r1 / (mu_b_coef * mu2))
-    power_ = - (power_**2)
+    power_ = r2 + (r1 / (mu_b_coef * mu2))
+    power_ = - mu_b_coef * (power_**2)
     
     # the quadrature roots never come over r=0 (x=-1)
     # L_bd' = L_bd - 1
-    aux  = np.exp((L_bd * np.log(r2)) + power_)     
+    aux  = np.exp(((L_bd - 1) * np.log(r2)) + power_)     
     return aux
 
 def _ssss_radialIntegral_over_r2(**kwargs):
@@ -417,19 +415,18 @@ def _ssss_radialIntegral_over_r2(**kwargs):
         for k_d in range(nd +1):
             alpha_nlk_d = _sho_series_coeff(QN_1body_radial(nd, 0), k_d)
             
-            L_bd = 2*(k_b + k_d) + 1
+            L_bd = 2*(k_b + k_d) + 2
             kwargs[_Args.L_bd] = L_bd
             
-            aux = (alpha_nlk_b + alpha_nlk_d - (L_bd * np.log(b_length)))
+            aux  = np.exp(alpha_nlk_b + alpha_nlk_d - (L_bd * np.log(b_length)))
+            aux *= (-1)**(k_b + k_d)
             
-            aux = ((-1)**(k_b + k_d)) * np.exp(aux)
-            
-            # negative integral
+            # negative integral exp(-(A*r2 - B)^2)
             kwargs[_Args.r1] *= -1
             neg_int = gaussianIntegralQuadrature(_ssss_r2_dependentFunction, 
                                                  0, r_Max, quad_order,
                                                  **kwargs)
-            # positive integral (restore r1)
+            # positive integral (restore r1) exp(-(A*r2 + B)^2)
             kwargs[_Args.r1] *= -1
             pos_int = gaussianIntegralQuadrature( _ssss_r2_dependentFunction, 
                                                  0, r_Max, quad_order,
@@ -443,27 +440,25 @@ def _ssss_radialIntegral_over_r2(**kwargs):
 def _ssss_r1_dependentFunction(r1, **kwargs):
     # getters
     mu_b_coef = kwargs.get(_Args.mu_b_coef)
-    b_param2  = kwargs.get(_Args.b_length)**2
     mu2     = kwargs.get(_Args.mu_param)**2
     L_ac    = kwargs.get(_Args.L_ac)
     
     # set
     kwargs[_Args.r1] = r1
     
-#     power_ = - (r1**2) * (mu_b_coef - ((1/mu2) * (1 + (1/(mu_b_coef * mu2)))))
     power_  = mu_b_coef - (1/(mu_b_coef * (mu2**2)))
     power_ *= - (r1**2)
     
     # the quadrature roots never come over r=0 (x=-1)
-    # L_ac = L_ac - 1
-    aux  = np.exp((L_ac * np.log(r1)) + power_) 
+    # L_ac' = L_ac - 1
+    aux  = np.exp(((L_ac - 1)* np.log(r1)) + power_) 
     aux *= _ssss_radialIntegral_over_r2(**kwargs)
     
     return aux
 
 
 
-def _ssss_gaussian2BMatrixElement(na, nb, nc, nd, b, mu_param, V_0=1, r_Max=10, quad_ord=10):
+def _ssss_gaussian2BMatrixElement(na, nb, nc, nd, b_length, mu_param, V_0=1, r_Max=10, quad_ord=10):
     
     kwargs = {
         _Args.b_st: nb,
@@ -483,7 +478,7 @@ def _ssss_gaussian2BMatrixElement(na, nb, nc, nd, b, mu_param, V_0=1, r_Max=10, 
         
         for k_c in range(nc +1):
             alpha_nlk_b = _sho_series_coeff(QN_1body_radial(nc, 0), k_c)
-            L_ac = (2*(k_a + k_c)) + 1
+            L_ac = (2*(k_a + k_c)) + 2
             kwargs[_Args.L_ac] = L_ac
             
             aux = np.exp(alpha_nlk_a + alpha_nlk_b - (L_ac * np.log(b_length)))
@@ -515,7 +510,7 @@ if __name__ == '__main__':
     bra = QN_2body_L_Coupling(a, b, 2)  
     ket = QN_2body_L_Coupling(c, d, 2)
     
-    quad_ord = 120
+    quad_ord = 100
     r_max = 6
 #     for quad_ord in range(5, 41, 5):
 # #     for r_max in range(1, 12 , 5):
@@ -528,13 +523,18 @@ if __name__ == '__main__':
     nc = n
     nd = n
     
-    la = 2
-    lb = 2
-    lc = 2
-    ld = 2
-    L  = 4
+    # na = 2
+    # nb = 0
+    # nc = 0
+    # nd = 1
     
-#     for quad_ord in (i for i in range(50, 101, 10)):
+    la = 0
+    lb = 0
+    lc = 0
+    ld = 0
+    L  = 0
+    
+    # for quad_ord in (i for i in range(80, 141, 10)):
 #         a, b = QN_1body_radial(n, la), QN_1body_radial(n, lb)
 #         c, d = QN_1body_radial(n, lc), QN_1body_radial(n, ld)
 #         #_plot_functions(a, b, c, d, b_length, mu_param, V_0, r_max)
@@ -543,6 +543,7 @@ if __name__ == '__main__':
 #                                                 QN_2body_L_Coupling(c, d, L), 
 #                                                 b_length, mu_param, V_0, 
 #                                                 quad_ord=quad_ord, r_Max=r_max))
+    #for L in range(0,4):
     for mu_param in (1.0, 0.7):
         a, b = QN_1body_radial(na, la), QN_1body_radial(nb, lb)
         c, d = QN_1body_radial(nc, lc), QN_1body_radial(nd, ld)
@@ -552,11 +553,11 @@ if __name__ == '__main__':
                                                 QN_2body_L_Coupling(c, d, L), 
                                                 b_length, mu_param, V_0, 
                                                 quad_ord=quad_ord, r_Max=r_max))
-#         print("me (ssss) = ", _ssss_gaussian2BMatrixElement(na, nb, nc, nd, 
-#                                                             b, mu_param, V_0, 
-#                                                             r_max, int(quad_ord//.7)))
-        
-        
+        print("me (ssss) = ", _ssss_gaussian2BMatrixElement(na, nb, nc, nd, 
+                                                            b_length, mu_param, V_0, 
+                                                            r_max, int(quad_ord)))
+    
+    print()
     
     
 #     a, b = QN_1body_radial(0, la), QN_1body_radial(0, lb)

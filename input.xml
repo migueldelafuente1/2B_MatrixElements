@@ -1,18 +1,20 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>bb_4He</Output_Filename>
+		<Output_Filename>bb_SPSD</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
-			   are not required parameters, define values only if explicit 
+			   are not required parameters, define values only for explicit 
 			   setting.
 			-->
 		<A_mass>4</A_mass>
-		<hbar_omega units='MeV'>25.8373</hbar_omega>
-		<b_length units='fm'>1.2662</b_length>
+		<hbar_omega units='MeV'>18.4586</hbar_omega>
+		<b_length units='fm'>1.4989</b_length>
+		<!--hbar_omega units='MeV'>25.8373</hbar_omega-->
+		<!--b_length units='fm'>1.2662</b_length-->
 		<!--hbar_omega units='MeV'>13.921</hbar_omega-->
 		<!--b_length units='fm'>1.726</b_length-->
 	</SHO_Parameters>
@@ -22,9 +24,10 @@
 		<Q_Number sp_state='101' sp_energy=''/>
 		<Q_Number sp_state='103' sp_energy=''/>
 		
-		<!--Q_Number sp_state='205' sp_energy=''/-->
-		<!--Q_Number sp_state='10001' sp_energy=''/-->
-		<!--Q_Number sp_state='203' sp_energy=''/-->
+		<Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='10001' sp_energy=''/>
+		<Q_Number sp_state='203' sp_energy=''/>
+		
 		<!--Q_Number sp_state='307' sp_energy=''/-->
 		
 		<!--Q_Number sp_state='10103' sp_energy=''/-->
@@ -51,11 +54,9 @@
 				and the three permutation operations:
 					Spatial (Majorana), spin (Bartlett) and isospin (Heisenberg)
 				 -->
-			<mu_length 	part_1='0.7' 	part_2='1.0' 		units='fm'/>
-			<Wigner		part_1='0.0' 	part_2='-30.0' 	units='MeV'/>
-			<Majorana	part_1='0.0'	part_2='0.0'		units='MeV'/>
-			<!--Wigner		part_1='595.55' 	part_2='-72.21' 	units='MeV'/-->
-			<!--Majorana	part_1='-206.05'	part_2='-68.4'		units='MeV'/-->
+			<mu_length 	part_1='0.7' 		part_2='1.4' 		units='fm'/>
+			<Wigner		part_1='595.55' 	part_2='-72.21' 	units='MeV'/>
+			<Majorana	part_1='-206.05'	part_2='-68.39'		units='MeV'/>
 			<Bartlett 	part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 			<Heisenberg part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 		</Brink_Boeker>

@@ -298,7 +298,7 @@ class TBME_Runner(object):
             # convert to l_ge_10 for taurus input
             for i in range(len(valence)):
                 stt, _en = valence[i]
-                stt = castAntoineFormat2Str(readAntoine(stt), True)
+                stt = castAntoineFormat2Str(readAntoine(stt, True), True)
                 valence[i] = (stt, _en)
         else:
             aux = [self._hamil_type, str(len(valence))]
@@ -377,12 +377,12 @@ class TBME_Runner(object):
         #=======================================================================
         # pppp = val_t1 / 1.7320508075688772 # sqrt(3)
         # nnnn = pppp
-        #  
-        # pnpn = ( 0.5 * val_t0) - (0.28867513459481287 * val_t1) # sqrt(3)/6
-        # pnnp = (-0.5 * val_t0) - (0.28867513459481287 * val_t1)
+        #
+        # pnpn = ( 0.5 * val_t0) + (0.28867513459481287 * val_t1)  # sqrt(3)/6
+        # pnnp = (-0.5 * val_t0) + (0.28867513459481287 * val_t1)
         # nppn = pnnp
         # npnp = pnpn
-        #  
+        #
         # return {0: pppp, 1:pnpn, 2:pnnp, 3:nppn, 4:npnp, 5:nnnn}
         #=======================================================================
         
@@ -394,10 +394,10 @@ class TBME_Runner(object):
         aux_0 = np.sqrt((1 - (phs_J*(bra1==bra2)))*(1 - (phs_J*(ket1==ket2))))
         aux_1 = np.sqrt((1 + (phs_J*(bra1==bra2)))*(1 + (phs_J*(ket1==ket2))))
         
-        pnpn = 0.5*((aux_0 * val_t0) + (aux_1 * val_t1))
-        pnnp = 0.5*((aux_0 * val_t0) - (aux_1 * val_t1))
-        nppn = pnnp
+        pnpn = 0.5*((aux_1 * val_t1) + (aux_0 * val_t0))
         npnp = pnpn
+        pnnp = 0.5*((aux_1 * val_t1) - (aux_0 * val_t0))
+        nppn = pnnp
         
         return {0: pppp, 1:pnpn, 2:pnnp, 3:nppn, 4:npnp, 5:nnnn}
         

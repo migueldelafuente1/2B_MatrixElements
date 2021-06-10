@@ -12,6 +12,7 @@ from matrix_elements.BM_brackets import fact
 from helpers.WaveFunctions import QN_2body_jj_JT_Coupling
 from helpers.Helpers import safe_wigner_9j
 from helpers.Enums import Enum
+from helpers.Log import XLog
 # from helpers.WaveFunctions import 
 
 class MatrixElementException(BaseException):
@@ -31,9 +32,9 @@ class _TwoBodyMatrixElement:
     
     COUPLING = None
     
-    # TODO: ?? DEBUG = False
+    DEBUG_MODE = False
     
-    NULL_TOLERANCE = 1.e-9
+    NULL_TOLERANCE = 1.e-10
     
     def __init__(self, bra, ket, run_it=True):
         raise MatrixElementException("Abstract method, implement me!")
@@ -95,6 +96,25 @@ class _TwoBodyMatrixElement:
         else:
             self._details = (*self._details, detail)
     
+    @classmethod
+    def turnDebugMode(cls, on=True):
+        if on:
+            cls.DEBUG_MODE = True
+        else:
+            cls.DEBUG_MODE = False
+        XLog.resetLog()
+        XLog('root')
+    
+    def saveXLog(self, title=None):
+        #raise MatrixElementException("define the string for the log xml file (cannot have ':/\\.' etc)")
+        if title == None:
+            title = 'me'
+        
+        XLog.getLog("{}_({}_{}_{}).xml"
+                    .format(title, 
+                            self.bra.shellStatesNotation.replace('/2', '.2'),
+                            self.__class__.__name__,
+                            self.ket.shellStatesNotation.replace('/2', '.2')))
     
     def isNullValue(self, value):
         """ Method to fix cero values and stop calculations."""
@@ -139,6 +159,9 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         
         if not self.isNullMatrixElement and run_it:
             # evaluate the normal and antisymmetrized me
+            if self.DEBUG_MODE: XLog.write('nas', 
+                                           bra=bra.shellStatesNotation, 
+                                           ket=ket.shellStatesNotation)
             self._run()
         
     #---------------------------------------------------------------------------
@@ -149,6 +172,17 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         if not isinstance(ket, QN_2body_jj_JT_Coupling):
             raise MatrixElementException("|ket> is not <QN_2body_jj_JT_Coupling>")
     
+    def saveXLog(self, title=None):
+        if title == None:
+            title = 'me'
+        
+        XLog.getLog("{}_({}_{}_{})J{}T{}.xml"
+                    .format(title, 
+                            self.bra.shellStatesNotation.replace('/2', '.2'),
+                            self.__class__.__name__,
+                            self.ket.shellStatesNotation.replace('/2', '.2'),
+                            self.J, self.T))
+        
     def _oddConditionOnJTForSameOrbit(self):
         """ When the  two nucleons of the bra or the ket are in the same orbit,
         total J and T must obey angular momentum coupling restriction. 
@@ -166,19 +200,24 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         
         # construct the exchange ket
         phase, exchanged_ket = self.ket.exchange()
-        
         exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
         
         direct = self._non_antisymmetrized_ME()
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation, 
+                       value=direct)
+        
         exchan = exch_2bme._non_antisymmetrized_ME()
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation, 
+                       value=exchan, phs=phase)
+            
         self._value =  direct - (phase * exchan)
-        
         # value is always M=0, M_T=0
-        
         self._value *= self.bra.norm() * self.ket.norm()
-        # / (2*self.J + 1) 
-        # Wigner Echart theorem only applies for non reduced m.e.
         
+        if self.DEBUG_MODE: 
+            XLog.write('nas', norms=(self.bra.norm(), self.ket.norm()), value=self._value)
     
     def _LScoupled_MatrixElement(self):
         """ 
@@ -211,7 +250,7 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         :recoupling_coeff     <float> 
         """
         
-        # j attribute are defined as 2*j
+        # j attribute is defined as 2*j
         
         w9j_bra = safe_wigner_9j(
             *self.bra.getAngularSPQuantumNumbers(1, j_over2=True), 
@@ -220,6 +259,10 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
 
         if not self.isNullValue(w9j_bra):
             recoupling = np.sqrt((self.bra.j1 + 1)*(self.bra.j2 + 1)) * w9j_bra
+            if self.DEBUG_MODE:
+                re1 = ((self.bra.j1 + 1)*(self.bra.j2 + 1)*(2*self._S_bra + 1)
+                       *(2*self._L_bra + 1))**.5 * w9j_bra 
+                XLog.write('recoup', Lb=self._L_bra, Sb=self._S_bra, val_b=re1)
             
             w9j_ket = safe_wigner_9j(
                 *self.ket.getAngularSPQuantumNumbers(1, j_over2=True), 
@@ -231,6 +274,11 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
                 recoupling *= np.sqrt((self.ket.j1 + 1)*(self.ket.j2 + 1))
                 recoupling *= np.sqrt((2*self._S_bra + 1)*(2*self._L_bra + 1)
                                       *(2*self._S_ket + 1)*(2*self._L_ket + 1))
+                
+                if self.DEBUG_MODE:
+                    re2 = ((self.ket.j1 + 1)*(self.ket.j2 + 1)*(2*self._S_ket + 1)
+                           *(2*self._L_ket + 1))**.5 * w9j_ket
+                    XLog.write('recoup', Lk=self._L_ket, Sk=self._S_ket, val_k=re2)
                 
                 return (False, recoupling)
         return (True, 0.0)
@@ -253,8 +301,6 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
                 self._S_ket = S_ket
                 
                 for L in range(L_min, L_max +1):
-                    if L==1:
-                        _=0
                     self._L_bra = L
                     
                     for L_ket in self._validKetTotalAngularMomentums():
@@ -265,6 +311,7 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
                             continue
                         
                         sum_ += coupling * self._LScoupled_MatrixElement()
+                
         return sum_
         
     

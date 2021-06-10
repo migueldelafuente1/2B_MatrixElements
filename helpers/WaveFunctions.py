@@ -142,6 +142,10 @@ class QN_1body_jj(_WaveFunction):
     def shellState(self):
         return shellSHO_Notation(self.n, self.l, self.j)
     
+    @property
+    def get_nl(self):
+        return self.n, self.l
+
     def __str__(self):
         # TODO: Or Antoine format
         return "(n:{},l:{},j:{}/2)".format(self.n, self.l, self.j)
@@ -402,16 +406,24 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
         return (getattr(self, 'l{}'.format(particle)),
                 aux * 1, 
                 aux * getattr(self, 'j{}'.format(particle)))
-        
+    
+    
     
     def __str__(self):
-        return "[{}, {},(J:{}T:{})]".format(self.sp_state_1.__str__(), 
-                                             self.sp_state_2.__str__(), 
-                                             self.J, self.T)
+        return "[{}, {},(J:{}T:{})]".format(self.sp_state_1.shellState, 
+                                            self.sp_state_2.shellState, 
+                                            self.J, self.T)
+        # return "[{}, {},(J:{}T:{})]".format(self.sp_state_1.__str__(), 
+        #                                      self.sp_state_2.__str__(), 
+        #                                      self.J, self.T)
     
     @property
     def shellStatesNotation(self):
         return self.sp_state_1.shellState + ' ' + self.sp_state_2.shellState
+    
+    def getRadialQuantumNumbers(self):
+        return (QN_1body_radial(*self.sp_state_1.get_nl), 
+                QN_1body_radial(*self.sp_state_2.get_nl))
     
     def __eq__(self, other, also_3rd_components=False):
         """ 

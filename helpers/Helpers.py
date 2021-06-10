@@ -126,8 +126,6 @@ from sympy.physics.wigner import wigner_9j, racah, clebsch_gordan, wigner_3j
 def safe_wigner_9j(*args):
     """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the arguments don't fulfill the triangle
     relation. """
-    if args == (2, 0.5, 1.5, 2, 0.5, 1.5, 1, 1, 2):
-        _=0
     try: 
         return float(wigner_9j(*args, prec=None))
     except ValueError or AttributeError:

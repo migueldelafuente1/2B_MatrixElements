@@ -16,13 +16,25 @@ from helpers.Enums import CouplingSchemeEnum, SHO_Parameters,\
 from helpers.Helpers import angular_condition, fact
 from helpers.integrals import talmiIntegral
 from matrix_elements.BM_brackets import BM_Bracket
+from helpers.Log import XLog
 
 #===============================================================================
 # Global dictionary for B coefficient memorization pattern
 # Index : comma separated indexes string: 'n,l,n_q,l_q,p'
 
 def _B_coeff_memo_accessor(n, l, n_q, l_q, p):
-    return ','.join(map(lambda x: str(x), [n, l, n_q, l_q, p]))
+    """ 
+    Key constructor for the memory storage of the coefficients.
+        B(nl,n'l', p) coefficients are symmetric by nl <-> n'l' return the 
+    lowest tuple (read from the left):
+    
+    _B_coeff_memo_accessor(1, 2, 0, 3, 1) >>> (0, 3, 1, 2, 1)
+    _B_coeff_memo_accessor(0, 3, 1, 2, 1) >>> (0, 3, 1, 2, 1)
+    
+    """
+    
+    list_ = [*min((n, l), (n_q, l_q)), *max((n, l), (n_q, l_q)), p]
+    return ','.join(map(lambda x: str(x), list_))
 
 _B_Coefficient_Memo = {}
 
@@ -114,11 +126,11 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
                         "in PotentialForms Enumeration, got: [{}]".format(value))
 
             if param in SHO_Parameters.members():
-                if param == SHO_Parameters.b_length:
-                    # In the center of mass system, b_length = b_length / sqrt_(2)
-                    value *= np.sqrt(1) 
-                    ## NO b_rel = sqrt_(2)*b !!, trasnformation taken into account
-                    ## for the Talmi integrals and the B_nlp coefficients
+                # if param == SHO_Parameters.b_length:
+                #     # In the center of mass system, b_length = b_length / sqrt_(2)
+                #     value *= np.sqrt(2) 
+                #     ## NO b_rel = sqrt_(2)*b !!, transformation taken into account
+                #     ## for the Talmi integrals and the B_nlp coefficients
                 cls.PARAMS_SHO[param] = value
             else:
                 cls.PARAMS_FORCE[param] = value
@@ -156,7 +168,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         return self._parity_ket        
         
     #===========================================================================
-    # % COMMON METHODS
+    # % SHARED METHODS
     #===========================================================================
     
     def __checkInputArguments(self, bra, ket):
@@ -178,8 +190,6 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
                 " to be a helper ".format(self.__class__.__bases__))
         
         if not self.isNullMatrixElement:
-            # TODO: Redundant !! 
-            #self._initializeRequiredAttributes()
             
             self._value = self.centerOfMassMatrixElementEvaluation()
     
@@ -235,18 +245,15 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         if not b_param:
             b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
         
-#         tpl = (self._n, self._l, self._N, self._L, self._n_q, self._l_q, self._p)
-        tpl = (self._n, self._l, self._n_q, self._l_q, self._p)
+        
+        tpl   = (self._n, self._l, self._n_q, self._l_q, self._p)
         tpl = _B_coeff_memo_accessor(*tpl)
-        ## TODO: B(nl,n'l', p) coefficients are symmetric by nl <-> n'l'
-        #tpl2 = (self._n_q, self._l_q, self._n, self._l, self._p)
-        #tpl2 = _B_coeff_memo_accessor(*tpl2)
         
         global _B_Coefficient_Memo
         
         if not tpl in _B_Coefficient_Memo:
             _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation(b_param)
-        # remove = _B_Coefficient_Memo[tpl]
+
         return _B_Coefficient_Memo[tpl]
     
     def _B_coefficient_evaluation(self, b_param=None):
@@ -274,7 +281,6 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         min_ = max(0, self._p - (self._l + self._l_q)//2 - self._n_q)
         
         for k in range(min_, max_ +1):
-            # TODO: check  +1 in the two numerator factorial_s
             const_k = ((fact(self._l + k) 
                       + fact(self._p - k - (self._l - self._l_q)//2))
                        -
@@ -323,7 +329,6 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         C_[X](n1,n2, l1,l2, (n1,n2, l1,l2)' L, L', ..., p)
         carry valid values, call delta and common constants
         """
-        # TODO: implement interaction series.
         raise MatrixElementException("Series to be implemented here from "
                                      "secureIter or minimalIter classes")
         return
@@ -341,9 +346,14 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         sum_ = 0.0
         for p in range(max(self.rho_bra, self.rho_ket) +1):
             self._p = p
+            series = self._interactionSeries() 
+            Ip =     self.talmiIntegral()
+            product = series * Ip
+            sum_ += product
+            # sum_ += self._interactionSeries() * self.talmiIntegral()
             
-            sum_ += self._interactionSeries() * self.talmiIntegral()
-            
+            if self.DEBUG_MODE:
+                XLog.write('talmi', p=p, series = series, Ip=Ip, val=product)
         return self._globalInteractionCoefficient() * sum_
     
     def centerOfMassMatrixElementEvaluation(self):
@@ -418,57 +428,20 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
     N,L, n,n', l,l' under verifications on parity and angular momentum
     """
     
-    
-    
-# TODO: The wave_function specification is not necessary since we cannot iterate NL, and n'l' could be easily defined
-#     def _validCOMqqnnAlgorithm(self, wave_function):
-#         
-#         assert wave_function in ('bra', 'ket'), "invalid argument (only bra/ket)"
-#         
-#         rho = getattr(self, 'rho_'+wave_function)
-#         lambda_ = getattr(self, '_L_'+wave_function)
-#         
-#         _rho_lambda_not_pair = bool(rho % lambda_)
-#         
-#         valid_qqnn = set()
-#         _big_Lamb_min = lambda_
-#         
-#         if _rho_lambda_not_pair:
-#             if (lambda_ == 0):
-#                 return valid_qqnn
-#             else:
-#                 _big_Lamb_min += 1
-#         
-#         for N in range((rho//2) +1):
-#             for n in range((rho//2) - N +1):
-#                 _big_N = N + n
-#                 _big_Lamb = rho - (2*_big_N)
-#                 
-#                 l_min = lambda_ + ((_big_Lamb - _big_Lamb_min)/2)
-#                 
-#                 for L in range(l_min, _big_Lamb - l_min +1):
-#                     l = rho - L - (2*_big_Lamb)
-#                     
-#                     if getattr(self, 'parity_'+wave_function) + (L + l)% 2 == 0:
-#                         continue
-#                     valid_qqnn.add(((N, L), (n, l)))
-#         
-#         return valid_qqnn
-    
     def _validCOM_Bra_qqnn(self):
                 
         rho = self.rho_bra
         lambda_ = self._L_bra
         ## Notation: big_Lambda = L + l, big_N = N + n
         
-        # TODO: Fix lambda_ = 0 case for parity
+        
         rho_lambda_dont_pair = (rho - lambda_) % 2
         
-        valid_qqnn = []#set()
+        valid_qqnn = []
         big_Lambda_min = lambda_
         
         if rho_lambda_dont_pair:
-            if (lambda_ == 0):
+            if (lambda_ == 0):         #lambda_ = 0 case for parity
                 return valid_qqnn
             else:
                 big_Lambda_min += 1
@@ -485,7 +458,6 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 
                 l_min = lambda_ + ((big_Lambda - big_Lambda_min)//2)
                 for l in range(big_Lambda - l_min, l_min +1, +1):
-#                 for l in range(l_min, big_Lambda - l_min -1, -1):
                     L = rho - l - (2*big_N)
                     
                     if not angular_condition(l, L, lambda_):
@@ -494,7 +466,6 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                     elif self.parity_bra + (L + l)% 2 == 1:
                         _ = 1
                         continue
-                    #key = 1000*n + 100*l + 10*N + L
                     valid_qqnn.append((n, l, N, L))
         
         # TODO: Comment when not debugging
@@ -540,8 +511,8 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 sum_ += _com_coeff * bmb_bra * bmb_ket * _b_coeff
                 
                 # TODO: comment when not debugging
-                if self.DEBUG_MODE:
-                    self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
+                # if self.DEBUG_MODE:
+                #     self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
                 
         return sum_
         
@@ -581,8 +552,8 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
         _com_coeff = self._interactionConstantsForCOM_Iteration()
         
         # TODO: comment when not debugging
-        if self.DEBUG_MODE:
-            self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
+        # if self.DEBUG_MODE:
+        #     self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
         
         return _com_coeff * bmb_bra * bmb_ket * _b_coeff
     
@@ -632,7 +603,7 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
                 l_min = big_Lambda - l_max 
                 
                 if (l_max - l_min) > lambda_ or (l_max < 0):
-                    # TODO: Maybe unnecessary, add breakpoint
+                    # Maybe unnecessary, add breakpoint
                     _ = 0
                     continue
                 
@@ -650,7 +621,7 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
                         aux = (N, self._L, self._n, l, (self._n_q, self._l_q))
                         if ((self._n_q < 0) or (self._l_q < 0) 
                             or not self._deltaConditionsForCOM_Iteration()):
-                            # TODO: Maybe unnecessary, add breakpoint
+                            #  Maybe unnecessary, add breakpoint
                             _ = 0
                             continue
                         
@@ -674,6 +645,4 @@ class TalmiTransformation(_TalmiTransformation_SecureIter):
     mass coordinates
     """
     pass
-#     def __checkInputArguments(self, *args, **kwargs):
-#         _TalmiTransformation_MinimalIter.__checkInputArguments(self, *args, **kwargs)
     
