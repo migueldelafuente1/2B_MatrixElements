@@ -374,15 +374,20 @@ class XLog(object):
                         val = "{:5.4e}".format(val)
                 attribs[key_] = str(val)
         return attribs
+    
+    def _accessLastEntry_Version1(self, tag, **new_attrs):
+        """ TODO: DEPRECATED (18/6/21), remove it if not breaks tree logging."""
         
-    def _accessLastEntry(self, tag, **new_attrs):
         new_attrs = self._cast2strAttribValues(new_attrs)
         
         # leaves = self._debugLogs.findall(xpath)
         leaves = self._debugLogs.findall(self._xpath)
         leaf = leaves[-1]
         if tag == leaf.tag:
-            new_keys = [k not in new_attrs for k in leaf.attrib]
+            new_keys = [k not in new_attrs for k in leaf.attrib] # v1
+            #new_keys = [k not in leaf.attrib for k in new_attrs]
+            new_keys = [(k, k not in leaf.attrib) for k in new_attrs]
+            new_keys = filter(lambda x: x[1], new_keys)
             if not False in new_keys:
                 # append new attributes
                 for k, val in new_attrs.items():
@@ -391,6 +396,36 @@ class XLog(object):
                 new_vals = [leaf.attrib[k]==new_attrs[k] for k in new_attrs]
                 if not False in new_vals:
                     leaf.attrib = new_attrs #overwrite attributes
+                else:
+                    # append element (repeated attribute with different value)
+                    parent = self._debugLogs.find(self._parent_xpath)
+                    _ = ET.SubElement(parent, tag, new_attrs)
+        else:
+            # there is no tag value in the current leaf, append element
+            leaf.append(ET.Element(tag, new_attrs))
+     
+    def _accessLastEntry(self, tag, **new_attrs):
+        new_attrs = self._cast2strAttribValues(new_attrs)
+        
+        # leaves = self._debugLogs.findall(xpath)
+        leaves = self._debugLogs.findall(self._xpath)
+        leaf = leaves[-1]
+        if tag == leaf.tag:
+            keys = [(k, k not in leaf.attrib) for k in new_attrs]
+            new_keys = dict(filter(lambda x: x[1], keys))
+            old_keys = dict(filter(lambda x: not x[1], keys))
+            
+            if len(new_keys) > 0:
+                # append new attributes
+                for k in new_keys:
+                    leaf.attrib[k] = new_attrs[k]
+                
+            else:
+                new_vals = [leaf.attrib[k]==new_attrs[k] for k in old_keys]
+                if not False in new_vals:
+                    # overwrite attributes
+                    for k in old_keys:
+                        leaf.attrib[k] = new_attrs[k]
                 else:
                     # append element (repeated attribute with different value)
                     parent = self._debugLogs.find(self._parent_xpath)

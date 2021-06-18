@@ -9,9 +9,10 @@ import numpy as np
 import matrix_elements.BM_brackets as bmb
 from matrix_elements.BM_brackets import fact
 
-from helpers.WaveFunctions import QN_2body_jj_JT_Coupling
+from helpers.WaveFunctions import QN_2body_jj_JT_Coupling,\
+    QN_2body_jj_J_Coupling
 from helpers.Helpers import safe_wigner_9j
-from helpers.Enums import Enum
+from helpers.Enums import Enum, CouplingSchemeEnum
 from helpers.Log import XLog
 # from helpers.WaveFunctions import 
 
@@ -31,6 +32,7 @@ class _TwoBodyMatrixElement:
     PARAMS_SHO   = {}
     
     COUPLING = None
+    _BREAK_ISOSPIN = None
     
     DEBUG_MODE = False
     
@@ -46,6 +48,13 @@ class _TwoBodyMatrixElement:
     def setInteractionParameters(cls, *args, **kwargs):
         """ Implement the parameters for the interaction calculations. """
         raise MatrixElementException("Abstract method, implement me!")
+    
+    @classmethod
+    def resInteractionParameters(cls, also_SHO=False):
+        """ Reset All interaction arguments to be changed """
+        cls.PARAMS_FORCE = {}
+        if also_SHO:
+            cls.PARAMS_SHO   = {}
     
     def permute(self):
         """ Permute single particle functions """
@@ -84,6 +93,10 @@ class _TwoBodyMatrixElement:
             self._isNullMatrixElement = False
             
         return self._isNullMatrixElement
+    
+    @property
+    def breakIsospin(self):
+        return self._BREAK_ISOSPIN
     
     @property
     def details(self):
@@ -127,9 +140,10 @@ class _TwoBodyMatrixElement:
 #===============================================================================
 # 
 #===============================================================================
-
-
-class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
+class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
+    
+    _BREAK_ISOSPIN = True
+    COUPLING = CouplingSchemeEnum.JJ
     
     def __init__(self, bra, ket, run_it=True):
         
@@ -139,59 +153,55 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         self.ket = ket
         
         self.J = bra.J
-        self.T = bra.T
         
-        self._L_bra = None
-        self._L_ket = None
-        self._S_bra = None
-        self._S_ket = None
-        
-        if (bra.J != ket.J) or (bra.T != ket.T):
-            print("Bra JT [{}]doesn't match with ket's JT [{}]"
-                  .format(bra.J, bra.T, ket.J, ket.T))
+        if (bra.J != ket.J):
+            print("Bra J [{}]doesn't match with ket's J [{}]"
+                  .format(bra.J, ket.J))
             self._value = 0.0
-        elif bra.T not in (0, 1):
-            print("T[{}] for 2 fermion W.F is not 0 or 1".format(bra.T))
-            self._value = 0.0
-            # TODO: Create an Angular Condition on J for elements (also with WF checkers)
         else:
-            self._oddConditionOnJTForSameOrbit()
+            self._nullConditionForSameOrbit()
         
         if not self.isNullMatrixElement and run_it:
             # evaluate the normal and antisymmetrized me
-            if self.DEBUG_MODE: XLog.write('nas', 
-                                           bra=bra.shellStatesNotation, 
-                                           ket=ket.shellStatesNotation)
+            if self.DEBUG_MODE: 
+                XLog.write('nas', 
+                           bra=bra.shellStatesNotation, ket=ket.shellStatesNotation)
             self._run()
-        
-    #---------------------------------------------------------------------------
+
     
     def __checkInputArguments(self, bra, ket):
-        if not isinstance(bra, QN_2body_jj_JT_Coupling):
-            raise MatrixElementException("<bra| is not <QN_2body_jj_JT_Coupling>")
-        if not isinstance(ket, QN_2body_jj_JT_Coupling):
-            raise MatrixElementException("|ket> is not <QN_2body_jj_JT_Coupling>")
-    
+        if not isinstance(bra, QN_2body_jj_J_Coupling):
+            raise MatrixElementException("<bra| is not <QN_2body_jj_J_Coupling>")
+        if not isinstance(ket, QN_2body_jj_J_Coupling):
+            raise MatrixElementException("|ket> is not <QN_2body_jj_J_Coupling>")
+        
+        ## Wave functions do not change the number of protons or neutrons_
+        if bra.isospin_3rdComponent != ket.isospin_3rdComponent:
+            self._value = 0.0
+            self._isNullMatrixElement = True
+        
     def saveXLog(self, title=None):
         if title == None:
             title = 'me'
-        
-        XLog.getLog("{}_({}_{}_{})J{}T{}.xml"
+        auxT_ = 'T{}'.format(self.T) if hasattr(self, 'T') else ''
+    
+        XLog.getLog("{}_({}_{}_{})J{}{}.xml"
                     .format(title, 
                             self.bra.shellStatesNotation.replace('/2', '.2'),
                             self.__class__.__name__,
                             self.ket.shellStatesNotation.replace('/2', '.2'),
-                            self.J, self.T))
+                            self.J, auxT_))
         
-    def _oddConditionOnJTForSameOrbit(self):
+    def _nullConditionForSameOrbit(self):
         """ When the  two nucleons of the bra or the ket are in the same orbit,
         total J and T must obey angular momentum coupling restriction. 
         """
         if (self.bra.nucleonsAreInThesameOrbit() or 
             self.ket.nucleonsAreInThesameOrbit()):
-            if (self.J + self.T)%2 != 1:
+            if self.J % 2 == 1:
                 self._value = 0.0
                 self._isNullMatrixElement = True
+    
     
     def _run(self):
         """ Calculate the antisymmetric matrix element value. """
@@ -202,21 +212,23 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
         phase, exchanged_ket = self.ket.exchange()
         exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
         
-        direct = self._non_antisymmetrized_ME()
         if self.DEBUG_MODE: 
-            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation, 
-                       value=direct)
+            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
         
-        exchan = exch_2bme._non_antisymmetrized_ME()
-        if self.DEBUG_MODE: 
-            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation, 
-                       value=exchan, phs=phase)
+        direct = self._non_antisymmetrized_ME()
+        
+        if self.DEBUG_MODE:
+            XLog.write('na_me', value=direct)
+            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation)
             
+        exchan = exch_2bme._non_antisymmetrized_ME()
+        
         self._value =  direct - (phase * exchan)
         # value is always M=0, M_T=0
         self._value *= self.bra.norm() * self.ket.norm()
         
         if self.DEBUG_MODE: 
+            XLog.write('na_me', value=exchan, phs=phase)
             XLog.write('nas', norms=(self.bra.norm(), self.ket.norm()), value=self._value)
     
     def _LScoupled_MatrixElement(self):
@@ -314,4 +326,72 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement):
                 
         return sum_
         
+    
+class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
+    
+    """ 
+        Base normalized & antisimetrized_ two body matrix element for isospin_
+    symmetric interactions. 
+        Based on general J interaction (perform the explicit exchange and the 
+    LS decoupling). Overwrites the constructor for the T arguments and the JT 
+    odd condition for the same orbit states.
+    """
+    
+    COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
+    _BREAK_ISOSPIN = False
+    
+    def __init__(self, bra, ket, run_it=True):
+        
+        self.__checkInputArguments(bra, ket)
+        
+        self.bra = bra
+        self.ket = ket
+        
+        self.J = bra.J
+        self.T = bra.T
+        
+        if (bra.J != ket.J) or (bra.T != ket.T):
+            print("Bra JT [{}]doesn't match with ket's JT [{}]"
+                  .format(bra.J, bra.T, ket.J, ket.T))
+            self._value = 0.0
+        else:
+            self._nullConditionForSameOrbit()
+        
+        if not self.isNullMatrixElement and run_it:
+            # evaluate the normal and antisymmetrized me
+            if self.DEBUG_MODE: XLog.write('nas', 
+                                           bra=bra.shellStatesNotation, 
+                                           ket=ket.shellStatesNotation)
+            self._run()
+        
+    #---------------------------------------------------------------------------
+    
+    def __checkInputArguments(self, bra, ket):
+        if not isinstance(bra, QN_2body_jj_JT_Coupling):
+            raise MatrixElementException("<bra| is not <QN_2body_jj_JT_Coupling>")
+        if not isinstance(ket, QN_2body_jj_JT_Coupling):
+            raise MatrixElementException("|ket> is not <QN_2body_jj_JT_Coupling>")
+    
+    # def saveXLog(self, title=None):
+    #     if title == None:
+    #         title = 'me'
+    #
+    #     XLog.getLog("{}_({}_{}_{})J{}T{}.xml"
+    #                 .format(title, 
+    #                         self.bra.shellStatesNotation.replace('/2', '.2'),
+    #                         self.__class__.__name__,
+    #                         self.ket.shellStatesNotation.replace('/2', '.2'),
+    #                         self.J, self.T))
+        
+    def _nullConditionForSameOrbit(self):
+        """ When the  two nucleons of the bra or the ket are in the same orbit,
+        total J and T must obey angular momentum coupling restriction. 
+        """
+        if (self.bra.nucleonsAreInThesameOrbit() or 
+            self.ket.nucleonsAreInThesameOrbit()):
+            if (self.J + self.T)%2 != 1:
+                self._value = 0.0
+                self._isNullMatrixElement = True
+    
+    
     

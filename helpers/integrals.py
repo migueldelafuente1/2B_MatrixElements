@@ -24,13 +24,10 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
     #potential = potential.lower()
     
     if potential == PotentialForms.Gaussian:
-        
-#         return b_param *((1/mu_param)**2 / (1 + 2*(b_param/mu_param)**2))**(p+1.5)
         return (b_param**3) / (1 + 2*(b_param/mu_param)**2)**(p+1.5)
     
     elif potential == PotentialForms.Coulomb:
-        # mu_param_param must be fixed for the nucleus (Z)
-        return mu_param * (b_param**2) * np.exp(gamma_half_int(2*p + 3))
+        return (b_param**2) * np.exp(fact(p) - gamma_half_int(2*p + 3)) / (2**.5)
     
     elif potential == PotentialForms.Yukawa:
         sum_ = 0.

@@ -159,8 +159,8 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
 #         _TwoBodyMatrixElement_JTCoupled._run(self)
     
     def _deltaConditionsForCOM_Iteration(self):
-        
-        #return True
+        # TODO: Avoid this l, l' T conditions
+        return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
                 return True

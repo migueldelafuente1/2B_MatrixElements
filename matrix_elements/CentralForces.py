@@ -7,9 +7,11 @@ import numpy as np
 
 from helpers.Helpers import safe_racah
 
-from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled
+from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
+    _TwoBodyMatrixElement_JCoupled
 from matrix_elements.transformations import TalmiTransformation
-from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs
+from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
+    PotentialForms
 
 class CentralForce(TalmiTransformation):
     
@@ -109,7 +111,7 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
     
     def _deltaConditionsForCOM_Iteration(self):
         
-        #return True
+        return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
@@ -127,8 +129,84 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
-        
         return self.centerOfMassMatrixElementEvaluation()
     
+
+class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
+    
+    COUPLING = CouplingSchemeEnum.JJ
+    
+    _BREAK_ISOSPIN = True
+    
+    COULOMB_CONST = 1.4522545041047  ## [MeV fm_ e^-2] K factor in natural untis
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """
+        Arguments for a radial potential form V(r; mu_length, constant, n, ...)
+        
+        :b_length 
+        :hbar_omega
+        :constant        <float>  MeV
+        
+        method bypasses calling from main or io_manager
+        """
+        # TODO: test with and without io_manager
+        # if True in map(lambda a: isinstance(a, dict), kwargs.values()):
+        #     # when calling from io_manager, arguments appear as dictionaries, 
+        #     # parse them            
+        #     # _map = {
+        #     #     CentralMEParameters.potential : (AttributeArgs.name, str),
+        #     #     CentralMEParameters.constant  : (AttributeArgs.value, float),
+        #     #     CentralMEParameters.mu_length : (AttributeArgs.value, float),
+        #     #     CentralMEParameters.n_power   : (AttributeArgs.value, int)
+        #     # }
+        # !! for inside previous if 
+        for arg, value in kwargs.items():
+            # if arg in _map:
+            #     attr_parser = _map[arg]
+            #     attr_, parser_ = attr_parser
+            #     kwargs[arg] = parser_(kwargs[arg].get(attr_))
+            if isinstance(value, str):
+                kwargs[arg] = float(value) if '.' in value else int(value)
+                    
+        kwargs[CentralMEParameters.potential] = PotentialForms.Coulomb
+        kwargs[CentralMEParameters.constant]  = cls.COULOMB_CONST
+        kwargs[CentralMEParameters.mu_length] = 1
+        kwargs[CentralMEParameters.n_power]   = 0
+        
+        super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
+    
+    def __init__(self, bra, ket, run_it=True):
+        
+        _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
+
+    def _run(self):
+        
+        if self.bra.isospin_3rdComponent != 1: 
+            ## same number of p or n for bra and ket_ already verified.
+            self._value = 0
+            self._isNullMatrixElement = True
+            
+        else:
+            _TwoBodyMatrixElement_JCoupled._run(self)
+    
+    def _deltaConditionsForCOM_Iteration(self):
+        return True
+    
+    def _validKetTotalSpins(self):
+        """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
+        return (self._S_bra, )
+    
+    def _validKetTotalAngularMomentums(self):
+        """ For Central Interaction, <L |Vc| L'> != 0 only if  L=L' """
+        return (self._L_bra, )
+    
+    def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        """
+        
+        return self.centerOfMassMatrixElementEvaluation()
     
     

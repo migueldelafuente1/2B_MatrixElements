@@ -143,5 +143,6 @@ class OutputFileTypes(Enum):
     oneBody = '.01b'
     twoBody = '.2b'
     centerOfMass = '.com'
-    
+
+
 

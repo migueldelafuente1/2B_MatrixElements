@@ -44,6 +44,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     
     COUPLING = CouplingSchemeEnum.L
     DEBUG_MODE = False
+    _BREAK_ISOSPIN = False
     
     def __init__(self, bra, ket, run_it=True):
         """
@@ -244,7 +245,6 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         
         if not b_param:
             b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
-        
         
         tpl   = (self._n, self._l, self._n_q, self._l_q, self._p)
         tpl = _B_coeff_memo_accessor(*tpl)

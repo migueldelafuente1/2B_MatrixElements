@@ -272,6 +272,7 @@ class TBME_Runner(object):
                 sho_params = getattr(self.input_obj, ip.SHO_Parameters)
                 
                 self.tbme_class = switchMatrixElementType(force)
+                self.tbme_class.resetInteractionParameters(also_SHO=True)
                 self.tbme_class.setInteractionParameters(**params, **sho_params)
                 
                 self._computeForValenceSpaceJTCoupled(force)
