@@ -279,7 +279,7 @@ class _XMLParser(_Parser):
     
     def getValenceSpaceArgs(self):
         """ 
-        the Antoine format for l < 10 or l > 10 in the sho states is assumed to 
+        The Antoine_ format for l < 10 or l > 10 in the sho states is assumed to 
         be correct, attribute "antoine_l_ge_10" is given to the main program to 
         interpret the quantum numbers.
         """
@@ -332,12 +332,13 @@ class _XMLParser(_Parser):
             active_ = force_elem.attrib.get(AttributeArgs.ForceArgs.active)
             force = force_elem.tag
             
-            if active_  in ('1', 'True', 'true', None):                
+            if active_ in ('1', 'True', 'true', None):                
                 assert force in ForceVariablesDict, ParserException(
                     "Unimplemented force and arguments for [{}], see "
                     "'ForceVariablesDict'".format(force))
                 
                 params = {}
+                
                 for param in ForceVariablesDict[force].members():
                     param_elem = force_elem.find(param)
                     if param_elem == None:
@@ -346,7 +347,7 @@ class _XMLParser(_Parser):
                         continue
                     params[param] = param_elem.attrib
                 
-                if len(params) == 0:
+                if len(params) == 0 and ForceVariablesDict[force].members()!=[]:
                     # If no parameters for a tag with not 'active' attribute, skip
                     continue
                 

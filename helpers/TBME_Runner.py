@@ -9,13 +9,15 @@ import json
 import time
 
 from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
-    SHO_Parameters, InputParts, Output_Parameters, OutputFileTypes
+    SHO_Parameters, InputParts, Output_Parameters, OutputFileTypes,\
+    CouplingSchemeEnum
 from matrix_elements import switchMatrixElementType
 from itertools import combinations_with_replacement
-from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling
+from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
+    QN_2body_jj_J_Coupling
 from copy import deepcopy
 from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
-    Constants
+    Constants, almostEqual
 import os
 import numpy as np
 
@@ -30,18 +32,34 @@ class TBME_Runner(object):
     
     RESULT_FOLDER = OUTPUT_FOLDER
     
+    class _Scheme:
+        ## Only for inner use
+        J  = 'J'
+        JT = 'JT'
+    
+    _JSchemeIndexing = {
+        0: (1,  1,  1,  1),  # pppp 
+        1: (1, -1,  1, -1),  # pnpn 
+        2: (1, -1, -1,  1),  # pnnp 
+        3: (-1, 1,  1, -1),  # nppn 
+        4: (-1, 1, -1,  1),  # npnp 
+        5: (-1, -1,-1, -1),  # nnnn
+    }
+    
     def __init__(self, filename='', manual_input={}):
         
         self.filename   = filename
         self.input_obj  = None
-        self.tbme_class    = None
-        self.valence_space = []
+        self.tbme_class = None
+        self.l_ge_10    = False
+        self.valence_space   = []
         self._hamil_type     = '1'
         self._com_correction = '0'
         
         self.results = {}
         self.resultsByInteraction = {}
-        self.resultsSummedUp = {}
+        self.resultsSummedUp    = {}
+        self.interactionSchemes = {}
         
         self.filename_output = 'out'
         
@@ -89,7 +107,7 @@ class TBME_Runner(object):
         
     
     def _readJsonInputFile(self):  
-        print("Warning! input by json is deprecated in the program")
+        print("Warning! input by json is DEPRECATED in the program")
         
         with open(self.filename, 'r') as jf:
             data = json.load(jf)
@@ -104,6 +122,60 @@ class TBME_Runner(object):
         _root = tree.getroot()
         
         self.input_obj = CalculationArgs(_root)
+    
+    def _checkHamilTypeAndForces(self):
+        """ 
+        Certain interactions cannot be expressed in JT formalism if they break
+        isospin_ symmetry (f.e Coulomb_). That means the global scheme for the
+        matrix elements must be J-scheme, and then, only hamilType=3/4 are 
+        accepted to print the elements.
+        
+        This method checks that if HamilType is 0/1, then it must not be any 
+        isospin_ breaking interactions (before any calculations).
+        
+        Also fill the interaction schemes
+        """
+        
+        _forcesAttr = ip.Force_Parameters
+        J_schemeForces = []
+        JT_schemeForces = []
+        T_breaking = []
+        
+        for force in getattr(self.input_obj, _forcesAttr):
+            
+            me = switchMatrixElementType(force)
+            
+            if me._BREAK_ISOSPIN: # cannot use property, m.e. not instanced
+                T_breaking.append(force)
+            
+            f_scheme = me.COUPLING
+            f_scheme = [f_scheme,] if isinstance(f_scheme, str) else f_scheme
+            
+            if CouplingSchemeEnum.L in f_scheme or CouplingSchemeEnum.S in f_scheme:
+                raise TBME_RunnerException("Matrix Element in L or S scheme,"
+                                           "class can only run in J or JT scheme")
+            
+            if (CouplingSchemeEnum.JJ in f_scheme):
+                if (CouplingSchemeEnum.T in f_scheme):
+                    JT_schemeForces.append(force)
+                    self.interactionSchemes[force] = self._Scheme.JT
+                    if me._BREAK_ISOSPIN:
+                        raise TBME_RunnerException(
+                            "Error in force [{}] <class>:[{}] definition"
+                            .format(force, me.__class__.__name__) +
+                            ", Isospin based (reduced) matrix elements breaks T.")
+                else:
+                    J_schemeForces.append(force)
+                    self.interactionSchemes[force] = self._Scheme.J
+        
+        if self._hamil_type in '12':
+            if len(T_breaking) > 0:
+                raise TBME_RunnerException("Cannot compute isospin-breaking interactions"
+                    "{} to write in hamilType format 1-2 (JT scheme)".format(T_breaking))
+            if len(JT_schemeForces) == 0:
+                # TODO: might convert to JT scheme J forces.
+                raise TBME_RunnerException("Cannot compute J forces JT scheme")
+        
     
     def _defineSHOParameters(self):
         """
@@ -167,7 +239,8 @@ class TBME_Runner(object):
         
         valence_space_aux = self.input_obj.Valence_Space
         l_ge_10 = self.input_obj.formatAntoine_l_ge_10
-        # convert to l_ge_10 for the code to use
+        self.l_ge_10 = l_ge_10
+        ## !! All q.n converted to l_ge_10 for TBME_Runner to use
         valence_space = {}
         for spst_ant, spe_ener in valence_space_aux.items():
             n, l, _j = readAntoine(spst_ant, l_ge_10)
@@ -193,9 +266,11 @@ class TBME_Runner(object):
         else:
             # all were defined
             pass        
-    
+            
     def _computeForValenceSpaceJTCoupled(self, force=''):
-        """ """
+        """ 
+        method to run the whole valence space m.e. in the JT scheme
+        """
         q_numbs = getattr(self.input_obj, ip.Valence_Space)
         self.valence_space = valenceSpaceShellNames(q_numbs)
         
@@ -220,14 +295,13 @@ class TBME_Runner(object):
                 
                 self.results[q_numbs[i]][q_numbs[j]] = {0: {},  1: {}}
                 
-                J_ket_min = abs(n1_ket.j - n2_ket.j) // 2
-                J_ket_max = (n1_ket.j + n2_ket.j) // 2
+                J_min = max(abs(n1_ket.j - n2_ket.j) // 2, J_bra_min)
+                J_max = min((n1_ket.j + n2_ket.j) // 2,    J_bra_max)
                 
                 count_ += 1
                 for T in (0, 1):
                     # assume M.E. cannot couple <(JT)|V|J'T'> if J', T' != J, T
-                    for J in range(max(J_bra_min, J_ket_min), 
-                                   min(J_bra_max, J_ket_max)+1):
+                    for J in range(J_min, J_max +1):
                         tic = time.time()
                         
                         bra = QN_2body_jj_JT_Coupling(n1_bra, n2_bra, J, T)
@@ -243,14 +317,95 @@ class TBME_Runner(object):
                                           bra.shellStatesNotation, 
                                           ket.shellStatesNotation, J, T, force))
                             print('\t= {:.8} '.format(me.value))                        
+    
+    def _computeForValenceSpaceJCoupled(self, force=''):
+        """ 
+        method to run the whole valence space m.e. in the J scheme
+        Indexing for J row:
+            {0: pppp, 1:pnpn, 2:pnnp, 3:nppn, 4:npnp, 5:nnnn}
+        """
+        q_numbs = getattr(self.input_obj, ip.Valence_Space)
+        self.valence_space = valenceSpaceShellNames(q_numbs)
         
+        q_numbs = map(lambda qn: int(qn), q_numbs)
+        q_numbs = sorted(q_numbs)#, reverse=True)
+        q_numbs = list(combinations_with_replacement(q_numbs, 2))
+        
+        count_ = 0
+        total_me_ = len(q_numbs)*(len(q_numbs)+1)//2
+        for i in range(len(q_numbs)):
+            n1_bra = QN_1body_jj(*readAntoine(q_numbs[i][0], l_ge_10=True))
+            n2_bra = QN_1body_jj(*readAntoine(q_numbs[i][1], True))
+            
+            self.results[q_numbs[i]] = {}
+            
+            J_bra_min = abs(n1_bra.j - n2_bra.j) // 2
+            J_bra_max = (n1_bra.j + n2_bra.j) // 2
+            
+            for j in range(i, len(q_numbs)):
+                n1_ket = QN_1body_jj(*readAntoine(q_numbs[j][0], True))
+                n2_ket = QN_1body_jj(*readAntoine(q_numbs[j][1], True))
+                
+                J_min = max(abs(n1_ket.j - n2_ket.j) // 2, J_bra_min)
+                J_max = min((n1_ket.j + n2_ket.j) // 2,    J_bra_max)
+                
+                aux = [(J, {}) for J in range(J_min, J_max +1)]
+                self.results[q_numbs[i]][q_numbs[j]] = deepcopy(dict(aux))
+                
+                count_ += 1
+                for J in range(J_min, J_max +1):
+                    for m, mts in self._JSchemeIndexing.items():
+                        tic = time.time()
+                        
+                        n1_bra.m_t = mts[0]
+                        n2_bra.m_t = mts[1]
+                        n1_ket.m_t = mts[2]
+                        n2_ket.m_t = mts[3]
+                        
+                        bra = QN_2body_jj_J_Coupling(n1_bra, n2_bra, J)
+                        ket = QN_2body_jj_J_Coupling(n1_ket, n2_ket, J)
+                        
+                        me = self.tbme_class(bra, ket)
+                        self.results[q_numbs[i]][q_numbs[j]][J][m] = me.value
+                        
+                        if me.value and self.PRINT_LOG:
+                            print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})> {}'
+                                  .format(count_, total_me_,
+                                          time.time()-tic, 
+                                          bra, ket, J, force))
+                            print('\t= {:.8} '.format(me.value))                        
+    
+    
+    def _computeForValenceSpace(self, force):
+        if self.interactionSchemes[force] == self._Scheme.J:
+            self._computeForValenceSpaceJCoupled(force)
+        elif self.interactionSchemes[force] == self._Scheme.JT:
+            self._computeForValenceSpaceJTCoupled(force)
+        else:
+            raise TBME_RunnerException("force [{}] invalid scheme: {}".format(
+                                       force, self.interactionSchemes[force]))
+            
     
     def combineAllResults(self):
         
-        final = {}
-        for _force, results in self.resultsByInteraction.items():
-            recursiveSumOnDictionaries(results, final)
+        final_J  = {}
+        final_JT = {}
+        for force, results in self.resultsByInteraction.items():
+            if self.interactionSchemes[force] == self._Scheme.J:
+                recursiveSumOnDictionaries(results, final_J)
+            else:
+                recursiveSumOnDictionaries(results, final_JT)
         
+        if self._hamil_type in '12':
+            final = final_JT
+            # TODO: convert J dictionary to JT dictionary
+            final_J = self._convertMatrixElemensScheme(final_J, conv_2J=False)
+            recursiveSumOnDictionaries(final_J, final)
+        elif self._hamil_type in '34':
+            final = final_J
+            # TODO: convert JT dictionary to J dictionary
+            final_JT = self._convertMatrixElemensScheme(final_JT, conv_2J=True)
+            recursiveSumOnDictionaries(final_JT, final)
         self.resultsSummedUp = final
                             
     
@@ -260,6 +415,7 @@ class TBME_Runner(object):
         print its combination in a file.
         """
         self._defineValenceSpaceEnergies()        
+        self._checkHamilTypeAndForces()
         
         _forcesAttr = ip.Force_Parameters
         times_ = {}
@@ -275,16 +431,17 @@ class TBME_Runner(object):
                 self.tbme_class.resetInteractionParameters(also_SHO=True)
                 self.tbme_class.setInteractionParameters(**params, **sho_params)
                 
-                self._computeForValenceSpaceJTCoupled(force)
+                self._computeForValenceSpace(force)
                 times_[force_str] = round(time.time() - tic_, 4)
                 print(" Force [{}] m.e. calculated: [{}]s"
                       .format(force, times_[force_str]))
-                
+                # TODO: change to selct resuts
                 self.resultsByInteraction[force_str] = deepcopy(self.results)
                 i += 1
         
         print("Finished computation, Total time (s): [", sum(times_.values()),"]=")
         print("\n".join(["\t"+str(t)+"s" for t in times_.items()]))
+        
         self.combineAllResults()
         
         self.printMatrixElementsFile()
@@ -401,9 +558,29 @@ class TBME_Runner(object):
         nppn = pnnp
         
         return {0: pppp, 1:pnpn, 2:pnnp, 3:nppn, 4:npnp, 5:nnnn}
+    
+    def _getIsospinvaluesFromLabels(self, j_block, J, bra1, bra2, ket1, ket2):
+        """ Reversed of the previous method, also checks <nnnn>=<pppp>, etc. """
+        pppp, nnnn = j_block[0], j_block[5]
+        pnpn, npnp = j_block[1], j_block[4]
+        pnnp, nppn = j_block[2], j_block[3]
         
+        assert almostEqual(pppp, nnnn, tolerance=1e-9), "nnnn m.e != pppp m.e."
+        assert almostEqual(pnpn, npnp, tolerance=1e-9), "pnpn m.e != npnp m.e."
+        assert almostEqual(pnnp, nppn, tolerance=1e-9), "nppn m.e != pnnp m.e."
         
+        v_T1 = pppp
+        v_T0 = (pnpn - pnnp)
         
+        if bra1==bra2 or ket1==ket2:
+            if J % 2 == 0:
+                v_T0 = 0.0
+            else:
+                v_T0 /= 2   ## Aux0 = 2
+                v_T1 = 0.0
+        #else:  ## Aux0 = 1
+        
+        return v_T0, v_T1
     
     def printMatrixElementsFile(self):
         
@@ -483,9 +660,13 @@ class TBME_Runner(object):
         
         with open(self.filename_output + OutputFileTypes.sho, 'w+') as f:
             f.write(strings_)
+            print (">> Antoine format 2body m.e. & valence space saved in [{}]"
+                   .format(self.filename_output + OutputFileTypes.sho))
     
-    def _write2BME_JParticleLabeledBlock(self, bra1, bra2, ket1, ket2, T_vals):
+    def _write2BME_JParticleLabeledBlock(self, bra1, bra2, ket1, ket2, block_vals):
         """ 
+                TODO: CHANGE to the J scheme (ommit conversion)
+                
         This method prints the JT block in a proton-neutron label matrix elements
         (the case of the .2b Taurus input file), block format:
         
@@ -503,20 +684,19 @@ class TBME_Runner(object):
         
         all_null = True
         
-        J_vals_T0 = T_vals[0]
-        J_vals_T1 = T_vals[1]
-        if not (J_vals_T0 or J_vals_T1):
+        if not block_vals:
             return []
         
-        jmin, jmax = self._getJBoundsForT0And1Match(J_vals_T0, J_vals_T1)
+        jmin, jmax = min(block_vals.keys()), max(block_vals.keys()) 
+        #jmin, jmax = self._getJBoundsForT0And1Match(J_vals_T0, J_vals_T1)
         str_me_space.append(' 0 5 {} {} {}'.format(spss_str, jmin, jmax))
         
         for j in range(jmin, jmax +1):
             
-            vals_j = self._getJvaluesFromIsospin(J_vals_T0[j], J_vals_T1[j], j,
-                                                 bra1, bra2, ket1, ket2)
+            # vals_j = self._getJvaluesFromIsospin(J_vals_T0[j], J_vals_T1[j], j,
+            #                                      bra1, bra2, ket1, ket2)
             
-            j_null, j_vals_str = self._formatValues2Standard(vals_j)
+            j_null, j_vals_str = self._formatValues2Standard(block_vals[j])
             
             all_null = all_null and j_null
             str_me_space.append('\t' + '\t'.join(j_vals_str))
@@ -541,6 +721,8 @@ class TBME_Runner(object):
         
         with open(self.filename_output + OutputFileTypes.sho, 'w+') as f:
             f.write('\n'.join(strings_sho_))
+            print (">> s.h.o valence space & parameters saved in [{}]"
+                   .format(self.filename_output + OutputFileTypes.sho))
         
         # write .01 file
         if self._hamil_type == '3':
@@ -552,20 +734,76 @@ class TBME_Runner(object):
             bra1 = castAntoineFormat2Str(bra[0], l_ge_10=True)
             bra2 = castAntoineFormat2Str(bra[1], True)
             
-            for ket, T_vals in kets.items():
+            for ket, block in kets.items():
                 ket1 = castAntoineFormat2Str(ket[0], True)
                 ket2 = castAntoineFormat2Str(ket[1], True)
                 
                 spss = (bra1, bra2, ket1, ket2)
                 
-                strings_ += self._write2BME_JParticleLabeledBlock(*spss, T_vals)
+                strings_ += self._write2BME_JParticleLabeledBlock(*spss, block)
         
         strings_ = '\n'.join(strings_)
         
         with open(self.filename_output + OutputFileTypes.twoBody, 'w+') as f:
             f.write(strings_)
+            print (">> 2body m.e. saved in [{}]"
+                   .format(self.filename_output + OutputFileTypes.twoBody))
+    
+    def _convertMatrixElemensScheme(self, me_dict, conv_2J=False):
+        """ 
+        Converter, take dictionary of the valence space computation and change 
+        to the other scheme. It crashes if the current dictionary is in that scheme.
+        Input:
+        {(bra1 <int>, bra2 <int> ) : {
+            (ket1 <int>, ket2 <int> ) : {
+              *** JT scheme block:
+                T <int> =0: {J <int>: me_val,  ....},
+                T <int> =1: {J <int>: me_val,  ....}
+              *** J scheme block:
+                J <int> (jmin): {mt <int>=0: me_val, 2: me_val, ..., 5: me_val},
+                ...
+                J <int> (jmax): {0: me_val, 2: me_val, ..., 5: me_val}
+            }
+        }
+        """
         
+        for bra, kets in me_dict.items():
+            b1 = castAntoineFormat2Str(bra[0], l_ge_10=True)
+            b2 = castAntoineFormat2Str(bra[1], True)
+            
+            for ket, block_vals in kets.items():
+                k1 = castAntoineFormat2Str(ket[0], True)
+                k2 = castAntoineFormat2Str(ket[1], True)
+                
+                if conv_2J:
+                    ## JT scheme 2 J scheme
+                    J_vals_T0 = block_vals[0]
+                    J_vals_T1 = block_vals[1]
+                    if not (J_vals_T0 or J_vals_T1):
+                        continue
+                    
+                    jmin, jmax = self._getJBoundsForT0And1Match(J_vals_T0, J_vals_T1)
+                    
+                    vals_J = {}
+                    for j in range(jmin, jmax +1):
+                        
+                        vals_J[j] = self._getJvaluesFromIsospin(J_vals_T0[j], 
+                                                                J_vals_T1[j], j,
+                                                                b1, b2, k1, k2)
+                    me_dict[bra][ket] = vals_J
+                else:
+                    ## J scheme 2
+                    #TODO: ("WARNING !! Converting from J scheme to JT TODO: verify")
+                    
+                    vals_T = {0 : {}, 1: {}}
+                    for j, j_block in block_vals.items():
+                        v_t0, v_t1 = self._getIsospinvaluesFromLabels(j_block, j,
+                                                                      b1, b2, k1, k2)
+                        vals_T[0][j] = v_t0
+                        vals_T[1][j] = v_t1
+                    me_dict[bra][ket] = vals_T
         
+        return me_dict
         
 
 class TBME_RunnerException(BaseException):
