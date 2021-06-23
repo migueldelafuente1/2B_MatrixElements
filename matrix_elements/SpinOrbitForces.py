@@ -273,12 +273,14 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         
         self._diagonalMatrixElement_Test()
         
-        factor = safe_racah(self._L_bra, self._L_ket, 
-                            self._S_bra, self._S_ket,
-                            1, self.J)
+        # factor = safe_racah(self._L_bra, self._L_ket, self._S_bra, self._S_ket, 1, self.J)
+        factor = safe_racah(self._L_bra, self._S_bra,  
+                            self.J, 1, 
+                            self._L_ket, self._S_ket)
+        
         #factor *= np.sqrt(2*self.J + 1)
         # phase resulting from wigner-eckart and the racah_W to 6j coefficients
-        factor *= (-1)**(self._S_ket + self._L_bra + self.J)
+        factor *= (-1)**(self._L_ket + self.J)
         
         if (self.isNullValue(factor) 
             or not self.deltaConditionsForGlobalQN()):
@@ -286,15 +288,16 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
             _ =0
             return 0
         
-        dir   = self._L_tensor_MatrixElement()
-        exch  = 0#self._L_tensor_MatrixElement(exchanged=True)
+        dir_  = self._L_tensor_MatrixElement()
+        exch  = self._L_tensor_MatrixElement(exchanged=True)
         
         factor *= self.PARAMS_FORCE.get(CentralMEParameters.constant)
-        aux = factor * spin_me * (dir + ((-1)**(self._L_bra+self._L_ket))*exch)
+        aux = factor * spin_me * (dir_ + ((-1)**(self._L_bra+self._L_ket))*exch)
         return  aux
     
     def _L_tensor_MatrixElement(self, exchanged=False):
         
+        b_len = self.PARAMS_SHO.get(SHO_Parameters.b_length)
         if exchanged:
             l1, l2      = self.ket.l2, self.ket.l1
             l1_q, l2_q  = self.bra.l2, self.bra.l1
@@ -305,13 +308,13 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         if ((l1 + l2) + (l1_q + l2_q))%2 == 1:
             return 0
         
-        factor = np.sqrt((2*self._L_bra + 1)*(2*self._L_ket + 1)
-                         *(2*l1 + 1)*(2*l2 + 1)*(2*l1_q + 1)*(2*l2_q + 1))
-        factor /= 4*np.pi * (self.PARAMS_SHO.get(SHO_Parameters.b_length)**5)
+        factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1)
+                         * (2*l1 + 1) * (2*l2 + 1) * (2*l1_q + 1) * (2*l2_q + 1))
+        factor /= 4 * np.pi * (b_len**5)
         
         # Factor include the effect of oscillator length b!= 1
         
-        aux0 = ((-1)**self._L_ket)*np.sqrt(2*l2*(l2 + 1)) * (
+        aux0 = ((-1)**self._L_ket) * np.sqrt(2*l2*(l2 + 1)) * (
               safe_3j_symbols(l1_q, l2_q,   self._L_ket, 0,0, 0)
             * safe_3j_symbols(l2,   l1,     self._L_ket, 1,0,-1)
             * safe_3j_symbols(1,    self._L_bra, self._L_ket, 1,0,-1))
@@ -332,11 +335,11 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         qn_3   = QN_1body_radial(self.ket.n1, self.ket.l1)
         qn_4   = QN_1body_radial(self.ket.n2, self.ket.l2)
         
-        aux0 *= _RadialIntegralsLS.integral(1, qn_cc1, qn_cc2, qn_3, qn_4)
-        aux1 *= _RadialIntegralsLS.integral(1, qn_4, qn_3, qn_cc2, qn_cc1)
-        aux2 *= _RadialIntegralsLS.integral(2, qn_cc1, qn_cc2, qn_3, qn_4)
+        aux0 *= _RadialIntegralsLS.integral(1, qn_cc1, qn_cc2, qn_3, qn_4, b_len)
+        aux1 *= _RadialIntegralsLS.integral(1, qn_4, qn_3, qn_cc2, qn_cc1, b_len)
+        aux2 *= _RadialIntegralsLS.integral(2, qn_cc1, qn_cc2, qn_3, qn_4, b_len)
         
-        return factor * (aux0 + aux1 + aux2) 
+        return factor * (aux0 + aux1 + aux2)
         
         
 #     def _radialIntegral(self, integral_type, wf1_bra, wf2_bra, wf1_ket, wf2_ket):

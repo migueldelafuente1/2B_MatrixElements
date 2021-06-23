@@ -594,20 +594,37 @@ class _RadialIntegralsLS():
     From T. Gonzalez Llarena thesis developments
     
     """
-    
-    def _TalmiIntegral(self, p, p_q, l1, l2, l1_q, l2_q):
-        
+    def _TalmiIntegral(self, p, p_q, l1, l2, l1_q, l2_q, plus_1):
+        """ :plus_1 = 0 for integral type 1 (without r^2), plus_1= 1 with r^2 """
         # l1 + l2 + l1_q + l2_q is even
-        N = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
-        
-        return np.exp(gamma_half_int(2*N + 1)) / (2**(N + 1.5))
+        No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2) + plus_1
+        return 0.5 * np.exp(gamma_half_int(2*No2 + 1)) / (2**(No2 + 0.5 + plus_1))
+    
+    # def _TalmiIntegral_DB(self, p, p_q, l1, l2, l1_q, l2_q):
+    #
+    #     # l1 + l2 + l1_q + l2_q is even
+    #     N = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
+    #
+    #     return 0.5 * np.exp(gamma_half_int(2*N + 1)) / (2**(N + 1.5))
+    #
+    # def _TalmiIntegral_BB(self, p, p_q, l1, l2, l1_q, l2_q):
+    #
+    #     # l1 + l2 + l1_q + l2_q is even
+    #     N = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
+    #
+    #     return 0.5 * np.exp(gamma_half_int(2*N + 3)) / (2**(N + 2.5))
     
     def __sum_aux_denominator(self, n1, l1, n2, l2, p, k):
         
+        # denominator = sum(
+        #     [fact(k), fact(n1 - k), fact(p - k), fact(n2 + k - p),
+        #     double_factorial(2*(k + l1) + 1), 
+        #     double_factorial(2*(p - k + l2) + 1)]
+        # )
         denominator = sum(
             [fact(k), fact(n1 - k), fact(p - k), fact(n2 + k - p),
-            double_factorial(2*(k + l1) + 1), 
-            double_factorial(2*(p - k + l2) + 1)]
+            gamma_half_int(2*(k + l1) + 3),  
+            gamma_half_int(2*(p - k + l2) + 3)]  ## double factorial (n - 1)
         )
         
         return np.exp(denominator)
@@ -621,7 +638,7 @@ class _RadialIntegralsLS():
         for k in range(k_min, k_max +1):
             sum_ += 1 / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return 4*(np.pi**2)*(2**(l1 + l2 + 2 + p)) * ((-1)**(n1 + n2 + p)) * sum_
+        return 4*(np.pi**3) * ((-1)**(n1 + n2 + p)) * sum_
     
     def _D_coeff(self, n1, l1, n2, l2, p):
         
@@ -632,7 +649,7 @@ class _RadialIntegralsLS():
         for k in range(k_min, k_max +1):
             sum_ += (2*k + l1) / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return 4*(np.pi**2)*(2**(l1 + l2 + 2 + p)) * ((-1)**(n1 + n2 + p)) * sum_ 
+        return 4*(np.pi**3) * ((-1)**(n1 + n2 + p)) * sum_ 
     
     def _norm_coeff(self, wf):
         """ Also extracted from Apendix D.1 of the thesis """
@@ -643,17 +660,18 @@ class _RadialIntegralsLS():
     
     
     @staticmethod
-    def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket): 
+    def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length): 
         """
         type_integral:
             [1] differential type:  d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
             [2] normal type      :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
         """
         self = _RadialIntegralsLS()
-        return self._integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket)
+        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length)
+        return self._integral(type_integral, *args)
         
     
-    def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket):
+    def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length):
         
         assert type_integral in (1, 2), "type_integral can only be 1 or 2"
         
@@ -666,21 +684,23 @@ class _RadialIntegralsLS():
         
         for p_q in range(n1_q+n2_q +1):
             
+            bra_b = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
             if type_integral == 1:
-                bra_coeff = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
-            else:
-                bra_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+                bra_d = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
             
             for p in range(n1+n2 +1):
                 ket_coeff = self._B_coeff(n1, l1, n2, l2, p)
+                I_1 = self._TalmiIntegral(p, p_q, l1, l2, l1_q, l2_q, 0)
                 
-                I_ = self._TalmiIntegral(p, p_q, l1, l2, l1_q, l2_q)
-                sum_ += bra_coeff * ket_coeff * I_
-        
+                if type_integral == 1:
+                    I_2 = self._TalmiIntegral(p, p_q, l1, l2, l1_q, l2_q, 1)
+                    sum_ += ket_coeff * ((bra_d*I_1) - (bra_b*I_2))
+                else:
+                    sum_ += ket_coeff * bra_b * I_1
         
         norm_fact = np.prod([self._norm_coeff(wf) for wf in 
                                         (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
-        return  norm_fact * sum_
+        return  b_length * norm_fact * sum_
                 
             
             
