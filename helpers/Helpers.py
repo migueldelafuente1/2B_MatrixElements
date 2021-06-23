@@ -198,6 +198,12 @@ def recursiveSumOnDictionaries(dict2read, dict2write):
         else:
             return dict2read + dict2write
 
+def almostEqual(a, b, tolerance=0):
+    """ Input """
+    if tolerance == 0:
+        return (a == b) and (abs(a - b) < 1e-40)
+    
+    return abs(a - b) < tolerance
 #===============================================================================
 #
 #===============================================================================

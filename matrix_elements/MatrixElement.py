@@ -50,7 +50,7 @@ class _TwoBodyMatrixElement:
         raise MatrixElementException("Abstract method, implement me!")
     
     @classmethod
-    def resInteractionParameters(cls, also_SHO=False):
+    def resetInteractionParameters(cls, also_SHO=False):
         """ Reset All interaction arguments to be changed """
         cls.PARAMS_FORCE = {}
         if also_SHO:

@@ -139,6 +139,7 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     _BREAK_ISOSPIN = True
     
     COULOMB_CONST = 1.4522545041047  ## [MeV fm_ e^-2] K factor in natural untis
+    # COULOMB_CONST = 1.44197028     ## constant extracted form HFBaxial code
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):

@@ -46,6 +46,7 @@ class ValenceSpaceParameters(Enum):
 class ForceParameters(Enum):
     SDI = 'SDI'
     Central = 'Central'
+    Coulomb = 'Coulomb'
     Tensor  = 'Tensor'
     SpinOrbit = 'SpinOrbit'
     SpinOrbitShortRange = 'SpinOrbitShortRange'
@@ -80,10 +81,12 @@ class BrinkBoekerParameters(Enum):
 
 # TODO: Update when adding forces, Enum implementations must be given
 # TODO: Implement also the attribute names in AttributeArgs.ForceArgs
+## Use Enum if the interaction has no parameters
 
 ForceVariablesDict = {
     ForceParameters.Brink_Boeker : BrinkBoekerParameters,
     ForceParameters.Central : CentralMEParameters,
+    ForceParameters.Coulomb : Enum,
     ForceParameters.Tensor  : CentralMEParameters,
     ForceParameters.SpinOrbit : CentralMEParameters,
     ForceParameters.SpinOrbitShortRange : CentralMEParameters,
@@ -95,6 +98,7 @@ ForceVariablesDict = {
 ForceVariablesMatrixElementDict = {
     ForceParameters.Brink_Boeker : 'BrinkBoeker',
     ForceParameters.Central      : 'CentralForce',
+    ForceParameters.Coulomb      : 'Coulomb',
     ForceParameters.Tensor       : 'TensorForce',
     ForceParameters.SpinOrbit    : 'SpinOrbitForce',
     ForceParameters.SpinOrbitShortRange    : 'SpinOrbitShortRange'

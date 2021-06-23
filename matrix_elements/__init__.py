@@ -2,23 +2,27 @@ from helpers.Enums import ForceParameters
 
 from .BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme
-from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme
-from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, ShortRangeSpinOrbit_JTScheme
+from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
+    CoulombForce
+from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
+    ShortRangeSpinOrbit_JTScheme
 
 
-def switchMatrixElementType(force):
+def switchMatrixElementType(force, J_scheme=False):
     """
     Select defined force classes for implementing matrix elements.
     Call from TBME_Runner automatic selection
     
     :force  From ForceParameters(Enum)
-    TODO: :scheme (J, JT)
+    TODO: :scheme (J and JT)
     """
     
     if force == ForceParameters.Brink_Boeker:
         return BrinkBoeker
     elif force == ForceParameters.Central:
         return CentralForce_JTScheme
+    elif force == ForceParameters.Coulomb:
+        return CoulombForce
     
     elif force == ForceParameters.SpinOrbit:
         return SpinOrbitForce_JTScheme

@@ -59,7 +59,7 @@ class QN_1body_radial(_1Body_WaveFunction):
         self.l = l
         self.m_l = m_l
         
-        self.m_t = m_t
+        self.m_t = mt
     
     def __checkQNArguments(self, n, l, m, m_t):
         
