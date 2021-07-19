@@ -5,13 +5,15 @@ Created on Mar 10, 2021
 '''
 import numpy as np
 
-from helpers.Helpers import safe_racah
+from helpers.Helpers import safe_racah, Constants, safe_wigner_6j,\
+    safe_3j_symbols
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
-    PotentialForms
+    PotentialForms, SHO_Parameters
+from helpers.Log import XLog
 
 class CentralForce(TalmiTransformation):
     
@@ -152,22 +154,8 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         
         method bypasses calling from main or io_manager
         """
-        # TODO: test with and without io_manager
-        # if True in map(lambda a: isinstance(a, dict), kwargs.values()):
-        #     # when calling from io_manager, arguments appear as dictionaries, 
-        #     # parse them            
-        #     # _map = {
-        #     #     CentralMEParameters.potential : (AttributeArgs.name, str),
-        #     #     CentralMEParameters.constant  : (AttributeArgs.value, float),
-        #     #     CentralMEParameters.mu_length : (AttributeArgs.value, float),
-        #     #     CentralMEParameters.n_power   : (AttributeArgs.value, int)
-        #     # }
-        # !! for inside previous if 
+        
         for arg, value in kwargs.items():
-            # if arg in _map:
-            #     attr_parser = _map[arg]
-            #     attr_, parser_ = attr_parser
-            #     kwargs[arg] = parser_(kwargs[arg].get(attr_))
             if isinstance(value, str):
                 kwargs[arg] = float(value) if '.' in value else int(value)
                     
@@ -210,4 +198,118 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         
         return self.centerOfMassMatrixElementEvaluation()
     
+
+
+class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JCoupled):
     
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """
+        Arguments for a radial potential form V(r; mu_length, constant, n, ...)
+        
+        :b_length 
+        :hbar_omega
+        :potential       <str> in PotentialForms Enumeration
+        :mu_length       <float>  fm
+        :constant        <float>  MeV
+        :n_power         <int>
+        
+        method bypasses calling from main or io_manager
+        """
+        from helpers.Enums import DensityDependentParameters as dd_p
+        
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b = SHO_Parameters.b_length
+        _a = SHO_Parameters.A_Mass
+        
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+        cls.PARAMS_SHO[_a] = float(kwargs.get(_a))
+        
+        cls.PARAMS_FORCE = {}
+        
+        for param in dd_p.members():
+            cls.PARAMS_FORCE[param] = float(kwargs[param].get(param))
+                
+        cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
+    
+    
+    def _LScoupled_MatrixElement(self):
+        
+        fact = ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
+                *(2*self.ket.l1 + 1)*(2*self.ket.l2 + 1))**0.5 / (4*np.pi)
+        fact *= safe_3j_symbols(self.bra.l1, self._L_bra, self.bra.l2, 0, 0, 0)
+        fact *= safe_3j_symbols(self.ket.l1, self._L_bra, self.ket.l2, 0, 0, 0)
+    
+class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_JTCoupled):
+    
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """
+        Arguments for a radial potential form V(r; mu_length, constant, n, ...)
+        
+        :b_length 
+        :hbar_omega
+        :potential       <str> in PotentialForms Enumeration
+        :mu_length       <float>  fm
+        :constant        <float>  MeV
+        :n_power         <int>
+        
+        method bypasses calling from main or io_manager
+        """
+                
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b = SHO_Parameters.b_length
+        _A = SHO_Parameters.A_Mass
+        assert _A in kwargs and _b in kwargs, "A_mass and oscillator b length are mandatory"
+        
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+        cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
+    
+    
+    def _validKetTotalAngularMomentums(self):
+        return (self._L_bra, )
+    
+    def _validKetTotalSpins(self):
+        return (self._S_bra, )
+    
+    def _nablaReducedMatrixElement(self, particle):
+        part = str(particle)
+        
+        n_q , l_q = getattr(self.bra, "n"+part), getattr(self.bra, "l"+part)
+        n , l     = getattr(self.ket, "n"+part), getattr(self.ket, "l"+part)
+        
+        A_, B_ = 0, 0
+        if l_q == (l + 1):
+            A_ = ((n**0.5) *(n_q==n-1)) + (((n + l + 1.5)**0.5) *(n_q==n))
+            A_ = -1 * A_
+        if l_q == (l - 1):
+            B_ = (((n + 1)**0.5) *(n_q==n+1)) + (((n + l + 0.5)**0.5) *(n_q==n))
+        
+        return (A_ * ((l + 1)**0.5)) - (B_ * (l**0.5))
+    
+    def _LScoupled_MatrixElement(self):
+        
+        if not hasattr(self, "_kin_factor"):
+            self._kin_factor = (Constants.HBAR_C**2) / (
+                 2 * Constants.M_MEAN 
+                 * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
+                 * self.PARAMS_SHO[SHO_Parameters.A_Mass])
+        
+        fact = safe_wigner_6j(self.bra.l1, self.bra.l2, self._L_bra, 
+                              self.ket.l2, self.ket.l1, 1)
+        fact *= ((-1)**(self.bra.l1 + self.bra.l2 + self._L_bra))
+            
+        nabla_1 = self._nablaReducedMatrixElement(1)
+        nabla_2 = self._nablaReducedMatrixElement(2)
+        if self.DEBUG_MODE:
+            XLog.write("Lme", nabla1=nabla_1, nabla2=nabla_2, f=fact, kin_f= self._kin_factor)
+            
+        return fact * self._kin_factor * nabla_1 * nabla_2
+        

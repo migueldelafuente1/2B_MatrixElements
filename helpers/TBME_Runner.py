@@ -306,7 +306,7 @@ class TBME_Runner(object):
                         
                         bra = QN_2body_jj_JT_Coupling(n1_bra, n2_bra, J, T)
                         ket = QN_2body_jj_JT_Coupling(n1_ket, n2_ket, J, T)
-                                                
+
                         me = self.tbme_class(bra, ket)
                         self.results[q_numbs[i]][q_numbs[j]][T][J] = me.value
                         
@@ -435,7 +435,7 @@ class TBME_Runner(object):
                 times_[force_str] = round(time.time() - tic_, 4)
                 print(" Force [{}] m.e. calculated: [{}]s"
                       .format(force, times_[force_str]))
-                # TODO: change to selct resuts
+                # TODO: change to select resuts
                 self.resultsByInteraction[force_str] = deepcopy(self.results)
                 i += 1
         
@@ -665,7 +665,7 @@ class TBME_Runner(object):
     
     def _write2BME_JParticleLabeledBlock(self, bra1, bra2, ket1, ket2, block_vals):
         """ 
-                TODO: CHANGE to the J scheme (ommit conversion)
+                TODO: CHANGE to the J scheme (omit conversion)
                 
         This method prints the JT block in a proton-neutron label matrix elements
         (the case of the .2b Taurus input file), block format:
@@ -692,10 +692,6 @@ class TBME_Runner(object):
         str_me_space.append(' 0 5 {} {} {}'.format(spss_str, jmin, jmax))
         
         for j in range(jmin, jmax +1):
-            
-            # vals_j = self._getJvaluesFromIsospin(J_vals_T0[j], J_vals_T1[j], j,
-            #                                      bra1, bra2, ket1, ket2)
-            
             j_null, j_vals_str = self._formatValues2Standard(block_vals[j])
             
             all_null = all_null and j_null

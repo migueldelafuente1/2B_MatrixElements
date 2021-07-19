@@ -3,7 +3,7 @@ from helpers.Enums import ForceParameters
 from .BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme
 from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
-    CoulombForce
+    CoulombForce, DensityDependentForce_JTScheme, KineticTwoBody_JTScheme
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
     ShortRangeSpinOrbit_JTScheme
 
@@ -23,6 +23,10 @@ def switchMatrixElementType(force, J_scheme=False):
         return CentralForce_JTScheme
     elif force == ForceParameters.Coulomb:
         return CoulombForce
+    elif force == ForceParameters.Kinetic_2Body:
+        return KineticTwoBody_JTScheme
+    elif force == ForceParameters.Density_Dependent:
+        return DensityDependentForce_JTScheme
     
     elif force == ForceParameters.SpinOrbit:
         return SpinOrbitForce_JTScheme

@@ -426,6 +426,11 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
         assert T in (0, 1), AttributeError("T must be 1 or 0")
         assert abs(MT) <= T, AttributeError("MT must be <= T")
         
+        ## Not necessary check m_t labels for the single particle states and total T
+        if T == 1:
+            if abs(sp_1.m_t + sp_2.m_t) != 2 or (sp_1.m_t + sp_2.m_t)//2 == MT:
+                pass ## invalid, pp or nn state without T=1,MT valid component
+        
         _sign  = [J >= 0, T >= 0]
         assert not False in _sign, AttributeError("Negative argument/s given: "
                                                   "[(J,T)={}].".format((J, T)))

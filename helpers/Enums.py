@@ -50,7 +50,9 @@ class ForceParameters(Enum):
     Tensor  = 'Tensor'
     SpinOrbit = 'SpinOrbit'
     SpinOrbitShortRange = 'SpinOrbitShortRange'
-    Brink_Boeker = 'Brink_Boeker'
+    Brink_Boeker  = 'Brink_Boeker'
+    Density_Dependent = 'Density_Dependent'
+    Kinetic_2Body = 'Kinetic_2Body'
     Multipole_Expansion = 'Multipole_Expansion'
 
 
@@ -79,6 +81,11 @@ class BrinkBoekerParameters(Enum):
     Bartlett    = 'Bartlett'
     Heisenberg  = 'Heisenberg'
 
+class DensityDependentParameters(Enum):
+    constant    = 'constant'
+    x0    = 'x0'
+    alpha = 'alpha'
+
 # TODO: Update when adding forces, Enum implementations must be given
 # TODO: Implement also the attribute names in AttributeArgs.ForceArgs
 ## Use Enum if the interaction has no parameters
@@ -90,19 +97,23 @@ ForceVariablesDict = {
     ForceParameters.Tensor  : CentralMEParameters,
     ForceParameters.SpinOrbit : CentralMEParameters,
     ForceParameters.SpinOrbitShortRange : CentralMEParameters,
+    ForceParameters.Density_Dependent : DensityDependentParameters,
+    ForceParameters.Kinetic_2Body : Enum,
     ForceParameters.SDI : None,
     ForceParameters.Multipole_Expansion: None,
 }
 
-# from the input name for the force to a 
-ForceVariablesMatrixElementDict = {
-    ForceParameters.Brink_Boeker : 'BrinkBoeker',
-    ForceParameters.Central      : 'CentralForce',
-    ForceParameters.Coulomb      : 'Coulomb',
-    ForceParameters.Tensor       : 'TensorForce',
-    ForceParameters.SpinOrbit    : 'SpinOrbitForce',
-    ForceParameters.SpinOrbitShortRange    : 'SpinOrbitShortRange'
-}
+# from the input name for the force to a
+## TODO: this dictionary is deprecated (Remove)
+# ForceVariablesMatrixElementDict = {
+#     ForceParameters.Brink_Boeker : 'BrinkBoeker',
+#     ForceParameters.Central      : 'CentralForce',
+#     ForceParameters.Coulomb      : 'Coulomb',
+#     ForceParameters.Tensor       : 'TensorForce',
+#     ForceParameters.SpinOrbit    : 'SpinOrbitForce',
+#     ForceParameters.SpinOrbitShortRange : 'SpinOrbitShortRange',
+#     ForceParameters.Density_Dependent   : ''     
+# }
 
 class AttributeArgs(Enum):
     name    = 'name'
