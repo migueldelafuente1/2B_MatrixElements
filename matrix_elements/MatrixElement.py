@@ -66,14 +66,16 @@ class _TwoBodyMatrixElement:
     
     def _run(self):
         """ 
-        Calculate the final numerical value, must get a totally antisymmetrized
+        Calculate the final numerical value, must get a totally antisymmetrized_
         and normalized matrix element evaluation. 
         """
         raise MatrixElementException("Abstract method, implement me!")
     
     @property
     def value(self):
-        """ If a matrix element has not been evaluated or discarded, evaluates it. """
+        """ 
+        If a matrix element has not been evaluated or discarded, evaluates it. 
+        """
         if not hasattr(self, '_value'):
             self._run()
         return self._value
@@ -81,8 +83,8 @@ class _TwoBodyMatrixElement:
     @property
     def isNullMatrixElement(self):
         """ 
-        If a matrix element is null, that means it does not fulfill the necessary 
-        symmetry requirements or it has been evaluated with 0.0 results.
+        If a matrix element is null it means it does not fulfill the necessary 
+        symmetry requirements or it has been evaluated with 0.0 result.
         """
         if hasattr(self, '_isNullMatrixElement'):
             return self._isNullMatrixElement
@@ -229,7 +231,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         
         if self.DEBUG_MODE: 
             XLog.write('na_me', value=exchan, phs=phase)
-            XLog.write('nas', norms=(self.bra.norm(), self.ket.norm()), value=self._value)
+            XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
     
     def _LScoupled_MatrixElement(self):
         """ 
@@ -274,7 +276,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
             if self.DEBUG_MODE:
                 re1 = ((self.bra.j1 + 1)*(self.bra.j2 + 1)*(2*self._S_bra + 1)
                        *(2*self._L_bra + 1))**.5 * w9j_bra 
-                XLog.write('recoup', Lb=self._L_bra, Sb=self._S_bra, val_b=re1)
+                XLog.write('recoup', Lb=self._L_bra, Sb=self._S_bra, re_b=re1)
             
             w9j_ket = safe_wigner_9j(
                 *self.ket.getAngularSPQuantumNumbers(1, j_over2=True), 
@@ -290,7 +292,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                 if self.DEBUG_MODE:
                     re2 = ((self.ket.j1 + 1)*(self.ket.j2 + 1)*(2*self._S_ket + 1)
                            *(2*self._L_ket + 1))**.5 * w9j_ket
-                    XLog.write('recoup', Lk=self._L_ket, Sk=self._S_ket, val_k=re2)
+                    XLog.write('recoup', Lk=self._L_ket, Sk=self._S_ket, cts=re1*re2)
                 
                 return (False, recoupling)
         return (True, 0.0)
@@ -303,8 +305,9 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         """
         
         sum_ = 0.
-        L_max = min((self.bra.l1+self.bra.l2), (self.ket.l1+self.ket.l2))
-        L_min = max(abs(self.bra.l1-self.bra.l2), abs(self.ket.l1-self.ket.l2))    
+        
+        L_max = self.bra.l1+self.bra.l2
+        L_min = abs(self.bra.l1-self.bra.l2)
         
         for S in (0, 1):
             self._S_bra = S
@@ -359,9 +362,9 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
         
         if not self.isNullMatrixElement and run_it:
             # evaluate the normal and antisymmetrized me
-            if self.DEBUG_MODE: XLog.write('nas', 
-                                           bra=bra.shellStatesNotation, 
-                                           ket=ket.shellStatesNotation)
+            if self.DEBUG_MODE: 
+                XLog.write('nas', bra=bra.shellStatesNotation, 
+                           ket=ket.shellStatesNotation, J=self.J, T=self.T)
             self._run()
         
     #---------------------------------------------------------------------------
@@ -371,17 +374,6 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
             raise MatrixElementException("<bra| is not <QN_2body_jj_JT_Coupling>")
         if not isinstance(ket, QN_2body_jj_JT_Coupling):
             raise MatrixElementException("|ket> is not <QN_2body_jj_JT_Coupling>")
-    
-    # def saveXLog(self, title=None):
-    #     if title == None:
-    #         title = 'me'
-    #
-    #     XLog.getLog("{}_({}_{}_{})J{}T{}.xml"
-    #                 .format(title, 
-    #                         self.bra.shellStatesNotation.replace('/2', '.2'),
-    #                         self.__class__.__name__,
-    #                         self.ket.shellStatesNotation.replace('/2', '.2'),
-    #                         self.J, self.T))
         
     def _nullConditionForSameOrbit(self):
         """ When the  two nucleons of the bra or the ket are in the same orbit,

@@ -372,6 +372,8 @@ class XLog(object):
                         val = "0.0"
                     else:
                         val = "{:5.4e}".format(val)
+                elif isinstance(val, (list, tuple)):
+                    val = tuple([str(i) for i in val])
                 attribs[key_] = str(val)
         return attribs
     

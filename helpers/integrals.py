@@ -8,11 +8,12 @@ import numpy as np
 from helpers.Enums import PotentialForms
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
     safe_clebsch_gordan, double_factorial
+from helpers.Log import XLog
 
 class IntegralException(BaseException):
     pass
 
-def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
+def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     """
     :p          index order
     :potential  form of the potential, from Poten
@@ -50,9 +51,9 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0):
     elif potential == PotentialForms.Power:
         if n_power == 0:
             return b_param**3
-        aux = gamma_half_int(2*p + 3 + n_power) - gamma_half_int(2*p + 3)
-        
-        return np.exp(aux + n_power*(3*np.log(b_param) - np.log(mu_param)))
+        aux =  gamma_half_int(2*p + 3 + n_power) - gamma_half_int(2*p + 3)
+        aux += n_power * ((np.log(2)/2) - np.log(mu_param))
+        return np.exp(aux + ((n_power + 3)*np.log(b_param)))
         
     elif potential == PotentialForms.Gaussian_power:
         raise IntegralException("Talmi integral 'gaussian_power' not implemented")
@@ -586,51 +587,29 @@ class _SpinOrbitPartialIntegral:
 #                 # D^{-}f_i * D^{-}f_k
 #                 ck1 = np.sqrt(self.wf_k.n + self.wf_k.l + 0.5)
 #                 ck2 = np.sqrt(self.wf_k.n + 1)
-    
-    
-class _RadialIntegralsLS():
-    
+
+class _RadialTwoBodyDecoupled():
     """
     From T. Gonzalez Llarena thesis developments
-    
     """
-    def _TalmiIntegral(self, p, p_q, l1, l2, l1_q, l2_q, plus_1):
-        """ :plus_1 = 0 for integral type 1 (without r^2), plus_1= 1 with r^2 """
-        # l1 + l2 + l1_q + l2_q is even
-        No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2) + plus_1
-        return 0.5 * np.exp(gamma_half_int(2*No2 + 1)) / (2**(No2 + 0.5 + plus_1))
     
-    # def _TalmiIntegral_DB(self, p, p_q, l1, l2, l1_q, l2_q):
-    #
-    #     # l1 + l2 + l1_q + l2_q is even
-    #     N = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
-    #
-    #     return 0.5 * np.exp(gamma_half_int(2*N + 1)) / (2**(N + 1.5))
-    #
-    # def _TalmiIntegral_BB(self, p, p_q, l1, l2, l1_q, l2_q):
-    #
-    #     # l1 + l2 + l1_q + l2_q is even
-    #     N = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
-    #
-    #     return 0.5 * np.exp(gamma_half_int(2*N + 3)) / (2**(N + 2.5))
+    DEBUG_MODE = False 
+    
+    def _TalmiIntegral(self, No2):
+        """ Define the integral I(n,l(1,2), n',l'(1,2), p, p')"""
+        raise IntegralException("Abstract method, define the integral")
     
     def __sum_aux_denominator(self, n1, l1, n2, l2, p, k):
         
-        # denominator = sum(
-        #     [fact(k), fact(n1 - k), fact(p - k), fact(n2 + k - p),
-        #     double_factorial(2*(k + l1) + 1), 
-        #     double_factorial(2*(p - k + l2) + 1)]
-        # )
         denominator = sum(
             [fact(k), fact(n1 - k), fact(p - k), fact(n2 + k - p),
             gamma_half_int(2*(k + l1) + 3),  
             gamma_half_int(2*(p - k + l2) + 3)]  ## double factorial (n - 1)
         )
-        
         return np.exp(denominator)
     
     def _B_coeff(self, n1, l1, n2, l2, p):
-        
+        """ (4*pi^3) (-)^n1+n2 factor not multiplied here """
         sum_ = 0
         
         k_max = min(p, n1)
@@ -638,10 +617,10 @@ class _RadialIntegralsLS():
         for k in range(k_min, k_max +1):
             sum_ += 1 / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return 4*(np.pi**3) * ((-1)**(n1 + n2 + p)) * sum_
+        return ((-1)**(p)) * sum_
     
     def _D_coeff(self, n1, l1, n2, l2, p):
-        
+        """ (4*pi^3) (-)^n1+n2 factor not multiplied here """
         sum_ = 0
         
         k_max = min(p, n1)
@@ -649,15 +628,42 @@ class _RadialIntegralsLS():
         for k in range(k_min, k_max +1):
             sum_ += (2*k + l1) / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return 4*(np.pi**3) * ((-1)**(n1 + n2 + p)) * sum_ 
+        return ((-1)**(p)) * sum_ 
     
     def _norm_coeff(self, wf):
-        """ Also extracted from Apendix D.1 of the thesis """
+        """ Also extracted from Apendix D.1 of the thesis, 
+        factor sqrt_(1 / 2*pi^3) extracted."""
                 
         aux = fact(wf.n) + gamma_half_int(2*(wf.n + wf.l) + 3)
         
-        return ((-1)**wf.n) * np.sqrt(np.exp(aux) / (2 * (np.pi**3)))       
+        return np.exp(0.5 * aux)   
+        
     
+    @staticmethod
+    def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length): 
+        """
+        type_integral:
+            [1] differential type:  d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
+            [2] normal type      :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
+        """
+        self = _RadialIntegralsLS()
+        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length)
+        return self._integral(type_integral, *args)
+        
+    
+    def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length):
+        
+        raise IntegralException("Abstract method, implement me (use _B_coeff, "
+                                "_D_coeff, _norm_coeff and define _TalmiIntegral")
+
+
+class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
+    
+    def _TalmiIntegral(self, No2):
+        """ :plus_1 = 0 for integral type 1 (without r^2), plus_1= 1 with r^2 """
+        # l1 + l2 + l1_q + l2_q is even
+        return np.exp(gamma_half_int(2*No2 + 1) - ((No2 + 1.5)*np.log(2)))
+        
     
     @staticmethod
     def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length): 
@@ -681,26 +687,41 @@ class _RadialIntegralsLS():
         n2, l2 = wf2_ket.n, wf2_ket.l
         
         sum_ = 0
+        if self.DEBUG_MODE:
+            XLog.write("R_int", type=type_integral, wf1=wf1_bra, wf2=wf2_bra, wf3=wf1_ket, wf4=wf2_ket)
         
-        for p_q in range(n1_q+n2_q +1):
+        for p in range(n1+n2 +1):
+            ket_coeff = self._B_coeff(n1, l1, n2, l2, p)
             
-            bra_b = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
-            if type_integral == 1:
-                bra_d = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
-            
-            for p in range(n1+n2 +1):
-                ket_coeff = self._B_coeff(n1, l1, n2, l2, p)
-                I_1 = self._TalmiIntegral(p, p_q, l1, l2, l1_q, l2_q, 0)
+            if self.DEBUG_MODE: XLog.write("Ip", p=p, ket_C=ket_coeff)
+            for p_q in range(n1_q+n2_q +1):
+                bra_b = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+                
+                No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
+                I_1 = self._TalmiIntegral(No2)
+                if self.DEBUG_MODE:
+                    XLog.write("Ip_q", pq=p_q, bra_B=bra_b, N=No2, I_1=I_1)
                 
                 if type_integral == 1:
-                    I_2 = self._TalmiIntegral(p, p_q, l1, l2, l1_q, l2_q, 1)
-                    sum_ += ket_coeff * ((bra_d*I_1) - (bra_b*I_2))
+                    bra_d = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+                    
+                    I_2 = self._TalmiIntegral(No2 + 1)
+                    aux = ket_coeff * ((bra_d*I_1) - (bra_b*I_2))
+                    sum_ += aux
+                    if self.DEBUG_MODE:
+                        XLog.write("Ip_q", I_2=I_2, bra_D=bra_d, val= aux)
                 else:
-                    sum_ += ket_coeff * bra_b * I_1
+                    aux = ket_coeff * bra_b * I_1
+                    sum_ += aux
+                    if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
         norm_fact = np.prod([self._norm_coeff(wf) for wf in 
                                         (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
-        return  b_length * norm_fact * sum_
+        norm_fact *= 4 * b_length
+        if self.DEBUG_MODE:
+            XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
+            
+        return  norm_fact * sum_
                 
             
             

@@ -14,6 +14,7 @@ class Constants:
     M_NEUTRON = 939.565420      # MeV/c2
     M_NUCLEON = 931.494028      # MeV/c2
     M_ELECTRON= 0.51099891      # MeV/c2
+    M_MEAN    = 938.918754      # (m_Proton + m_Neutron) / 2
     
     ALPHA     = 7.297353e-3
     e_CHARGE  = 1.602176e-19   # C
@@ -121,16 +122,16 @@ def gamma_half_int(i):
 #===============================================================================
 #%%     sympy angular momentum fucntions
 #===============================================================================
-from sympy.physics.wigner import wigner_9j, racah, clebsch_gordan, wigner_3j
+from sympy.physics.wigner import wigner_9j, racah, wigner_6j, clebsch_gordan, wigner_3j
 
 def safe_wigner_9j(*args):
-    """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the arguments don't fulfill the triangle
-    relation. """
+    """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the
+     arguments don't fulfill the triangle relation. """
     try: 
         return float(wigner_9j(*args, prec=None))
     except ValueError or AttributeError:
         return 0
-    
+
 def safe_racah(a, b, c, d, ee, ff):
     """ Avoid the ValueError whenever the arguments don't fulfill the triangle
     relation. """
@@ -138,7 +139,15 @@ def safe_racah(a, b, c, d, ee, ff):
         return float(racah(a, b, c, d, ee, ff, prec=None))
     except ValueError or AttributeError:
         return 0
-    
+
+def safe_wigner_6j(*args):
+    """ Wigner 6j symbol, same arguments as in Avoid the ValueError whenever the
+     arguments don't fulfill the triangle relation. """
+    try: 
+        return float(wigner_6j(*args, prec=None))
+    except ValueError or AttributeError:
+        return 0
+
 def safe_clebsch_gordan(j1, j2, j3, m1, m2, m3):
     """
     :args   j1, j2, j3,   m1, m2, m3
@@ -174,6 +183,18 @@ def angular_condition(l1, l2, L):
 #===============================================================================
 #     
 #===============================================================================
+def prettyPrintDictionary(dictionary, level=0, delimiter=' . '):
+    
+    header = ''.join([delimiter]*level)
+    for k, val in dictionary.items():
+        if isinstance(val, dict):
+            print(header+str(k)+': {')
+            prettyPrintDictionary(val, level + 1, delimiter)
+            print(header+'}')
+        else:
+            print(header+str(k)+':'+str(val))
+        
+
 
 def recursiveSumOnDictionaries(dict2read, dict2write):
     """

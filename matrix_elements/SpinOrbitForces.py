@@ -7,14 +7,16 @@ import numpy as np
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters
 from helpers.Enums import AttributeArgs, SHO_Parameters
-from helpers.Helpers import safe_racah, safe_clebsch_gordan, safe_3j_symbols
+from helpers.Helpers import safe_racah, safe_clebsch_gordan, safe_3j_symbols,\
+    safe_wigner_6j
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException
 from matrix_elements.transformations import TalmiTransformation
 from helpers.WaveFunctions import QN_2body_LS_Coupling, QN_1body_radial
 from helpers.integrals import _SpinOrbitPartialIntegral, _RadialIntegralsLS
-from copy import deepcopy
+from copy import deepcopy, copy
+from helpers.Log import XLog
 
 class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled, 
     
@@ -128,7 +130,8 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
     def _globalInteractionCoefficient(self):
         # no special interaction constant for the Central ME
         phase = (-1)**(self._S_bra + self._L_bra - self.J)
-        factor = np.sqrt((2*self._L_bra + 1)*(2*self._L_ket + 1))
+        #phase = (-1)**(self._l + self._L - self.J)
+        factor = 1#np.sqrt((2*self._L_bra + 1)*(2*self._L_ket + 1))
         
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
@@ -153,10 +156,6 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
     def __init__(self, bra, ket, run_it=True):
         
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
-
-#     def _run(self):
-#         # TODO: No necessary  _overwriting (that calls directly to that class)
-#         _TwoBodyMatrixElement_JTCoupled._run(self)
     
     def _deltaConditionsForCOM_Iteration(self):
         # TODO: Avoid this l, l' T conditions
@@ -257,6 +256,28 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         self.test_value_diagonal[0][key_] = aux * aux_l
         self.test_value_diagonal[1][key_] = aux_l
     
+    def _run(self):
+        """ Calculate the antisymmetric matrix element value. """
+    
+        if self.isNullMatrixElement:
+            return
+        if self.T != 1:
+            # Spin-orbit approximation antisymmetrization_ condition 1 - PxPsPt =
+            # 1 + delta(tau1, tau2) => T=0 is null (factor 2 in the m.e. below) 
+            self._value = 0.0
+            self._isNullMatrixElement = True
+            return
+    
+        if self.DEBUG_MODE: 
+            XLog.write('nas', ket=self.ket.shellStatesNotation)
+    
+        self._value = 2 * self._non_antisymmetrized_ME()
+    
+        self._value *= self.bra.norm() * self.ket.norm()
+    
+        if self.DEBUG_MODE:
+            XLog.write('nas', value=self._value)
+            XLog.write('nas', norms=self.bra.norm()*self.ket.norm())
     
     def _LScoupled_MatrixElement(self):
         """
@@ -268,54 +289,77 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         """
         
         skip, spin_me = self._totalSpinTensorMatrixElement()
-        if skip:
+        if skip or self.T == 0:
             return 0
         
-        self._diagonalMatrixElement_Test()
-        
         # factor = safe_racah(self._L_bra, self._L_ket, self._S_bra, self._S_ket, 1, self.J)
-        factor = safe_racah(self._L_bra, self._S_bra,  
-                            self.J, 1, 
-                            self._L_ket, self._S_ket)
-        
-        #factor *= np.sqrt(2*self.J + 1)
-        # phase resulting from wigner-eckart and the racah_W to 6j coefficients
-        factor *= (-1)**(self._L_ket + self.J)
+        factor = safe_wigner_6j(self._L_bra,      1,  self._L_ket,
+                                self._S_bra, self.J, self._S_ket)
+         
+        factor *= (-1)**(self._L_ket + self.J) * spin_me
         
         if (self.isNullValue(factor) 
             or not self.deltaConditionsForGlobalQN()):
             # same delta conditions act here, since tensor is rank 1
-            _ =0
             return 0
+        if self.DEBUG_MODE: XLog.write("LSme")
         
         dir_  = self._L_tensor_MatrixElement()
         exch  = self._L_tensor_MatrixElement(exchanged=True)
         
         factor *= self.PARAMS_FORCE.get(CentralMEParameters.constant)
-        aux = factor * spin_me * (dir_ + ((-1)**(self._L_bra+self._L_ket))*exch)
+        aux = factor * (dir_ + ((-1)**(self._L_bra+self._L_ket))*exch)
+        
+        if self.DEBUG_MODE: 
+            XLog.write("LSme", factor=factor, dir=dir_, exch=exch, value=aux)
         return  aux
     
-    def _L_tensor_MatrixElement(self, exchanged=False):
-        
-        b_len = self.PARAMS_SHO.get(SHO_Parameters.b_length)
+    def _getQRadialNumbers(self, exchanged):
+        """ Auxiliary method to exchange the quantum numbers 
+        returns: 
+            bra_l1, bra_l2, ket_l1, ket_l2, <tuple>(bra1, bra2, ket1, ket2)
+        """
         if exchanged:
             l1, l2      = self.ket.l2, self.ket.l1
             l1_q, l2_q  = self.bra.l2, self.bra.l1
+            
+            qn_cc1 = QN_1body_radial(self.bra.n2, self.bra.l2) # conjugated
+            qn_cc2 = QN_1body_radial(self.bra.n1, self.bra.l1) # conjugated
+            qn_3   = QN_1body_radial(self.ket.n2, self.ket.l2)
+            qn_4   = QN_1body_radial(self.ket.n1, self.ket.l1)
+            if self.DEBUG_MODE: 
+                XLog.write('Ltens', t="EXCH", wf=(qn_cc1, qn_cc2, qn_3, qn_4))
         else:
             l1, l2      = self.ket.l1, self.ket.l2
             l1_q, l2_q  = self.bra.l1, self.bra.l2
+            
+            qn_cc1 = QN_1body_radial(self.bra.n1, self.bra.l1) # conjugated
+            qn_cc2 = QN_1body_radial(self.bra.n2, self.bra.l2) # conjugated
+            qn_3   = QN_1body_radial(self.ket.n1, self.ket.l1)
+            qn_4   = QN_1body_radial(self.ket.n2, self.ket.l2)
+            if self.DEBUG_MODE: 
+                XLog.write('Ltens', t="DIR", wf=(qn_cc1, qn_cc2, qn_3, qn_4))
+                
+        return l1_q, l2_q, l1, l2, (qn_cc1, qn_cc2, qn_3, qn_4)
+    
+    def _L_tensor_MatrixElement(self, exchanged=False):
+        
+        b = self.PARAMS_SHO.get(SHO_Parameters.b_length)
+        
+        l1_q, l2_q, l1, l2, qqnn = self._getQRadialNumbers(exchanged)
+        qn_cc1, qn_cc2, qn_3, qn_4 = qqnn
         
         if ((l1 + l2) + (l1_q + l2_q))%2 == 1:
             return 0
         
         factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1)
                          * (2*l1 + 1) * (2*l2 + 1) * (2*l1_q + 1) * (2*l2_q + 1))
-        factor /= 4 * np.pi * (b_len**5)
+        factor /= 4 * np.pi * (b**6)
         
         # Factor include the effect of oscillator length b!= 1
         
         aux0 = ((-1)**self._L_ket) * np.sqrt(2*l2*(l2 + 1)) * (
-              safe_3j_symbols(l1_q, l2_q,   self._L_ket, 0,0, 0)
+              safe_3j_symbols(l1_q, l2_q,   self._L_bra, 0,0, 0)
             * safe_3j_symbols(l2,   l1,     self._L_ket, 1,0,-1)
             * safe_3j_symbols(1,    self._L_bra, self._L_ket, 1,0,-1))
         
@@ -330,33 +374,26 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
                 * safe_3j_symbols(l2,   l1,     self._L_ket, 1,0,-1)
                 * safe_3j_symbols(1,    self._L_ket, self._L_bra, 0,1,-1))
         
-        qn_cc1 = QN_1body_radial(self.bra.n1, self.bra.l1) # conjugated
-        qn_cc2 = QN_1body_radial(self.bra.n2, self.bra.l2) # conjugated
-        qn_3   = QN_1body_radial(self.ket.n1, self.ket.l1)
-        qn_4   = QN_1body_radial(self.ket.n2, self.ket.l2)
+        if self.DEBUG_MODE:
+            XLog.write('Ltens', fact= factor, aux0=aux0, aux1=aux1, aux2=aux2)
+            _RadialIntegralsLS.DEBUG_MODE = True
         
-        aux0 *= _RadialIntegralsLS.integral(1, qn_cc1, qn_cc2, qn_3, qn_4, b_len)
-        aux1 *= _RadialIntegralsLS.integral(1, qn_4, qn_3, qn_cc2, qn_cc1, b_len)
-        aux2 *= _RadialIntegralsLS.integral(2, qn_cc1, qn_cc2, qn_3, qn_4, b_len)
+        if not self.isNullValue(aux0):
+            aux0 *= _RadialIntegralsLS.integral(1, qn_cc1, qn_cc2, qn_3, qn_4, b)
+        if not self.isNullValue(aux1):
+            aux1 *= _RadialIntegralsLS.integral(1, qn_4, qn_3, qn_cc2, qn_cc1, b)
+        if not self.isNullValue(aux2):
+            aux2 *= _RadialIntegralsLS.integral(2, qn_cc1, qn_cc2, qn_3, qn_4, b)
+        
+        if self.DEBUG_MODE: 
+            XLog.write('Ltens', value= factor * (aux0 + aux1 + aux2))
         
         return factor * (aux0 + aux1 + aux2)
-        
-        
-#     def _radialIntegral(self, integral_type, wf1_bra, wf2_bra, wf1_ket, wf2_ket):
-#         """
-#         From T. Gonzalez Llarena thesis
-#         
-#         :integral_type is one of these:
-#             1    : d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
-#                  :  (bra_1/r)   * bra_2 * ket_1 * d(ket_2)/d_r  
-#             2    :  (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
-#         """
-#         if integral_type == 1:
-#             return 1
-#         return 1
     
         
-    
+    #===========================================================================
+    # FIRST VERRSION
+    #===========================================================================
     def _LScoupled_MatrixElement_version1(self):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (JT)>
