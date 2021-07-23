@@ -7,7 +7,8 @@ import numpy as np
 
 from helpers.Enums import PotentialForms
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
-    safe_clebsch_gordan, double_factorial
+    safe_clebsch_gordan, _B_coeff_memo_accessor, getStatesUpToLastOccupied,\
+    getStatesAndOccupationUpToLastOccupied, shellSHO_Notation
 from helpers.Log import XLog
 
 class IntegralException(BaseException):
@@ -62,38 +63,80 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
                         .format(potential, PotentialForms.members()))
 
 
-def gaussianIntegralQuadrature(function, a, b, order, *args, **kwargs):
-    """ 
-    Evaluate integral of <function> object, of 1 variable and parameters:
-        Args:
-    :function  <function> f(x, *args, **kwargs)
-    :a         <float> lower limit
-    :b         <float> upper limit
-    :order     <int>   order of the quadrature
+#if not 'roots_legendre' in globals():
+from scipy.special import roots_legendre, roots_laguerre
+
+class GaussianQuadrature:
     
-    *args and **kwargs will be passed to the function (check argument introduction
-        in case of several function management)
+    """ 
+    Class to evaluate Gaussian type integrations, save the roots and weights for
+    speeding.
     """
     
-    if not 'roots_legendre' in globals():
-        from scipy.special import roots_legendre
-    A = (b - a) / 2
-    B = (b + a) / 2
+    _roots_weights_Legendre = {}
+    _roots_weights_Laguerre = {}
     
-    x_i, w_i = roots_legendre(order, mu=False)
-    x_i = A*x_i + B
-    
-    #integral = A * sum(w_i * function(x_i, *args, **kwargs))
-    #return integral
-    
-    integral = 0.0
-    for i in range(len(x_i)):
-        integral += w_i[i] * function(x_i[i], *args, **kwargs)
-    
-    #print("order", order, "=",integral)
-    return A * integral
-    
-    
+    @staticmethod
+    def legendre(function, a, b, order, *args, **kwargs):
+        """ 
+        Evaluate integral of <function> object, of 1 variable and parameters:
+            Args:
+        :function  <function> f(x, *args, **kwargs)
+        :a         <float> lower limit
+        :b         <float> upper limit
+        :order     <int>   order of the quadrature
+        
+        *args and **kwargs will be passed to the function (check argument introduction
+            in case of several function management)
+        """
+        
+        A = (b - a) / 2
+        B = (b + a) / 2
+        
+        if not order in GaussianQuadrature._roots_weights_Legendre:
+            x_i, w_i = roots_legendre(order, mu=False)
+            GaussianQuadrature._roots_weights_Legendre[order] = (x_i, w_i)
+        else:
+            x_i, w_i = GaussianQuadrature._roots_weights_Legendre.get(order)
+        x_i_aux = A*x_i + B
+        
+        #integral = A * sum(w_i * function(x_i, *args, **kwargs))
+        #return integral
+        
+        integral = 0.0
+        for i in range(len(x_i)):
+            integral += w_i[i] * function(x_i_aux[i], *args, **kwargs)
+        
+        #print("order", order, "=",integral)
+        return A * integral
+        
+    @staticmethod
+    def laguerre(function, order, *args, **kwargs):
+        """ 
+        Evaluate integral of <function> object, of 1 variable and parameters:
+            integral[0, +infinity] {dx exp(-x) function(x, **args)} 
+            Args:
+        :function  <function> f(x, *args, **kwargs)
+        :a         <float> lower limit
+        :b         <float> upper limit
+        :order     <int>   order of the quadrature
+        
+        *args and **kwargs will be passed to the function (check argument introduction
+            in case of several function management)
+        """
+        if not order in GaussianQuadrature._roots_weights_Laguerre:
+            x_i, w_i = roots_laguerre(order, mu=0)
+            GaussianQuadrature._roots_weights_Laguerre[order] = (x_i, w_i)
+        else:
+            x_i, w_i = GaussianQuadrature._roots_weights_Laguerre.get(order)
+        
+        integral = 0.0
+        for i in range(len(x_i)):
+            integral += w_i[i] * function(x_i[i], *args, **kwargs)
+        
+        #print("order", order, "=",integral)
+        return integral
+
 
 #===============================================================================
 #     SPIN ORBIT INTEGRAL FOR GOGNY D1S
@@ -590,14 +633,61 @@ class _SpinOrbitPartialIntegral:
 
 class _RadialTwoBodyDecoupled():
     """
-    From T. Gonzalez Llarena thesis developments
+    From T. Gonzalez Llarena thesis developments. Matrix elements use total 
+    decoupling from the angular part. B/D coefficients are kept in static memory
+    pattern for efficiency.
+    
+    Phi_{n1l1}*Phi_{n2l2}         = [norm_coeff{12}] * sum B * (r/b)**(2*p + l1+l2)
+    r(d Phi_{n1l1}/dr)*Phi_{n2l2} = [norm_coeff{12}] * sum D * (r/b)**(2*p + l1+l2)
+    
+    sum range [0, n1+n2], B/D(n1l1 n2l2, p) coefficients are not b_length dependent.
+    and got the norm embedded (thesis definition separate the norm coefficient)
+    
+    Real coefficients have a factor (4*pi^3) (-)^n1+n2 multiplying, avoided here
+    due the factor from the norm coefficient sqrt_(1/2*pi^3). When integrating, 
+    factors cancel and left a factor 4*b_length.
+        integral(r**2 dr Phi_{1}*Phi_{2}  V(r) Phi_{3}*Phi_{4})
+    
+    Some proofs and details of B coefficient can be found in:
+    Talman, J. D. (1970)
+        Some properties of three-dimensional harmonic oscillator wave fucntions.
+        Nuclear Physics A, 141(2), 273-288 doi:10.1016/0375-9474(70)90847-x
+    
     """
+    
+    _BCoeff_Decoup_Memo = {}
+    _DCoeff_Decoup_Memo = {}
     
     DEBUG_MODE = False 
     
-    def _TalmiIntegral(self, No2):
-        """ Define the integral I(n,l(1,2), n',l'(1,2), p, p')"""
+    def _r_dependentIntegral(self, *args):
+        """ 
+        Define the integral I(n,l(1,2), n',l'(1,2), p, p'), at the end of the 
+        transformation.
+        """
         raise IntegralException("Abstract method, define the integral")
+    
+    
+    def _B_coeff(self, n1, l1, n2, l2, p):
+        """ Same accessor than Moshinsky transformation """
+        tpl = _B_coeff_memo_accessor(n1, l1, n2, l2, p)
+        
+        if not tpl in self._BCoeff_Decoup_Memo:
+            self._BCoeff_Decoup_Memo[tpl] = self._B_coeff_eval(n1, l1, n2, l2, p)
+        
+        return self._BCoeff_Decoup_Memo[tpl]
+    
+    def _D_coeff(self, n1, l1, n2, l2, p):
+        """ D coefficients cannot access by B memory accessor, wave functions 
+        are not interchangeable, the first function is derivated """
+        
+        tpl = ','.join(map(lambda x: str(x), (n1, l1, n2, l2, p)))
+        
+        if not tpl in self._DCoeff_Decoup_Memo:
+            self._DCoeff_Decoup_Memo[tpl] = self._D_coeff_eval(n1, l1, n2, l2, p)
+        
+        return self._DCoeff_Decoup_Memo[tpl]
+    
     
     def __sum_aux_denominator(self, n1, l1, n2, l2, p, k):
         
@@ -608,7 +698,7 @@ class _RadialTwoBodyDecoupled():
         )
         return np.exp(denominator)
     
-    def _B_coeff(self, n1, l1, n2, l2, p):
+    def _B_coeff_eval(self, n1, l1, n2, l2, p):
         """ (4*pi^3) (-)^n1+n2 factor not multiplied here """
         sum_ = 0
         
@@ -617,9 +707,10 @@ class _RadialTwoBodyDecoupled():
         for k in range(k_min, k_max +1):
             sum_ += 1 / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return ((-1)**(p)) * sum_
+        return ((-1)**(p)) * sum_ * self._norm_coeff(n1, l1, n2, l2)
     
-    def _D_coeff(self, n1, l1, n2, l2, p):
+    
+    def _D_coeff_eval(self, n1, l1, n2, l2, p):
         """ (4*pi^3) (-)^n1+n2 factor not multiplied here """
         sum_ = 0
         
@@ -628,54 +719,56 @@ class _RadialTwoBodyDecoupled():
         for k in range(k_min, k_max +1):
             sum_ += (2*k + l1) / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return ((-1)**(p)) * sum_ 
+        return ((-1)**(p)) * sum_ * self._norm_coeff(n1, l1, n2, l2)
     
-    def _norm_coeff(self, wf):
+    def _norm_coeff(self, n1, l1, n2, l2):
         """ Also extracted from Apendix D.1 of the thesis, 
-        factor sqrt_(1 / 2*pi^3) extracted."""
+        factor (1 / 2*pi^3) extracted."""
                 
-        aux = fact(wf.n) + gamma_half_int(2*(wf.n + wf.l) + 3)
+        aux =  fact(n1) + gamma_half_int(2*(n1 + l1) + 3)
+        aux += fact(n2) + gamma_half_int(2*(n2 + l2) + 3)
         
         return np.exp(0.5 * aux)   
-        
     
     @staticmethod
-    def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length): 
+    def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, *args): 
         """
         type_integral:
             [1] differential type:  d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
-            [2] normal type      :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
+            [2] 1/r w.f. type    :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
         """
-        self = _RadialIntegralsLS()
-        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length)
+        self = _RadialTwoBodyDecoupled()
+        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket)
+        raise IntegralException("Abstract method, implement me (use _B_coeff, "
+                                "_D_coeff, _norm_coeff and define _r_dependentIntegral")
+        
         return self._integral(type_integral, *args)
         
     
     def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length):
-        
         raise IntegralException("Abstract method, implement me (use _B_coeff, "
-                                "_D_coeff, _norm_coeff and define _TalmiIntegral")
-
+                                "_D_coeff, _norm_coeff and define _r_dependentIntegral")
+        
 
 class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
     
-    def _TalmiIntegral(self, No2):
-        """ :plus_1 = 0 for integral type 1 (without r^2), plus_1= 1 with r^2 """
+    def _r_dependentIntegral(self, No2):
+        """ Integral r^2*No2 exp(-r^2), b lengths extracted (b**6)
+        :No2 stands for N over 2, being N = 2*(p+p') + sum{l} (+2 opt.)"""
+        
         # l1 + l2 + l1_q + l2_q is even
         return np.exp(gamma_half_int(2*No2 + 1) - ((No2 + 1.5)*np.log(2)))
-        
     
     @staticmethod
     def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length): 
         """
         type_integral:
             [1] differential type:  d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
-            [2] normal type      :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
+            [2] 1/r w.f. type    :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
         """
         self = _RadialIntegralsLS()
         args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length)
         return self._integral(type_integral, *args)
-        
     
     def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length):
         
@@ -698,14 +791,14 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
                 bra_b = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
                 
                 No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
-                I_1 = self._TalmiIntegral(No2)
+                I_1 = self._r_dependentIntegral(No2)
                 if self.DEBUG_MODE:
                     XLog.write("Ip_q", pq=p_q, bra_B=bra_b, N=No2, I_1=I_1)
                 
                 if type_integral == 1:
                     bra_d = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
                     
-                    I_2 = self._TalmiIntegral(No2 + 1)
+                    I_2 = self._r_dependentIntegral(No2 + 1)
                     aux = ket_coeff * ((bra_d*I_1) - (bra_b*I_2))
                     sum_ += aux
                     if self.DEBUG_MODE:
@@ -715,14 +808,139 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
                     sum_ += aux
                     if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
-        norm_fact = np.prod([self._norm_coeff(wf) for wf in 
-                                        (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
-        norm_fact *= 4 * b_length
+        # norm_fact = np.prod([self._norm_coeff(wf) for wf in 
+        #                                 (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
+        norm_fact = 4 * b_length
         if self.DEBUG_MODE:
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             
         return  norm_fact * sum_
-                
-            
-            
+
+
+
+class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
+    
+    _instance = None
+    
+    @staticmethod
+    def _getInstance():
+        if _RadialDensityDependentFermi._instance == None:
+            _RadialDensityDependentFermi._instance = _RadialDensityDependentFermi()
+        return _RadialDensityDependentFermi._instance
+    
+    def _FermiDensity(self, A, rOb):
+        """
+        :rOb = r/b
         
+        the hypothetical nucleus is considered symmetric Z=N=A//2
+        """
+        
+        aux = 0.0 * rOb
+        occupied_states = getStatesAndOccupationUpToLastOccupied(A//2)
+        for i in range(len(occupied_states)):
+            sps, deg = occupied_states[i]
+            ni, li, _ = sps
+            
+            last = 0 if i < len(occupied_states) - 1 else A%2 
+            N = (2*deg) + last
+            
+            if N > 0:
+                aux_i = 0.0 * rOb
+                for p in range(2*ni +1):
+                    aux_i += self._B_coeff(ni, li, ni, li, p) * rOb**(2*(p + li))
+                aux += 2 * N * aux_i
+                # factor 2 come from the normalization coefficient
+        
+        return aux
+    
+    def _auxFunction(self, x, No2, A, alpha):
+        """ Function to be inserted in the Laguerre_ integral. """
+        return (x**(No2 - 0.5)) * self._FermiDensity(A, np.sqrt(x/(alpha + 2)))
+    
+    @staticmethod
+    def _auxFunction_static(x, No2, A, alpha):
+    
+        self = _RadialDensityDependentFermi._getInstance()
+        return self._auxFunction(x, No2, A, alpha)
+    
+    def _r_dependentIntegral(self, No2, b_length, A, alpha):
+        """ Radial integral for  (factors omitted)
+            exp(-(alpha + 2)r**2) * r^2*No2 * fermi_density
+        :No2 stands for N over 2, being N = 2*(p+p') + sum{l} + 2 
+        """
+        x = np.arange(0, (alpha + 2)*((10/b_length)**2), 0.1)
+        cte = 0.5 / ((alpha + 2)**(No2 - 0.5))
+        
+        aux = GaussianQuadrature.laguerre(self._auxFunction,#self._auxFunction_static, 
+                                          80, No2, A, alpha)
+        # aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
+        #                                   80, No2, A, alpha)
+        return cte * aux
+
+    
+    @staticmethod
+    def integral(wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha): 
+        """
+        wfs: wave fucntions bra 1, 2 ket 1, 2
+        b_length: oscillator parameter 
+        A: <int>  mass number
+        alpha: coefficient over the density (1/3 only valid)
+        """
+        self = _RadialDensityDependentFermi._getInstance()
+        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha)        
+        return self._integral(*args)
+    
+    def _integral(self, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha):
+                
+        n1_q, l1_q = wf1_bra.n, wf1_bra.l
+        n2_q, l2_q = wf2_bra.n, wf2_bra.l
+        n1, l1 = wf1_ket.n, wf1_ket.l
+        n2, l2 = wf2_ket.n, wf2_ket.l
+        
+        sum_ = 0
+        if self.DEBUG_MODE:
+            XLog.write("R_int", wf1=wf1_bra, wf2=wf2_bra, wf3=wf1_ket, wf4=wf2_ket)
+        
+        for p in range(n1+n2 +1):
+            ket_coeff = self._B_coeff(n1, l1, n2, l2, p)
+            
+            if self.DEBUG_MODE: XLog.write("Ip", p=p, ket_C=ket_coeff)
+            for p_q in range(n1_q+n2_q +1):
+                bra_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+                
+                # l1 + l2 + l1_q + l2_q is even
+                No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2) + 1
+                I_dd = self._r_dependentIntegral(No2, b_length, A, alpha)
+                
+                if self.DEBUG_MODE:
+                    XLog.write("Ip_q", pq=p_q, bra_C=bra_coeff, N=No2, Idd=I_dd)
+                
+                aux = ket_coeff * bra_coeff * I_dd
+                sum_ += aux
+                if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
+        
+        norm_fact = 4 * (b_length**(2 - 3*alpha))
+        if self.DEBUG_MODE:
+            XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
+            
+        return  norm_fact * sum_
+
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    A_max = getStatesAndOccupationUpToLastOccupied(100)
+    A = 0
+    Z = 0
+    for spss, a in A_max:
+        A += 2*a
+        Z += a 
+        aux = _RadialDensityDependentFermi()
+        rOb = np.arange(0, 4, 0.01)
+        # den = aux._FermiDensity(A, rOb)
+        den = aux._auxFunction(rOb, 6, A, 1/3)
+        den /= np.exp((7/3) * rOb**2)
+        
+        spss = shellSHO_Notation(*spss)
+        plt.plot(rOb, den, label=f"{A}({Z})={spss}")
+    plt.legend()
+    plt.show()
