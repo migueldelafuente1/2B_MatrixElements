@@ -82,7 +82,7 @@ class BrinkBoekerParameters(Enum):
     Heisenberg  = 'Heisenberg'
 
 class DensityDependentParameters(Enum):
-    constant    = 'constant'
+    constant    = 'constant' # t_0
     x0    = 'x0'
     alpha = 'alpha'
 

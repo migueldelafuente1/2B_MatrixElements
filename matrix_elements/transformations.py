@@ -19,23 +19,10 @@ from matrix_elements.BM_brackets import BM_Bracket
 from helpers.Log import XLog
 
 #===============================================================================
-# Global dictionary for B coefficient memorization pattern
-# Index : comma separated indexes string: 'n,l,n_q,l_q,p'
+# moved there due circular import (after angular_condition method)
+from helpers.Helpers import _B_coeff_memo_accessor
 
-def _B_coeff_memo_accessor(n, l, n_q, l_q, p):
-    """ 
-    Key constructor for the memory storage of the coefficients.
-        B(nl,n'l', p) coefficients are symmetric by nl <-> n'l' return the 
-    lowest tuple (read from the left):
-    
-    _B_coeff_memo_accessor(1, 2, 0, 3, 1) >>> (0, 3, 1, 2, 1)
-    _B_coeff_memo_accessor(0, 3, 1, 2, 1) >>> (0, 3, 1, 2, 1)
-    
-    """
-    
-    list_ = [*min((n, l), (n_q, l_q)), *max((n, l), (n_q, l_q)), p]
-    return ','.join(map(lambda x: str(x), list_))
-
+# B coefficients stored in Memory are not b_length normalized (divide by b**3)
 _B_Coefficient_Memo = {}
 
 #===============================================================================
@@ -223,7 +210,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     def BCoefficient(n, l, n_q, l_q, p, b_param=1):
         """ 
         @static method to access B(n,l, n', l', p) coefficients. 
-        Testing Purposes, Do not use it inner calculations
+        Testing purposes, Do not use it inner calculations
         """
         
         _dummy_me = _TalmiTransformationBase(
@@ -237,7 +224,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         _dummy_me._l_q = l_q
         _dummy_me._p   = p
         
-        return _dummy_me._B_coefficient_evaluation(b_param=b_param)
+        return _dummy_me._B_coefficient_evaluation() / (b_param**3)
     
     
     def _B_coefficient(self, b_param=None):
@@ -252,12 +239,12 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         global _B_Coefficient_Memo
         
         if not tpl in _B_Coefficient_Memo:
-            _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation(b_param)
+            _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation()
 
-        return _B_Coefficient_Memo[tpl]
+        return _B_Coefficient_Memo[tpl] / (b_param**3)
     
-    def _B_coefficient_evaluation(self, b_param=None):
-        """ SHO normalization coefficients for WF """
+    def _B_coefficient_evaluation(self):
+        """ SHO normalization coefficients for WF, not b_length dependent """
         
         # parity condition
         if(((self._l + self._l_q)%2)!=0):
@@ -274,7 +261,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         const += fact(2*self._p + 1) - fact(self._p)
         
         const = (-1)**(self._p - (self._l + self._l_q)//2) * np.exp(const)
-        const /= (b_param**3) * (2**(self._n + self._n_q))
+        const /= (2**(self._n + self._n_q))
         
         aux_sum = 0.
         max_ = min(self._n, self._p - (self._l + self._l_q)//2)
@@ -346,7 +333,8 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         sum_ = 0.0
         for p in range(max(self.rho_bra, self.rho_ket) +1):
             self._p = p
-            series = self._interactionSeries() 
+            # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
+            series = 2 * self._interactionSeries()
             Ip =     self.talmiIntegral()
             product = series * Ip
             sum_ += product
@@ -488,20 +476,24 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
             
             self._n, self._l, self._N, self._L = qqnn_bra
             
-            bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, self._L_bra)
+            bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, 
+                                 self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, 
+                                 self._L_bra)
             if self.isNullValue(bmb_bra):
                 continue
             
             for l_q in self._validKet_relativeAngularMomentums():
                 self._l_q = l_q
                 
-                self._n_q = self._n
+                self._n_q  = self._n
                 self._n_q += (self.rho_ket - self.rho_bra + self._l  - self._l_q) // 2
                 
                 if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
                     continue
                 
-                bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, self._L_ket)
+                bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, 
+                                     self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
+                                     self._L_ket)
                 if self.isNullValue(bmb_ket):
                     continue
                 

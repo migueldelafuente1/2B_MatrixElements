@@ -267,8 +267,11 @@ def compareDictionaries(d_bench, d_test):
 if __name__ == '__main__':
     
     
-    b_bench_diag, b_bench_off = _getJTSchemeMatrixElements('LS_me_BLC_test_JT.2b', ignorelines=2)
-    b_2test_diag, b_2test_off = _getJTSchemeMatrixElements('../results/ls_SPSD.sho', ignorelines=4)
+    # b_bench_diag, b_bench_off = _getJTSchemeMatrixElements('LS_me_BLC_test_JT.2b', ignorelines=2)
+    # b_2test_diag, b_2test_off = _getJTSchemeMatrixElements('../results/ls_SPSD.sho', ignorelines=4)
+    
+    b_bench_diag, b_bench_off = _getJTSchemeMatrixElements('../results/central_SPSD_correct.sho', ignorelines=4)
+    b_2test_diag, b_2test_off = _getJTSchemeMatrixElements('../results/central_SPSD.sho', ignorelines=4)
     
     __TESTING_DIAG = False
     compareDictionaries(b_bench_off, b_2test_off)

@@ -1,8 +1,8 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>k2b_SPSD</Output_Filename>
-		<Hamil_Type>1</Hamil_Type>
+		<Output_Filename>auxbb_SPSD</Output_Filename>
+		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
@@ -10,7 +10,7 @@
 			   are not required parameters, define values only for explicit 
 			   setting.
 			-->
-		<A_mass>4</A_mass>
+		<A_mass>16</A_mass>
 		<hbar_omega units='MeV'>18.4586</hbar_omega>
 		<b_length units='fm'>1.4989</b_length>
 	</SHO_Parameters>
@@ -43,7 +43,7 @@
 		<innert_core name=''/>
 	</Core>
 	<Force_Parameters>
-		<Brink_Boeker active='False'>
+		<Brink_Boeker active='True'>
 			<!-- Brink-Boeker force: 
 				Effective force mediated by 2 gaussians of length :mu fm.
 				Gaussian radial functions are shared by a central term (Wigner)
@@ -73,9 +73,9 @@
 		<Coulomb active='False'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
-		<Kinetic_2Body active='Fasle'>
+		<Kinetic_2Body active='False'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
-		</Kinetic_2Body>3
+		</Kinetic_2Body>
 		<Central active='False'>
 			<!-- Central force potential,
 				Shaped as exponential, gaussian, power term, yukawa or coulomb 
@@ -103,18 +103,18 @@
 				f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
 				-->
 			<potential 	name='power'/>
-			<constant	value='0.5' 	units='MeV'/>
+			<constant	value='1.0' 	units='MeV'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbit>
-		<SpinOrbitShortRange active='True'>
+		<SpinOrbitShortRange active='False'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
 				f(r; mu, n), modulated by constant: V(r3)=C*f(r; mu, n)
 				-->
 			<potential 	name='power'/>
-			<constant	value='115.0' 	units='MeV*fm^-5'/>
+			<constant	value='1.0' 	units='MeV*fm^-5'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
@@ -124,7 +124,8 @@
 					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)
 				alpha fixed (=1/3), x0 fixed (=1)
 				-->
-			<constant value='1350.0'  	units='MeV*fm^-4'/>
+			<!--constant value='1350.0'  	units='MeV*fm^-4'/-->
+			<constant value='1.0'  	units='MeV*fm^-4'/>
 			<alpha    value='0.33333333'/>
 			<x0		  value='1'/>
 		</Density_Dependent>

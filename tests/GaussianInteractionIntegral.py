@@ -12,7 +12,7 @@ on the simple harmonic oscillator functions using the multipole expansion.
 
 import numpy as np
 from helpers.Helpers import fact, gamma_half_int, safe_3j_symbols, safe_racah
-from helpers.integrals import gaussianIntegralQuadrature
+from helpers.integrals import GaussianQuadrature
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial
 
 #===============================================================================
@@ -261,12 +261,12 @@ def _radialIntegral_over_r2(**kwargs):
                     
                     # negative integral
                     kwargs[_Args.r1] *= -1
-                    neg_int = gaussianIntegralQuadrature( _r2_dependentFunction, 
-                                                         0, r_Max, quad_order,
-                                                         **kwargs)
+                    neg_int = GaussianQuadrature.legendre(_r2_dependentFunction, 
+                                                          0, r_Max, quad_order,
+                                                          **kwargs)
                     # positive integral (restore r1)
                     kwargs[_Args.r1] *= -1
-                    pos_int = gaussianIntegralQuadrature( _r2_dependentFunction, 
+                    pos_int = GaussianQuadrature.legendre(_r2_dependentFunction, 
                                                          0, r_Max, quad_order,
                                                          **kwargs)
                     
@@ -325,7 +325,7 @@ def _radialIntegral_over_r1(bra, ket, k, b_length, mu_param, r_Max, quad_ord):
             aux = np.exp(alpha_nlk_a + alpha_nlk_c - (L_ac * np.log(b_length)))
             aux *= (-1)**(k_a + k_c)
             
-            sum_ += aux * gaussianIntegralQuadrature(_r1_dependentFunction, 
+            sum_ += aux * GaussianQuadrature.legendre(_r1_dependentFunction, 
                                                      0, 
                                                      r_Max * b_length,
                                                      quad_ord,
@@ -423,12 +423,12 @@ def _ssss_radialIntegral_over_r2(**kwargs):
             
             # negative integral exp(-(A*r2 - B)^2)
             kwargs[_Args.r1] *= -1
-            neg_int = gaussianIntegralQuadrature(_ssss_r2_dependentFunction, 
+            neg_int = GaussianQuadrature.legendre(_ssss_r2_dependentFunction, 
                                                  0, r_Max, quad_order,
                                                  **kwargs)
             # positive integral (restore r1) exp(-(A*r2 + B)^2)
             kwargs[_Args.r1] *= -1
-            pos_int = gaussianIntegralQuadrature( _ssss_r2_dependentFunction, 
+            pos_int = GaussianQuadrature.legendre( _ssss_r2_dependentFunction, 
                                                  0, r_Max, quad_order,
                                                  **kwargs)
             
@@ -484,7 +484,7 @@ def _ssss_gaussian2BMatrixElement(na, nb, nc, nd, b_length, mu_param, V_0=1, r_M
             aux = np.exp(alpha_nlk_a + alpha_nlk_b - (L_ac * np.log(b_length)))
             aux *= (-1)**(k_a + k_c)
             
-            sum_ += aux * gaussianIntegralQuadrature(_ssss_r1_dependentFunction, 
+            sum_ += aux * GaussianQuadrature.legendre(_ssss_r1_dependentFunction, 
                                                      0, 
                                                      r_Max * b_length,
                                                      quad_ord,
@@ -504,8 +504,8 @@ if __name__ == '__main__':
     mu_param = 1.0
     V_0      = 1
     
-    a, b = QN_1body_radial(1, 3), QN_1body_radial(1, 1)
-    c, d = QN_1body_radial(1, 3), QN_1body_radial(1, 1)
+    a, b = QN_1body_radial(1, 3, mt=1), QN_1body_radial(1, 1, mt=1)
+    c, d = QN_1body_radial(1, 3, mt=1), QN_1body_radial(1, 1, mt=1)
     
     bra = QN_2body_L_Coupling(a, b, 2)  
     ket = QN_2body_L_Coupling(c, d, 2)
@@ -535,8 +535,8 @@ if __name__ == '__main__':
     L  = 0
     
     # for quad_ord in (i for i in range(80, 141, 10)):
-#         a, b = QN_1body_radial(n, la), QN_1body_radial(n, lb)
-#         c, d = QN_1body_radial(n, lc), QN_1body_radial(n, ld)
+#         a, b = QN_1body_radial(n, la, mt=1), QN_1body_radial(n, lb, mt=1)
+#         c, d = QN_1body_radial(n, lc, mt=1), QN_1body_radial(n, ld, mt=1)
 #         #_plot_functions(a, b, c, d, b_length, mu_param, V_0, r_max)
 #         print("quad_ord, rmax: ", quad_ord, r_max)
 #         print("me = ", _gaussian2BMatrixElement(QN_2body_L_Coupling(a, b, L), 
@@ -545,8 +545,8 @@ if __name__ == '__main__':
 #                                                 quad_ord=quad_ord, r_Max=r_max))
     #for L in range(0,4):
     for mu_param in (1.0, 0.7):
-        a, b = QN_1body_radial(na, la), QN_1body_radial(nb, lb)
-        c, d = QN_1body_radial(nc, lc), QN_1body_radial(nd, ld)
+        a, b = QN_1body_radial(na, la, mt=1), QN_1body_radial(nb, lb, mt=1)
+        c, d = QN_1body_radial(nc, lc, mt=1), QN_1body_radial(nd, ld, mt=1)
         _plot_functions(a, b, c, d, b_length, mu_param, V_0, r_max)
         print("quad_ord, rmax:", quad_ord, r_max, '  (b, m)=', b_length, mu_param)
         print("me =", _gaussian2BMatrixElement(QN_2body_L_Coupling(a, b, L), 
@@ -560,8 +560,8 @@ if __name__ == '__main__':
     print()
     
     
-#     a, b = QN_1body_radial(0, la), QN_1body_radial(0, lb)
-#     c, d = QN_1body_radial(0, lc), QN_1body_radial(0, ld)
+#     a, b = QN_1body_radial(0, la, mt=1), QN_1body_radial(0, lb, mt=1)
+#     c, d = QN_1body_radial(0, lc, mt=1), QN_1body_radial(0, ld, mt=1)
 #     _plot_functions(a, b, c, d, b_length, mu_param, V_0, r_max)
 #     print("quad_ord, rmax: ", quad_ord, r_max)
 #     print("me = ", _gaussian2BMatrixElement(QN_2body_L_Coupling(a, b, L), 
@@ -569,8 +569,8 @@ if __name__ == '__main__':
 #                                             b_length, mu_param, V_0, 
 #                                             quad_ord=quad_ord, r_Max=r_max))
 #     
-#     a, b = QN_1body_radial(1, la), QN_1body_radial(1, lb)
-#     c, d = QN_1body_radial(1, lc), QN_1body_radial(1, ld)
+#     a, b = QN_1body_radial(1, la, mt=1), QN_1body_radial(1, lb, mt=1)
+#     c, d = QN_1body_radial(1, lc, mt=1), QN_1body_radial(1, ld, mt=1)
 #     _plot_functions(a, b, c, d, b_length, mu_param, V_0, r_max)
 #     print("quad_ord, rmax: ", quad_ord, r_max)
 #     print("me = ", _gaussian2BMatrixElement(QN_2body_L_Coupling(a, b, L), 
@@ -578,8 +578,8 @@ if __name__ == '__main__':
 #                                             b_length, mu_param, V_0, 
 #                                             quad_ord=quad_ord, r_Max=r_max))
 #     
-#     a, b = QN_1body_radial(2, la), QN_1body_radial(2, lb)
-#     c, d = QN_1body_radial(2, lc), QN_1body_radial(2, ld)
+#     a, b = QN_1body_radial(2, la, mt=1), QN_1body_radial(2, lb, mt=1)
+#     c, d = QN_1body_radial(2, lc, mt=1), QN_1body_radial(2, ld, mt=1)
 #     print("quad_ord, rmax: ", quad_ord, r_max)
 #     print("me = ", _gaussian2BMatrixElement(QN_2body_L_Coupling(a, b, L), 
 #                                             QN_2body_L_Coupling(c, d, L),

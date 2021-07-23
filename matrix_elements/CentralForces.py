@@ -12,8 +12,10 @@ from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
-    PotentialForms, SHO_Parameters
+    PotentialForms, SHO_Parameters, DensityDependentParameters
 from helpers.Log import XLog
+from helpers.integrals import _RadialDensityDependentFermi
+from helpers.WaveFunctions import QN_1body_radial
 
 class CentralForce(TalmiTransformation):
     
@@ -96,7 +98,11 @@ class CentralForce(TalmiTransformation):
         return 1
     
     def _deltaConditionsForCOM_Iteration(self):
-        return True
+        # return True
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+            return True
+        return False
     
     
 
@@ -105,15 +111,33 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     
     def __init__(self, bra, ket, run_it=True):
-        
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
-
+    
+    # def _run(self):
+    #     ## First method that runs antisymmetrization by exchange the quantum
+    #     ## numbers (X2 time), change 2* _series_coefficient
+    #     return _TwoBodyMatrixElement_JTCoupled._run(self)
+    
     def _run(self):
-        _TwoBodyMatrixElement_JTCoupled._run(self)
+        """ Calculate the antisymmetric matrix element value. """
+        if self.isNullMatrixElement:
+            return
+    
+        if self.DEBUG_MODE: 
+            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+    
+        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
+        self._value = self._non_antisymmetrized_ME()
+    
+        if self.DEBUG_MODE:
+            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
+    
+        # value is always M=0, M_T=0
+        self._value *= self.bra.norm() * self.ket.norm()
     
     def _deltaConditionsForCOM_Iteration(self):
         
-        return True
+        #return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
@@ -169,8 +193,12 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     def __init__(self, bra, ket, run_it=True):
         
         _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
-
+        
+        
     def _run(self):
+        
+        if self.isNullMatrixElement:
+            return
         
         if self.bra.isospin_3rdComponent != 1: 
             ## same number of p or n for bra and ket_ already verified.
@@ -178,7 +206,18 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
             self._isNullMatrixElement = True
             
         else:
-            _TwoBodyMatrixElement_JCoupled._run(self)
+            if self.DEBUG_MODE: 
+                XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+        
+            # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
+            self._value = self._non_antisymmetrized_ME()
+        
+            if self.DEBUG_MODE:
+                XLog.write('nas_me', value=self._value, 
+                           norms=self.bra.norm()*self.ket.norm())
+        
+            # value is always M=0, M_T=0
+            self._value *= self.bra.norm() * self.ket.norm()
     
     def _deltaConditionsForCOM_Iteration(self):
         return True
@@ -200,7 +239,15 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
 
 
-class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JCoupled):
+class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
+    """
+    Density term based on Fermi density distribution, (ordered filled up to A 
+    mass number). 
+    """
+    
+    COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
+    
+    _BREAK_ISOSPIN = False
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
@@ -226,25 +273,50 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JCoupled):
         _a = SHO_Parameters.A_Mass
         
         cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
-        cls.PARAMS_SHO[_a] = float(kwargs.get(_a))
+        cls.PARAMS_SHO[_a] = int(kwargs.get(_a))
         
         cls.PARAMS_FORCE = {}
         
         for param in dd_p.members():
-            cls.PARAMS_FORCE[param] = float(kwargs[param].get(param))
+            cls.PARAMS_FORCE[param] = float(kwargs[param][AttributeArgs.value])
                 
-        cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
+        #cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
     
+    def _validKetTotalAngularMomentums(self):
+        return (self._L_bra, )
+    
+    def _validKetTotalSpins(self):
+        return (self._S_bra, )
     
     def _LScoupled_MatrixElement(self):
         
-        fact = ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
-                *(2*self.ket.l1 + 1)*(2*self.ket.l2 + 1))**0.5 / (4*np.pi)
+        phs = ((-1)**self._S_bra)
+        fact = (1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0]))
+        fact *= ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
+                 *(2*self.ket.l1 + 1)*(2*self.ket.l2 + 1))**0.5
+        
         fact *= safe_3j_symbols(self.bra.l1, self._L_bra, self.bra.l2, 0, 0, 0)
         fact *= safe_3j_symbols(self.ket.l1, self._L_bra, self.ket.l2, 0, 0, 0)
+        fact *= self.PARAMS_FORCE[DensityDependentParameters.constant]/ (4*np.pi)
+        
+        args = (
+            QN_1body_radial(self.bra.n1, self.bra.l1), 
+            QN_1body_radial(self.bra.n2, self.bra.l2),
+            QN_1body_radial(self.ket.n1, self.ket.l1),
+            QN_1body_radial(self.ket.n2, self.ket.l2),
+            self.PARAMS_SHO.get(SHO_Parameters.b_length),
+            self.PARAMS_SHO.get(SHO_Parameters.A_Mass),
+            self.PARAMS_FORCE.get(DensityDependentParameters.alpha)
+        )
+        radial = _RadialDensityDependentFermi.integral(*args)
+        
+        return fact * radial
     
 class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_JTCoupled):
     
+    COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
+    
+    _BREAK_ISOSPIN = False
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):

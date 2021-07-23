@@ -181,6 +181,29 @@ def angular_condition(l1, l2, L):
 
 
 #===============================================================================
+# Global dictionary for B coefficient memorization pattern
+# Index : comma separated indexes string: 'n,l,n_q,l_q,p'
+#
+## need to be here to avoid circular import from integrals and transformations.
+
+def _B_coeff_memo_accessor(n, l, n_q, l_q, p):
+    """ 
+    Key constructor for the memory storage of the coefficients.
+        B(nl,n'l', p) coefficients are symmetric by nl <-> n'l' return the 
+    lowest tuple (read from the left):
+    
+    _B_coeff_memo_accessor(1, 2, 0, 3, 1) >>> (0, 3, 1, 2, 1)
+    _B_coeff_memo_accessor(0, 3, 1, 2, 1) >>> (0, 3, 1, 2, 1)
+    
+    Note: works for both Moshinsky_ and Talman_ coefficients
+    """
+    
+    list_ = [*min((n, l), (n_q, l_q)), *max((n, l), (n_q, l_q)), p]
+    return ','.join(map(lambda x: str(x), list_))
+
+#===============================================================================
+
+#===============================================================================
 #     
 #===============================================================================
 def prettyPrintDictionary(dictionary, level=0, delimiter=' . '):
@@ -283,6 +306,10 @@ def getCoreNucleus(Z, N):
     else:
         return 'UNIDENTIFIED !'
 
+## Default Ordering of the shells.
+SHO_shell_order = ['S', 'P', 'SD', 'F', 'PF', 'G', 
+                   'SDG', 'H', 'PFH', 'I', 'SDGI', 'J']
+
 valenceSpacesDict = {
     'S'   : ('001',),
     'P'   : ('103','101'),
@@ -316,6 +343,32 @@ angularMomentumLetterDict = {
     0:'s', 1:'p', 2:'d', 3:'f', 4:'g', 5:'h', 6:'i', 7:'j', 8:'k', 9:'l', 10:'m'
 }
 
+def readAntoine(index, l_ge_10=False):
+    """     
+    returns the Quantum numbers from string Antoine's format:
+        :return: [n, l, j], None if invalid
+        
+    :l_ge_10 <bool> [default=False] format for l>10.
+    """
+    if isinstance(index, str):
+        index = int(index)
+    
+    if(index == 1):
+        return[0, 0, 1]
+    else:
+        if index % 2 == 1:
+            _n_division = 10000 if l_ge_10 else 1000
+            n = int((index)/_n_division)
+            l = int((index - (n*_n_division))/100)
+            j = int(index - (n*_n_division) - (l*100))# is 2j 
+            
+            if (n >= 0) and (l >= 0) and (j > 0):
+                return [n, l, j]
+    
+    raise Exception("Invalid state index for Antoine Format [{}]".format(index))
+
+
+
 def shellSHO_Notation(n, l, j=0):
     """
     Give the Shell state: (n,l)=(0,3) -> '0f', (n,l,j)=(1,2,3) -> '1d3/2' 
@@ -325,6 +378,57 @@ def shellSHO_Notation(n, l, j=0):
     return '{}{}{}'.format(str(n), angularMomentumLetterDict[l], j)
 
 
+shell_filling_order = []
 
-
+def _shellFilling():
+    """
+    return the states ordered by default (the order in valenceSpacesDict).
+    """
     
+    for shell in SHO_shell_order:
+        sp_states = valenceSpacesDict[shell]
+        
+        for spss in sp_states:
+            n, l, j = readAntoine(spss)
+            
+            deg = j + 1
+            shell_filling_order.append((spss, (n,l,j), deg))
+
+_shellFilling()
+
+def getStatesAndOccupationUpToLastOccupied(N, N_min=0):
+    """ Function that return the quantum numbers occupied from an N_min (which 
+    must fill a subshell, otherwise it will return the subshell as empty)
+    until an N max.
+    
+    Use: States occupied to evaluate the density of N particles.
+    """
+    end_ = False
+    vals = []
+    i, n = 0, 0
+    while(not end_):
+        _, spss, deg = shell_filling_order[i]
+        n += deg
+        i += 1
+        if n > N_min:
+            if n <= N: 
+                vals.append((spss, deg))
+            else:
+                vals.append((spss, deg - (n - N)))
+                end_ = True
+        #print(f"st[{x}] n:{n:2} deg:{deg:2}  "+str(vals))
+    return vals
+
+def getStatesUpToLastOccupied(N, N_min=0):
+    
+    vals = getStatesAndOccupationUpToLastOccupied(N, N_min)
+    vals = [val[0] for val in vals]
+    return vals
+
+
+# if __name__ == "__main__":
+#
+#     print('13=\n'+'\n'.join(map(lambda x: str(x), getStatesUpToLastOcupied(13))))
+#     print('43=\n'+'\n'.join(map(lambda x: str(x), getStatesUpToLastOcupied(43))))
+#     print('10=\n'+'\n'.join(map(lambda x: str(x), getStatesUpToLastOcupied(10, 2))))
+#     print('23=\n'+'\n'.join(map(lambda x: str(x), getStatesUpToLastOcupied(23))))

@@ -47,7 +47,25 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = ([], [])    
-        
+    
+    
+    def _run(self):
+        """ Calculate the antisymmetric matrix element value. """
+        if self.isNullMatrixElement:
+            return
+    
+        if self.DEBUG_MODE: 
+            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+    
+        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
+        self._value = self._non_antisymmetrized_ME()
+    
+        if self.DEBUG_MODE:
+            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
+    
+        # value is always M=0, M_T=0
+        self._value *= self.bra.norm() * self.ket.norm()
+    
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
         return (self._S_bra, )
@@ -88,7 +106,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
     
     def _deltaConditionsForCOM_Iteration(self):
         
-        return True
+        #return True
         
         # TODO: Remove or not? conditions from Moshinsky - implementation in 
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 

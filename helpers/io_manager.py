@@ -3,39 +3,13 @@ Created on Feb 23, 2021
 
 @author: Miguel
 '''
-from helpers.Enums import InputParts, SHO_Parameters, ForceParameters, Enum,\
+from helpers.Enums import InputParts, SHO_Parameters, ForceParameters,\
     AttributeArgs, ValenceSpaceParameters, Output_Parameters
 from helpers.Enums import ForceVariablesDict
 import xml.etree.ElementTree as et
 from helpers.WaveFunctions import QN_1body_jj
-from helpers.Helpers import valenceSpacesDict, shellSHO_Notation,\
-    valenceSpacesDict_l_ge10
+from helpers.Helpers import readAntoine, shellSHO_Notation, valenceSpacesDict_l_ge10
 
-
-
-def readAntoine(index, l_ge_10=False):
-    """     
-    returns the Quantum numbers from string Antoine's format:
-        :return: [n, l, j], None if invalid
-        
-    :l_ge_10 <bool> [default=False] format for l>10.
-    """
-    if isinstance(index, str):
-        index = int(index)
-    
-    if(index == 1):
-        return[0, 0, 1]
-    else:
-        if index % 2 == 1:
-            _n_division = 10000 if l_ge_10 else 1000
-            n = int((index)/_n_division)
-            l = int((index - (n*_n_division))/100)
-            j = int(index - (n*_n_division) - (l*100))# is 2j 
-            
-            if (n >= 0) and (l >= 0) and (j > 0):
-                return [n, l, j]
-    
-    raise Exception("Invalid state index for Antoine Format [{}]".format(index))
 
 def castAntoineFormat2Str(state, l_ge_10=False):
     """ 
@@ -48,7 +22,7 @@ def castAntoineFormat2Str(state, l_ge_10=False):
             return state.AntoineStrIndex_l_greatThan10
         return state.AntoineStrIndex
     
-    elif isinstance(state, int):
+    if isinstance(state, int):
         if l_ge_10:
             state = readAntoine(state, l_ge_10)
             state = str(10000*state[0] + 100*state[1] + state[2])

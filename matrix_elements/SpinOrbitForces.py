@@ -157,9 +157,31 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
     
+    # def _run(self):
+    #     ## First method that runs antisymmetrization by exchange the quantum
+    #     ## numbers (X2 time), change 2* _series_coefficient
+    #     return _TwoBodyMatrixElement_JTCoupled._run(self)
+    
+    def _run(self):
+        """ Calculate the antisymmetric matrix element value. """
+        if self.isNullMatrixElement:
+            return
+    
+        if self.DEBUG_MODE: 
+            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+    
+        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
+        self._value = self._non_antisymmetrized_ME()
+    
+        if self.DEBUG_MODE:
+            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
+    
+        # value is always M=0, M_T=0
+        self._value *= self.bra.norm() * self.ket.norm()
+    
     def _deltaConditionsForCOM_Iteration(self):
         # TODO: Avoid this l, l' T conditions
-        return True
+        #return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
