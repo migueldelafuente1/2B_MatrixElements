@@ -43,7 +43,7 @@ class ValenceSpaceParameters(Enum):
     QN_Energies = 'QN_Energies'
     l_great_than_10 = 'l_great_than_10'
 
-class ForceParameters(Enum):
+class ForceEnum(Enum):
     SDI = 'SDI'
     Central = 'Central'
     Coulomb = 'Coulomb'
@@ -91,28 +91,28 @@ class DensityDependentParameters(Enum):
 ## Use Enum if the interaction has no parameters
 
 ForceVariablesDict = {
-    ForceParameters.Brink_Boeker : BrinkBoekerParameters,
-    ForceParameters.Central : CentralMEParameters,
-    ForceParameters.Coulomb : Enum,
-    ForceParameters.Tensor  : CentralMEParameters,
-    ForceParameters.SpinOrbit : CentralMEParameters,
-    ForceParameters.SpinOrbitShortRange : CentralMEParameters,
-    ForceParameters.Density_Dependent : DensityDependentParameters,
-    ForceParameters.Kinetic_2Body : Enum,
-    ForceParameters.SDI : None,
-    ForceParameters.Multipole_Expansion: None,
+    ForceEnum.Brink_Boeker : BrinkBoekerParameters,
+    ForceEnum.Central : CentralMEParameters,
+    ForceEnum.Coulomb : Enum,
+    ForceEnum.Tensor  : CentralMEParameters,
+    ForceEnum.SpinOrbit : CentralMEParameters,
+    ForceEnum.SpinOrbitShortRange : CentralMEParameters,
+    ForceEnum.Density_Dependent : DensityDependentParameters,
+    ForceEnum.Kinetic_2Body : Enum,
+    ForceEnum.SDI : None,
+    ForceEnum.Multipole_Expansion: None,
 }
 
 # from the input name for the force to a
 ## TODO: this dictionary is deprecated (Remove)
 # ForceVariablesMatrixElementDict = {
-#     ForceParameters.Brink_Boeker : 'BrinkBoeker',
-#     ForceParameters.Central      : 'CentralForce',
-#     ForceParameters.Coulomb      : 'Coulomb',
-#     ForceParameters.Tensor       : 'TensorForce',
-#     ForceParameters.SpinOrbit    : 'SpinOrbitForce',
-#     ForceParameters.SpinOrbitShortRange : 'SpinOrbitShortRange',
-#     ForceParameters.Density_Dependent   : ''     
+#     ForceEnum.Brink_Boeker : 'BrinkBoeker',
+#     ForceEnum.Central      : 'CentralForce',
+#     ForceEnum.Coulomb      : 'Coulomb',
+#     ForceEnum.Tensor       : 'TensorForce',
+#     ForceEnum.SpinOrbit    : 'SpinOrbitForce',
+#     ForceEnum.SpinOrbitShortRange : 'SpinOrbitShortRange',
+#     ForceEnum.Density_Dependent   : ''     
 # }
 
 class AttributeArgs(Enum):

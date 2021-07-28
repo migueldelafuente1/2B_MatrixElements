@@ -1,4 +1,4 @@
-from helpers.Enums import ForceParameters
+from helpers.Enums import ForceEnum
 
 from .BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme
@@ -13,27 +13,27 @@ def switchMatrixElementType(force, J_scheme=False):
     Select defined force classes for implementing matrix elements.
     Call from TBME_Runner automatic selection
     
-    :force  From ForceParameters(Enum)
+    :force  From ForceEnum(Enum)
     TODO: :scheme (J and JT)
     """
     
-    if force == ForceParameters.Brink_Boeker:
+    if force == ForceEnum.Brink_Boeker:
         return BrinkBoeker
-    elif force == ForceParameters.Central:
+    elif force == ForceEnum.Central:
         return CentralForce_JTScheme
-    elif force == ForceParameters.Coulomb:
+    elif force == ForceEnum.Coulomb:
         return CoulombForce
-    elif force == ForceParameters.Kinetic_2Body:
+    elif force == ForceEnum.Kinetic_2Body:
         return KineticTwoBody_JTScheme
-    elif force == ForceParameters.Density_Dependent:
+    elif force == ForceEnum.Density_Dependent:
         return DensityDependentForce_JTScheme
     
-    elif force == ForceParameters.SpinOrbit:
+    elif force == ForceEnum.SpinOrbit:
         return SpinOrbitForce_JTScheme
-    elif force == ForceParameters.SpinOrbitShortRange:
+    elif force == ForceEnum.SpinOrbitShortRange:
         return ShortRangeSpinOrbit_JTScheme
     
-    elif force == ForceParameters.Tensor:
+    elif force == ForceEnum.Tensor:
         return TensorForce_JTScheme
     else:
         raise Exception("Invalid force: [{}]".format(force))

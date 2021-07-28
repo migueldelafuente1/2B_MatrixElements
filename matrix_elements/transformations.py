@@ -331,7 +331,11 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         """
         
         sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('talmi')
         for p in range(max(self.rho_bra, self.rho_ket) +1):
+            if self.DEBUG_MODE:
+                XLog.write('talmi', p=p)
             self._p = p
             # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
             series = 2 * self._interactionSeries()
@@ -341,7 +345,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
             # sum_ += self._interactionSeries() * self.talmiIntegral()
             
             if self.DEBUG_MODE:
-                XLog.write('talmi', p=p, series = series, Ip=Ip, val=product)
+                XLog.write('talmi', series = series, Ip=Ip, val=product)
         return self._globalInteractionCoefficient() * sum_
     
     def centerOfMassMatrixElementEvaluation(self):
@@ -472,6 +476,9 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
     def _interactionSeries(self):
         
         sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('intSer')
+        
         for qqnn_bra in self._validCOM_Bra_qqnn():
             
             self._n, self._l, self._N, self._L = qqnn_bra
@@ -500,12 +507,16 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 _b_coeff = self._B_coefficient(self.PARAMS_SHO.get(SHO_Parameters.b_length))
                 _com_coeff = self._interactionConstantsForCOM_Iteration()
                 
-                sum_ += _com_coeff * bmb_bra * bmb_ket * _b_coeff
+                aux =  _com_coeff * bmb_bra * bmb_ket * _b_coeff
+                sum_ += aux
                 
                 # TODO: comment when not debugging
-                # if self.DEBUG_MODE:
+                if self.DEBUG_MODE:
+                    XLog.write('intSer', bmbs=bmb_bra * bmb_ket, B=_b_coeff,
+                               comCoeff=_com_coeff, aux=aux)
                 #     self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
-                
+        if self.DEBUG_MODE:
+            XLog.write('intSer', value=sum_)
         return sum_
         
         

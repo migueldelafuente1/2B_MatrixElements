@@ -16,6 +16,7 @@ from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs
 from helpers.Log import XLog
 from helpers.integrals import _RadialDensityDependentFermi
 from helpers.WaveFunctions import QN_1body_radial
+from future.builtins.misc import isinstance
 
 class CentralForce(TalmiTransformation):
     
@@ -164,7 +165,7 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
     _BREAK_ISOSPIN = True
     
-    COULOMB_CONST = 1.4522545041047  ## [MeV fm_ e^-2] K factor in natural untis
+    COULOMB_CONST = 1.4522545041047  ## [MeV fm_ e^-2] K factor in natural units
     # COULOMB_CONST = 1.44197028     ## constant extracted form HFBaxial code
     
     @classmethod
@@ -278,7 +279,10 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         cls.PARAMS_FORCE = {}
         
         for param in dd_p.members():
-            cls.PARAMS_FORCE[param] = float(kwargs[param][AttributeArgs.value])
+            aux = kwargs[param]
+            if isinstance(aux, dict):
+                aux = float(aux[AttributeArgs.value])
+            cls.PARAMS_FORCE[param] = aux
                 
         #cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
     

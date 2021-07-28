@@ -3,7 +3,7 @@ Created on Feb 23, 2021
 
 @author: Miguel
 '''
-from helpers.Enums import InputParts, SHO_Parameters, ForceParameters,\
+from helpers.Enums import InputParts, SHO_Parameters, ForceEnum,\
     AttributeArgs, ValenceSpaceParameters, Output_Parameters
 from helpers.Enums import ForceVariablesDict
 import xml.etree.ElementTree as et
@@ -98,7 +98,7 @@ class _Parser:
     def getCore(self):
         raise ParserException('abstract method, implement me!')
     
-    def getForceParameters(self):
+    def getForceEnum(self):
         raise ParserException('abstract method, implement me!')
         
 class ParserException(Exception):
@@ -178,7 +178,7 @@ class _JsonParser(_Parser):
         
         return vals_dict
     
-    def getForceParameters(self):
+    def getForceEnum(self):
         force_elems = self._data.get(InputParts.Force_Parameters)
         force_dict = {}
         
@@ -206,7 +206,7 @@ class _JsonParser(_Parser):
         
         if len(force_dict) == 0:
             raise ParserException("No Force given, must be one of these: {}"
-                                  .format(ForceParameters.members()))
+                                  .format(ForceEnum.members()))
         return force_dict
 
 
@@ -298,7 +298,7 @@ class _XMLParser(_Parser):
         
         return vals_dict
     
-    def getForceParameters(self):
+    def getForceEnum(self):
         force_elems = self._data.find(InputParts.Force_Parameters)
         force_dict = {}
         
@@ -336,7 +336,7 @@ class _XMLParser(_Parser):
         
         if len(force_dict) == 0:
             raise ParserException("No Force given, must be one of these: {}"
-                                  .format(ForceParameters.members()))
+                                  .format(ForceEnum.members()))
         return force_dict
         
 
@@ -387,7 +387,7 @@ class CalculationArgs(object):
                 self._data.getCore())
         setattr(self,
                 InputParts.Force_Parameters, 
-                self._data.getForceParameters())
+                self._data.getForceEnum())
         
         val_dict, self.formatAntoine_l_ge_10 = self._data.getValenceSpaceArgs()
         setattr(self, InputParts.Valence_Space, val_dict)

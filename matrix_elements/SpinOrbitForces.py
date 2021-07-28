@@ -91,17 +91,12 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         NOTE: Redundant if run from JJ -> LS recoupling
         """
         if (abs(self._L_bra - self._L_ket) > 1) :
-            #or ((self._S_bra != self._S_ket) and (self._S_bra != 1)):
-            
-            # TODO: Remove debug
-            self.details = "deltaConditionsForGlobalQN = False spin orbit {}\n {}"\
-                .format(str(self.bra), str(self.ket))
             return False
-        
         return True
     
     def _totalSpinTensorMatrixElement(self):
-        """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 """
+        """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 
+        boolean for skip"""
         if (self._S_bra != self._S_ket) or (self._S_bra == 0):
             return True, 0.0
         
@@ -118,21 +113,20 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         skip, spin_me = self._totalSpinTensorMatrixElement()
         if skip:
             return 0
-        
+    
         factor = safe_racah(self._L_bra, self._L_ket, 
                             self._S_bra, self._S_ket,
                             1, self.J)
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
-        
+    
         return  factor * spin_me * self._BrodyMoshinskyTransformation()
     
     def _globalInteractionCoefficient(self):
-        # no special interaction constant for the Central ME
         phase = (-1)**(self._S_bra + self._L_bra - self.J)
         #phase = (-1)**(self._l + self._L - self.J)
         factor = 1#np.sqrt((2*self._L_bra + 1)*(2*self._L_ket + 1))
-        
+    
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
@@ -143,8 +137,58 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
                             1, self._L)
         if self.isNullValue(factor):
             return 0
-        
+    
         return factor * np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
+    
+
+    #===========================================================================
+    # Version From "The Harmonic Oscillator" book
+    #===========================================================================
+    # def centerOfMassMatrixElementEvaluation(self):
+    #     #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
+    #     """ 
+    #     Radial Brody-Moshinsky transformation, direct implementation for  
+    #     non-central spin orbit force.
+    #     """
+    #     # the spin matrix element is 0 unless S=S'=1
+    #     # skip, spin_me = self._totalSpinTensorMatrixElement()
+    #     # if skip:
+    #     #     return 0
+    #
+    #     factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1))
+    #     factor *= ((-1)**(self._L_bra + self._L_ket))
+    #
+    #     return  factor * self._BrodyMoshinskyTransformation()
+    #
+    # def _globalInteractionCoefficient(self):
+    #     factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1))
+    #     phase  = ((-1)**(self._L_bra + self._L_ket))
+    #
+    #     return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
+    #
+    #
+    # def _interactionConstantsForCOM_Iteration(self):
+    #     # no special internal c.o.m interaction constants for the Central ME
+    #     S = self._S_bra
+    #     if self.DEBUG_MODE:
+    #         XLog.write('C_ls')
+    #     factor = 0
+    #     for j in range(abs(self._S_bra - self._l), self._S_bra + self._l +1):
+    #
+    #         aux  = safe_wigner_6j(j,  self._L, self.J,
+    #                                  self._L_bra, S, self._l)
+    #         aux *= safe_wigner_6j(j,  self._L, self.J,
+    #                                  self._L_ket, S, self._l_q)
+    #
+    #         aux *= 0.5*((j*(j + 1)) - (self._l*(self._l + 1)) - (S*(S + 1)))
+    #         aux *= (j*(j + 1))
+    #         factor += aux
+    #         if self.DEBUG_MODE:
+    #             XLog.write('C_ls', j=j, aux_j=aux)
+    #
+    #     if self.DEBUG_MODE:
+    #         XLog.write('C_ls', value=factor)
+    #     return factor
 
 
 
