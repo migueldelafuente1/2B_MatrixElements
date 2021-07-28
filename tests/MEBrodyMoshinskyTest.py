@@ -8,7 +8,7 @@ import unittest
 
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
     QN_2body_LS_Coupling, QN_1body_jj, QN_2body_jj_JT_Coupling
-from helpers.Enums import PotentialForms, ForceParameters
+from helpers.Enums import PotentialForms, ForceEnum
 
 from matrix_elements.CentralForces import CentralForce
 from matrix_elements.TensorForces import TensorForce
@@ -93,7 +93,7 @@ class Test(unittest.TestCase):
                 
         for bra, ket, J, force, correct_value in list_bmbs:
             
-            if force == ForceParameters.Central:
+            if force == ForceEnum.Central:
                 CentralForce.setInteractionParameters(
                     potential = PotentialForms.Power,
                     mu_length = 1,
@@ -103,7 +103,7 @@ class Test(unittest.TestCase):
                 result_ = me.value
                 me_str = self.__printCodeForTable(bra, ket, J, force)
                 
-            elif force == ForceParameters.Tensor:
+            elif force == ForceEnum.Tensor:
                 TensorForce.setInteractionParameters(
                     potential = PotentialForms.Power,
                     mu_length = 1,
@@ -113,7 +113,7 @@ class Test(unittest.TestCase):
                 result_ = me.value
                 me_str = self.__printCodeForTable(bra, ket, J, force)
                 
-            elif force == ForceParameters.SpinOrbit:
+            elif force == ForceEnum.SpinOrbit:
                 SpinOrbitForce.setInteractionParameters(
                     potential = PotentialForms.Power,
                     mu_length = 1,
@@ -145,19 +145,19 @@ class Test(unittest.TestCase):
         benchmarks = [
             (QN_2body_L_Coupling(QN_1body_radial(1,2), QN_1body_radial(1,3), 2),
              QN_2body_L_Coupling(QN_1body_radial(1,2), QN_1body_radial(1,3), 2),
-             0, ForceParameters.Central, 1.0),
+             0, ForceEnum.Central, 1.0),
             (QN_2body_L_Coupling(QN_1body_radial(2,0), QN_1body_radial(0,2), 2),
              QN_2body_L_Coupling(QN_1body_radial(0,1), QN_1body_radial(1,3), 2),
-             0, ForceParameters.Central, 0.0),
+             0, ForceEnum.Central, 0.0),
 #             (QN_2body_LS_Coupling(QN_1body_radial(2,0), QN_1body_radial(0,2), 2, 1),
 #              QN_2body_LS_Coupling(QN_1body_radial(0,1), QN_1body_radial(1,3), 2, 1),
-#              3, ForceParameters.Tensor, 0.01079898),
+#              3, ForceEnum.Tensor, 0.01079898),
 #             (QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(3,2), 2, 1),
 #              QN_2body_LS_Coupling(QN_1body_radial(2,1), QN_1body_radial(3,3), 2, 1),
-#              3, ForceParameters.Tensor, 0.01079898),
+#              3, ForceEnum.Tensor, 0.01079898),
 #             (QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(2,2), 2, 1),
 #              QN_2body_LS_Coupling(QN_1body_radial(2,2), QN_1body_radial(2,2), 2, 1),
-#              2, ForceParameters.Spin_Orbit, 0.01079898)
+#              2, ForceEnum.Spin_Orbit, 0.01079898)
         ]
         
         self._checkSpecificMEs(benchmarks)
