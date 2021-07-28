@@ -18,7 +18,7 @@ from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
 from matrix_elements.BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce
 from helpers.Enums import PotentialForms, SHO_Parameters, BrinkBoekerParameters, \
-    ForceParameters, CentralMEParameters
+    ForceEnum, CentralMEParameters
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, ShortRangeSpinOrbit_JTScheme,\
     SpinOrbitForce_JTScheme 
 from helpers.Log import XLog
@@ -50,17 +50,17 @@ if __name__ == "__main__":
     }
     J=2
     bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,1,3), J, 1)
+                                   QN_1body_jj(0,2,3), J, 1)
     ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,1,3), J, 1)
+                                   QN_1body_jj(0,2,3), J, 1)
     
-    # SpinOrbitForce_JTScheme.turnDebugMode()
-    # SpinOrbitForce_JTScheme.setInteractionParameters(**kwargs)
-    # me = SpinOrbitForce_JTScheme(bra_, ket_)
-    # print("me mosh: ", me.value)
-    # me.saveXLog('me_LS')
-    # # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
-    # XLog.resetLog()
+    SpinOrbitForce_JTScheme.turnDebugMode(True)
+    SpinOrbitForce_JTScheme.setInteractionParameters(**kwargs)
+    me = SpinOrbitForce_JTScheme(bra_, ket_)
+    print("me mosh: ", me.value)
+    me.saveXLog('me_LS')
+    # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
+    XLog.resetLog()
     
     # kwargs[CentralMEParameters.n_power] = 0
     # ShortRangeSpinOrbit_JTScheme.turnDebugMode()
@@ -70,10 +70,10 @@ if __name__ == "__main__":
     # print("me short: ", me.value)
     # me.saveXLog('me_shortLS')
     
-    KineticTwoBody_JTScheme.turnDebugMode(True)
-    KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
-    me = KineticTwoBody_JTScheme(bra_, ket_)
-    me.saveXLog("kin2B")
+    # KineticTwoBody_JTScheme.turnDebugMode(True)
+    # KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
+    # me = KineticTwoBody_JTScheme(bra_, ket_)
+    # me.saveXLog("kin2B")
     
     
     

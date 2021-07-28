@@ -826,6 +826,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
     def _getInstance():
         if _RadialDensityDependentFermi._instance == None:
             _RadialDensityDependentFermi._instance = _RadialDensityDependentFermi()
+            _RadialDensityDependentFermi._instance.A = -1
         return _RadialDensityDependentFermi._instance
     
     def _FermiDensity(self, A, rOb):
@@ -834,7 +835,10 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         
         the hypothetical nucleus is considered symmetric Z=N=A//2
         """
+        if A == self.A:
+            return self._densityIntegral
         
+        self.A = A
         aux = 0.0 * rOb
         occupied_states = getStatesAndOccupationUpToLastOccupied(A//2)
         for i in range(len(occupied_states)):
@@ -851,6 +855,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                 aux += 2 * N * aux_i
                 # factor 2 come from the normalization coefficient
         
+        self._densityIntegral = aux
         return aux
     
     def _auxFunction(self, x, No2, A, alpha):

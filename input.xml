@@ -1,8 +1,8 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>auxbb_SPSD</Output_Filename>
-		<Hamil_Type>4</Hamil_Type>
+		<Output_Filename>ls_new_SPSDPF</Output_Filename>
+		<Hamil_Type>1</Hamil_Type>
 		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
@@ -24,12 +24,12 @@
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		
-		<!--Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='307' sp_energy=''/>
 		
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
-		<Q_Number sp_state='409' sp_energy=''/-->
+		<!--Q_Number sp_state='409' sp_energy=''/-->
 		
 		<!--Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
@@ -43,7 +43,7 @@
 		<innert_core name=''/>
 	</Core>
 	<Force_Parameters>
-		<Brink_Boeker active='True'>
+		<Brink_Boeker active='False'>
 			<!-- Brink-Boeker force: 
 				Effective force mediated by 2 gaussians of length :mu fm.
 				Gaussian radial functions are shared by a central term (Wigner)
@@ -96,7 +96,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</Tensor>
-		<SpinOrbit active='False'>
+		<SpinOrbit active='True'>
 			<!-- Spin Orbit Force.
 				Standard non central force V(r)L*S parameterized with exponential, 
 				gaussian, power term, yukawa or coulomb potential functions 
