@@ -2,17 +2,8 @@
 Created on Jul 2, 2021
 
 @author: Miguel
-
-This script read a hamilType 1 matrix elements file from bench to compare with
-one generated from the program.
-
-(14/7/2021) "compareDictionaries_version1" is deprecated but still more general, 
-    it is now fixed for an specific prepared block of T common matrix elements:
-        {single particle state: {J: value, ...}, ...} (Asummed T=1 for LS m.e.)
-    to be used for more general matrix elements require a fix in the reading and
-    another loop for the "compareDictionaries" method (or just group the 
-    dictionaries in T=0 block and T=1) 
 '''
+
 from helpers.Helpers import prettyPrintDictionary
 from helpers.io_manager import readAntoine
 from copy import deepcopy
@@ -23,7 +14,18 @@ class MatrixElementFilesComparator:
     (script takes care of exchange sing), 
     Can return a dictionary with invalid matrix (getFailedME()) and a summary of
     the failures/miss/oks (getResults())
-    elements an"""
+    
+    Usage:
+    test = MatrixElementFilesComparator('../results/central_SPSDPF_bench.sho', 
+                                        '../results/central_SPSDPF_2.sho')
+    
+    _result = test.compareDictionaries()
+    
+    print(" === TEST RESULTS:    =================================\n")
+    prettyPrintDictionary(test.getResults())
+    prettyPrintDictionary(test.getFailedME())
+    
+    """
     
     class File:
         bench = 'bench'
@@ -136,6 +138,7 @@ class MatrixElementFilesComparator:
         if file_ == self.File.test:
             self.b_2test_diag = JT_block_diag
             self.b_2test_off  = JT_block_off_diag
+    
     
     def _countStatusFail(self, fail, value=None, missing=False):
             
@@ -272,25 +275,3 @@ class MatrixElementFilesComparator:
                             print("... Equal [OK]",  val, "=", val_bench, "(bench)")
                         self._countStatusFail(False, val)
     
-    
-    
-if __name__ == '__main__':
-    
-    test = MatrixElementFilesComparator('../results/central_SPSDPF_bench.sho', 
-                                        '../results/central_SPSDPF_2.sho', 
-                                        )
-    
-    _result = test.compareDictionaries()
-    # b_bench_diag, b_bench_off = _getJTSchemeMatrixElements('LS_me_BLC_test_JT.2b', ignorelines=2)
-    # b_2test_diag, b_2test_off = _getJTSchemeMatrixElements('../results/ls_SPSD.sho', ignorelines=4)
-    
-    # b_bench_diag, b_bench_off = _getJTSchemeMatrixElements('../results/central_SPSD_correct.sho', ignorelines=4)
-    # b_2test_diag, b_2test_off = _getJTSchemeMatrixElements('../results/central_SPSD.sho', ignorelines=4)
-    
-    
-    print(" === TEST RESULTS:    =================================\n")
-    prettyPrintDictionary(test.getResults())
-    prettyPrintDictionary(test.getFailedME())
-    # print("\nFail [{f}/{tot}] OK[{ok}/{tot}]".format(tot=TOTAL, ok=PASS, f=FAIL))
-    # print("Diagonal matrix elements: [{ok}/{tot}]".format(ok=_DIAGONAL_OK, tot=_DIAGONAL))
-    # print("Non Diag matrix elements: [{ok}/{tot}]".format(ok=_OFF_DIAG_OK, tot=_OFF_DIAG))

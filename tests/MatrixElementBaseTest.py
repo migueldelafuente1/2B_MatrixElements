@@ -11,9 +11,9 @@ from helpers.Enums import ForceEnum, SHO_Parameters, CentralMEParameters,\
 from copy import deepcopy
 from helpers.Helpers import prettyPrintDictionary, valenceSpacesDict,\
     readAntoine
-from tests.matrixElementComparison import MatrixElementFilesComparator
 from itertools import combinations_with_replacement
 from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_1body_jj
+from helpers.matrixElementHandlers import MatrixElementFilesComparator
 
 class MatrixElementBaseTest(unittest.TestCase):
     """
