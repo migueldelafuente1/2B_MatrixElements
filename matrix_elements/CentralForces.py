@@ -9,7 +9,7 @@ from helpers.Helpers import safe_racah, Constants, safe_wigner_6j,\
     safe_3j_symbols
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    _TwoBodyMatrixElement_JCoupled
+    _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
     PotentialForms, SHO_Parameters, DensityDependentParameters
@@ -61,7 +61,6 @@ class CentralForce(TalmiTransformation):
         """ Central interaction only allows l'==l"""
         return (self._l, )
     
-    
     def deltaConditionsForGlobalQN(self):
         """ 
         Define if non null requirements on LS coupled J Matrix Element, 
@@ -70,13 +69,16 @@ class CentralForce(TalmiTransformation):
         NOTE: Redundant if run from JJ -> LS recoupling
         """
         if (self._L_bra != self._L_ket):
-#             or (self._S_bra != self._S_ket):
-            # TODO: Remove debug
-            self.details = "deltaConditionsForGlobalQN = False central {}\n {}"\
-                .format(str(self.bra), str(self.ket))
             return False
-        
         return True
+    
+    def _deltaConditionsForCOM_Iteration(self):
+        """ For the antisymmetrization_ of the wave functions. """
+        
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
     
     def centerOfMassMatrixElementEvaluation(self):
         #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
@@ -99,6 +101,8 @@ class CentralForce(TalmiTransformation):
         return 1
     
     def _deltaConditionsForCOM_Iteration(self):
+        """ This condition ensure the antisymmetrization (without calling 
+        exchanged the matrix element)"""
         # return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
@@ -114,35 +118,11 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
     def __init__(self, bra, ket, run_it=True):
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
     
-    # def _run(self):
-    #     ## First method that runs antisymmetrization by exchange the quantum
-    #     ## numbers (X2 time), change 2* _series_coefficient
-    #     return _TwoBodyMatrixElement_JTCoupled._run(self)
-    
     def _run(self):
-        """ Calculate the antisymmetric matrix element value. """
-        if self.isNullMatrixElement:
-            return
+        ## First method that runs antisymmetrization_ by exchange the quantum
+        ## numbers (X2 time), change 2* _series_coefficient
+        return _TwoBodyMatrixElement_JTCoupled._run(self)
     
-        if self.DEBUG_MODE: 
-            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
-    
-        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
-        self._value = self._non_antisymmetrized_ME()
-    
-        if self.DEBUG_MODE:
-            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
-    
-        # value is always M=0, M_T=0
-        self._value *= self.bra.norm() * self.ket.norm()
-    
-    def _deltaConditionsForCOM_Iteration(self):
-        
-        #return True
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
-                return True
-        return False
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
@@ -194,8 +174,7 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     def __init__(self, bra, ket, run_it=True):
         
         _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
-        
-        
+    
     def _run(self):
         
         if self.isNullMatrixElement:
@@ -207,18 +186,7 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
             self._isNullMatrixElement = True
             
         else:
-            if self.DEBUG_MODE: 
-                XLog.write('nas_me', ket=self.ket.shellStatesNotation)
-        
-            # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
-            self._value = self._non_antisymmetrized_ME()
-        
-            if self.DEBUG_MODE:
-                XLog.write('nas_me', value=self._value, 
-                           norms=self.bra.norm()*self.ket.norm())
-        
-            # value is always M=0, M_T=0
-            self._value *= self.bra.norm() * self.ket.norm()
+            _TwoBodyMatrixElement_JCoupled._run(self)
     
     def _deltaConditionsForCOM_Iteration(self):
         return True
@@ -240,7 +208,7 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
 
 
-class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
+class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
     """
     Density term based on Fermi density distribution, (ordered filled up to A 
     mass number). 
@@ -315,8 +283,10 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         radial = _RadialDensityDependentFermi.integral(*args)
         
         return fact * radial
-    
-class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_JTCoupled):
+
+
+
+class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     

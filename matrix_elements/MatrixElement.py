@@ -143,6 +143,10 @@ class _TwoBodyMatrixElement:
 # 
 #===============================================================================
 class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
+    """
+    Implementation of non antisymmetrized_ (explicitly) matrix elements particle
+    labeled, states in the  jj scheme coupled to total J angular momentum
+    """
     
     _BREAK_ISOSPIN = True
     COUPLING = CouplingSchemeEnum.JJ
@@ -169,7 +173,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                 XLog.write('nas', 
                            bra=bra.shellStatesNotation, ket=ket.shellStatesNotation)
             self._run()
-
+    
     
     def __checkInputArguments(self, bra, ket):
         if not isinstance(bra, QN_2body_jj_J_Coupling):
@@ -204,34 +208,26 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                 self._value = 0.0
                 self._isNullMatrixElement = True
     
-    
     def _run(self):
-        """ Calculate the antisymmetric matrix element value. """
+        """ 
+        Calculates the NON antisymmetrized_ matrix element value. 
+        This overwriting allow to implement the antysimmetrization in the inner
+        process to avoid the explicit calculation of the whole m.e.
+        """
         if self.isNullMatrixElement:
             return
-        
-        # construct the exchange ket
-        phase, exchanged_ket = self.ket.exchange()
-        exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
-        
+    
         if self.DEBUG_MODE: 
-            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
-        
-        direct = self._non_antisymmetrized_ME()
-        
+            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+    
+        # antisymmetrization_ taken in the inner evaluation
+        self._value = self._non_antisymmetrized_ME()
+    
         if self.DEBUG_MODE:
-            XLog.write('na_me', value=direct)
-            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation)
-            
-        exchan = exch_2bme._non_antisymmetrized_ME()
-        
-        self._value =  direct - (phase * exchan)
+            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
+    
         # value is always M=0, M_T=0
         self._value *= self.bra.norm() * self.ket.norm()
-        
-        if self.DEBUG_MODE: 
-            XLog.write('na_me', value=exchan, phs=phase)
-            XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
     
     def _LScoupled_MatrixElement(self):
         """ 
@@ -328,8 +324,43 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                         sum_ += coupling * self._LScoupled_MatrixElement()
                 
         return sum_
-        
     
+class _TwoBodyMatrixElement_Antisym_JCoupled(_TwoBodyMatrixElement_JCoupled):
+    
+    """ 
+    Overwriting of the explicit implementation of the antysymmetrization_
+    """
+    
+    def _run(self):
+        """ Calculate the explicit antisymmetric matrix element value. """
+        if self.isNullMatrixElement:
+            return
+        
+        # construct the exchange ket
+        phase, exchanged_ket = self.ket.exchange()
+        exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
+        
+        direct = self._non_antisymmetrized_ME()
+        
+        if self.DEBUG_MODE:
+            XLog.write('na_me', value=direct)
+            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation)
+            
+        exchan = exch_2bme._non_antisymmetrized_ME()
+        
+        self._value =  direct - (phase * exchan)
+        # value is always M=0, M_T=0
+        self._value *= self.bra.norm() * self.ket.norm()
+        
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', value=exchan, phs=phase)
+            XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
+    
+
+
 class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
     
     """ 
@@ -385,5 +416,39 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
                 self._value = 0.0
                 self._isNullMatrixElement = True
     
+
+
+class _TwoBodyMatrixElement_Antisym_JTCoupled(_TwoBodyMatrixElement_JTCoupled):
+    """ 
+    Overwriting of the explicit implementation of the antysymmetrization_
+    """
     
-    
+    def _run(self):
+        """ Calculate the explicit antisymmetric matrix element value. """
+        if self.isNullMatrixElement:
+            return
+        
+        # construct the exchange ket
+        phase, exchanged_ket = self.ket.exchange()
+        exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
+        
+        direct = self._non_antisymmetrized_ME()
+        
+        if self.DEBUG_MODE:
+            XLog.write('na_me', value=direct)
+            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation)
+            
+        exchan = exch_2bme._non_antisymmetrized_ME()
+        
+        self._value =  direct - (phase * exchan)
+        # value is always M=0, M_T=0
+        self._value *= self.bra.norm() * self.ket.norm()
+        
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', value=exchan, phs=phase)
+            XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
+
+

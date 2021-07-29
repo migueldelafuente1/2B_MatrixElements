@@ -94,6 +94,13 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
             return False
         return True
     
+    def _deltaConditionsForCOM_Iteration(self):
+        """ For the antisymmetrization_ of the wave functions. """
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
+    
     def _totalSpinTensorMatrixElement(self):
         """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 
         boolean for skip"""
@@ -140,9 +147,9 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
     
         return factor * np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
     
-
+    
     #===========================================================================
-    # Version From "The Harmonic Oscillator" book
+    # Version From "The Harmonic Oscillator" book (excessive values)
     #===========================================================================
     # def centerOfMassMatrixElementEvaluation(self):
     #     #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
@@ -206,25 +213,8 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
     #     ## numbers (X2 time), change 2* _series_coefficient
     #     return _TwoBodyMatrixElement_JTCoupled._run(self)
     
-    def _run(self):
-        """ Calculate the antisymmetric matrix element value. """
-        if self.isNullMatrixElement:
-            return
-    
-        if self.DEBUG_MODE: 
-            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
-    
-        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
-        self._value = self._non_antisymmetrized_ME()
-    
-        if self.DEBUG_MODE:
-            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
-    
-        # value is always M=0, M_T=0
-        self._value *= self.bra.norm() * self.ket.norm()
-    
     def _deltaConditionsForCOM_Iteration(self):
-        # TODO: Avoid this l, l' T conditions
+        """ Antisymmetrization condition (*2 in BrodyMoshinkytransformation)"""
         #return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
@@ -275,52 +265,6 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
     """
     
     _PARAMETERS_SETTED = False
-    
-    def _diagonalMatrixElement_Test(self):
-        """ 
-        Analytic value for diagonal and same orbit matrix elements:
-            Moshinsky, Nucl. Phys 8, 19-40 (1958)
-            
-        Method called after checking S'=S= 1
-        """
-        if not hasattr(self, 'test_value_diagonal'):
-            self.test_value_diagonal = [{}, {}]
-        
-        if self._L_bra != self._L_ket or self._L_bra % 2 == 0:
-            return
-        elif (self.bra.n1 != self.bra.n2) and (self.bra.l1 != self.bra.l2):
-            return
-        else:
-            # fool the __eq__ method for jj functions (doesn't matter their js)
-            aux_bra = deepcopy(self.bra)
-            aux_ket = deepcopy(self.ket)
-            
-            aux_bra.j1 = aux_bra.j2 
-            aux_ket.j1 = aux_bra.j1
-            aux_ket.j2 = aux_bra.j1
-            
-            if not aux_bra == aux_ket:
-                return 
-        
-        l = self.bra.l1
-        L = self._L_bra
-        
-        aux = safe_racah(L, L, 1, 1, 1, self.J) * np.sqrt(6)\
-            * ((-1)**(L+1+self.J)) /3
-        
-        int_R4 = 1 # TODO: calculate
-        
-        aux_l = np.sqrt((2*L + 1)/(L*(L + 1)))
-        aux_l *= ((l + 1)*(2*l + 3)*((2*l + 1)**3)
-                  * (safe_clebsch_gordan((l+1), l, L, 0,0,0)**2)
-                  * (safe_racah(l,(l+1), L,L, 1,l)**2)
-                  * int_R4
-                  )
-        
-        key_ = str(aux_bra)
-        
-        self.test_value_diagonal[0][key_] = aux * aux_l
-        self.test_value_diagonal[1][key_] = aux_l
     
     def _run(self):
         """ Calculate the antisymmetric matrix element value. """
@@ -458,8 +402,55 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
     
         
     #===========================================================================
-    # FIRST VERRSION
+    # FIRST VERSION
     #===========================================================================
+    
+    def _diagonalMatrixElement_Test(self):
+        """ 
+        Analytic value for diagonal and same orbit matrix elements:
+            Moshinsky, Nucl. Phys 8, 19-40 (1958)
+            
+        Method called after checking S'=S= 1
+        """
+        if not hasattr(self, 'test_value_diagonal'):
+            self.test_value_diagonal = [{}, {}]
+        
+        if self._L_bra != self._L_ket or self._L_bra % 2 == 0:
+            return
+        elif (self.bra.n1 != self.bra.n2) and (self.bra.l1 != self.bra.l2):
+            return
+        else:
+            # fool the __eq__ method for jj functions (doesn't matter their js)
+            aux_bra = deepcopy(self.bra)
+            aux_ket = deepcopy(self.ket)
+            
+            aux_bra.j1 = aux_bra.j2 
+            aux_ket.j1 = aux_bra.j1
+            aux_ket.j2 = aux_bra.j1
+            
+            if not aux_bra == aux_ket:
+                return 
+        
+        l = self.bra.l1
+        L = self._L_bra
+        
+        aux = safe_racah(L, L, 1, 1, 1, self.J) * np.sqrt(6)\
+            * ((-1)**(L+1+self.J)) /3
+        
+        int_R4 = 1 # TODO: calculate
+        
+        aux_l = np.sqrt((2*L + 1)/(L*(L + 1)))
+        aux_l *= ((l + 1)*(2*l + 3)*((2*l + 1)**3)
+                  * (safe_clebsch_gordan((l+1), l, L, 0,0,0)**2)
+                  * (safe_racah(l,(l+1), L,L, 1,l)**2)
+                  * int_R4
+                  )
+        
+        key_ = str(aux_bra)
+        
+        self.test_value_diagonal[0][key_] = aux * aux_l
+        self.test_value_diagonal[1][key_] = aux_l
+    
     def _LScoupled_MatrixElement_version1(self):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (JT)>

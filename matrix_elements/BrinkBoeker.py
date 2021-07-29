@@ -18,12 +18,15 @@ from helpers.Log import XLog
 
 class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
     
+    """
+    Implementation of the central force for two gaussians_, overriding of the
+    BrodyMoschinsky transformation method to skip
+    """
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """ 
         Implement the parameters for the Brink-Boeker interaction calculation. 
-        
         
         """
         # Refresh the Force parameters
@@ -31,7 +34,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
             cls.PARAMS_FORCE = {}
         
         _b = SHO_Parameters.b_length
-        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))# * np.sqrt(2)
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
         
         part_1 = AttributeArgs.ForceArgs.Brink_Boeker.part_1
         part_2 = AttributeArgs.ForceArgs.Brink_Boeker.part_2
@@ -46,25 +49,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
         
         cls._integrals_p_max = -1
-        cls._talmiIntegrals  = ([], [])    
-    
-    
-    def _run(self):
-        """ Calculate the antisymmetric matrix element value. """
-        if self.isNullMatrixElement:
-            return
-    
-        if self.DEBUG_MODE: 
-            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
-    
-        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
-        self._value = self._non_antisymmetrized_ME()
-    
-        if self.DEBUG_MODE:
-            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
-    
-        # value is always M=0, M_T=0
-        self._value *= self.bra.norm() * self.ket.norm()
+        cls._talmiIntegrals  = ([], [])
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """

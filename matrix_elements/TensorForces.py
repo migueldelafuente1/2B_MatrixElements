@@ -93,17 +93,11 @@ class TensorForce(TalmiTransformation):#):
         NOTE: Redundant if run from JJ -> LS recoupling
         """
         if (abs(self._L_bra - self._L_ket) > 2):
-            #or ((self._S_bra != self._S_ket) and (self._S_bra != 1)):
-            
-            # TODO: Remove debug
-            self.details = "deltaConditionsForGlobalQN = False Tensor {}\n {}"\
-                .format(str(self.bra), str(self.ket))
             return False
-        
         return True
     
     def _deltaConditionsForCOM_Iteration(self):
-        #return True
+        """ For the antisymmetrization_ of the wave functions. """
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
@@ -117,7 +111,6 @@ class TensorForce(TalmiTransformation):#):
         return False, 3.872983346207417 ## = np.sqrt(15)
     
     def centerOfMassMatrixElementEvaluation(self):
-        #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
         """ 
         Radial Brody-Moshinsky transformation, implementation for a
         non central tensor force.
@@ -132,7 +125,6 @@ class TensorForce(TalmiTransformation):#):
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
         
-        # TODO: Implement
         return factor * spin_me * self._BrodyMoshinskyTransformation()
     
     def _globalInteractionCoefficient(self):
@@ -154,9 +146,6 @@ class TensorForce(TalmiTransformation):#):
         factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
         
         return factor * np.sqrt(2*self._l + 1)
-    
-    
-
 
 
 
@@ -174,22 +163,6 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
     #     ## numbers (X2 time), change 2* _series_coefficient
     #     return _TwoBodyMatrixElement_JTCoupled._run(self)
     
-    def _run(self):
-        """ Calculate the antisymmetric matrix element value. """
-        if self.isNullMatrixElement:
-            return
-    
-        if self.DEBUG_MODE: 
-            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
-    
-        # antisymmetrization_ taken in transformation._BrodyMoshinskyTransofrmation()
-        self._value = self._non_antisymmetrized_ME()
-    
-        if self.DEBUG_MODE:
-            XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
-    
-        # value is always M=0, M_T=0
-        self._value *= self.bra.norm() * self.ket.norm()
     
     def _validKetTotalSpins(self):
         """ 
@@ -200,13 +173,12 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
             return []
         return (1, )
     
-    # def _deltaConditionsForCOM_Iteration(self):
-    #
-    #     #return True
-    #     if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-    #         ((self._S_ket + self.T + self._l_q) % 2 == 1)):
-    #             return True
-    #     return False
+    def _deltaConditionsForCOM_Iteration(self):
+        """ For the antisymmetrization_ of the wave functions. """
+        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
+            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+                return True
+        return False
     
     def _validKetTotalAngularMomentums(self):
         """ 

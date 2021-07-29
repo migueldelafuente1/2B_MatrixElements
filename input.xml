@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>ls_new_SPSDPF</Output_Filename>
+		<Output_Filename>deleteme</Output_Filename>
 		<Hamil_Type>1</Hamil_Type>
 		<COM_correction>0</COM_correction>
 	</Output_Parameters>
@@ -20,7 +20,7 @@
 		<Q_Number sp_state='101' sp_energy=''/>
 		<Q_Number sp_state='103' sp_energy=''/>
 		
-		<Q_Number sp_state='205' sp_energy=''/>
+		<!--Q_Number sp_state='205' sp_energy=''/>
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		
@@ -29,7 +29,7 @@
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
-		<!--Q_Number sp_state='409' sp_energy=''/-->
+		<Q_Number sp_state='409' sp_energy=''/-->
 		
 		<!--Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
@@ -96,7 +96,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</Tensor>
-		<SpinOrbit active='True'>
+		<SpinOrbit active='False'>
 			<!-- Spin Orbit Force.
 				Standard non central force V(r)L*S parameterized with exponential, 
 				gaussian, power term, yukawa or coulomb potential functions 
@@ -118,7 +118,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
-		<Density_Dependent active='False'>
+		<Density_Dependent active='True'>
 			<!-- Density dependent Force based on Fermi density for the nucleus,
 				parametrization from Gogny D1S:
 					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)
