@@ -73,11 +73,12 @@ class CentralForce(TalmiTransformation):
         return True
     
     def _deltaConditionsForCOM_Iteration(self):
-        """ For the antisymmetrization_ of the wave functions. """
-        
+        """ This condition ensure the antisymmetrization (without calling 
+        exchanged the matrix element)"""
+        # return True
         if (((self._S_bra + self.T + self._l) % 2 == 1) and 
             ((self._S_ket + self.T + self._l_q) % 2 == 1)):
-                return True
+            return True
         return False
     
     def centerOfMassMatrixElementEvaluation(self):
@@ -100,14 +101,7 @@ class CentralForce(TalmiTransformation):
         # no special internal c.o.m interaction constants for the Central ME
         return 1
     
-    def _deltaConditionsForCOM_Iteration(self):
-        """ This condition ensure the antisymmetrization (without calling 
-        exchanged the matrix element)"""
-        # return True
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
-            return True
-        return False
+
     
     
 
