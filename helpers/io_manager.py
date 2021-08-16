@@ -4,11 +4,13 @@ Created on Feb 23, 2021
 @author: Miguel
 '''
 from helpers.Enums import InputParts, SHO_Parameters, ForceEnum,\
-    AttributeArgs, ValenceSpaceParameters, Output_Parameters
+    AttributeArgs, ValenceSpaceParameters, Output_Parameters,\
+    ForcesWithRepeatedParametersList
 from helpers.Enums import ForceVariablesDict
 import xml.etree.ElementTree as et
 from helpers.WaveFunctions import QN_1body_jj
-from helpers.Helpers import readAntoine, shellSHO_Notation, valenceSpacesDict_l_ge10
+from helpers.Helpers import readAntoine, shellSHO_Notation, valenceSpacesDict_l_ge10,\
+    getCoreNucleus
 
 
 def castAntoineFormat2Str(state, l_ge_10=False):
@@ -281,21 +283,19 @@ class _XMLParser(_Parser):
             val_ = elem.find(param)
                     
             if val_ in (None, ''):
-                if param == AttributeArgs.CoreArgs.innert_core:
-                    val_ = 0
-                else:
-                    raise ParserException("missing parameter [{}] in {}"
-                                          .format(param, InputParts.Core))
+                # if param == AttributeArgs.CoreArgs.innert_core:
+                #     val_ = 0
+                # else:
+                pass#val_ = 0
+                    # raise ParserException("missing parameter [{}] in {}"
+                    #                       .format(param, InputParts.Core))
             if param == AttributeArgs.CoreArgs.innert_core:
-                # TODO: What to do with innert_core, append a
-                val_ = val_.get(AttributeArgs.name)
+                val_ = val_.get(AttributeArgs.name) if val_ else getCoreNucleus(0, 0)
             else:
-                val_ = val_.text
+                val_ = '0' if val_ == None  else val_.text
             
             vals_dict[param] = val_
-        
-        # TODO: put a Core Nucleus Name
-        
+                
         return vals_dict
     
     def getForceEnum(self):
@@ -311,15 +311,7 @@ class _XMLParser(_Parser):
                     "Unimplemented force and arguments for [{}], see "
                     "'ForceVariablesDict'".format(force))
                 
-                params = {}
-                
-                for param in ForceVariablesDict[force].members():
-                    param_elem = force_elem.find(param)
-                    if param_elem == None:
-                        print("WARNING {}!: missing parameter [{}] in Force [{}]"
-                              .format(self.__class__, param, force))
-                        continue
-                    params[param] = param_elem.attrib
+                params = self._getParamsForce(force, force_elem)
                 
                 if len(params) == 0 and ForceVariablesDict[force].members()!=[]:
                     # If no parameters for a tag with not 'active' attribute, skip
@@ -338,9 +330,50 @@ class _XMLParser(_Parser):
             raise ParserException("No Force given, must be one of these: {}"
                                   .format(ForceEnum.members()))
         return force_dict
+    
+    def _getParamsForce(self, force, force_elem):
+        """ Forces can have unique or multiple entries in the parameters """
+        if force_elem.tag in ForcesWithRepeatedParametersList:
+            return self._getForceParams_MultipleEntries(force, force_elem)
+        else:
+            return self._getForceParams_FixedEntries(force, force_elem)
+    
+    def _getForceParams_FixedEntries(self, force, force_elem):
+        """ Entry tags are fixed and unique, read them from VariablesDict """
+        params = {}
         
-
-
+        for param in ForceVariablesDict[force].members():
+            param_elem = force_elem.find(param)
+            if param_elem == None:
+                print("WARNING {}!: missing parameter [{}] in Force [{}]"
+                      .format(self.__class__, param, force))
+                continue
+            params[param] = param_elem.attrib
+        
+        return params
+    
+    def _getForceParams_MultipleEntries(self, force, force_elem):
+        """ 
+        Entry tags are fixed but can be multiple (must have the same name ) 
+        """
+        params = {}
+        
+        for param in ForceVariablesDict[force].members():
+            
+            param_elems = force_elem.findall(param)
+            
+            if len(param_elems) > 1:
+                for i, param_elem in enumerate(param_elems):
+                    params[param + str(i)] = param_elem.attrib
+            else:
+                param_elem = param_elems[0]
+                if param_elem == None:
+                    print("WARNING {}!: missing parameter [{}] in Force [{}]"
+                          .format(self.__class__, param, force))
+                    continue
+                params[param] = param_elem.attrib
+        
+        return params
 
 
 class CalculationArgs(object):

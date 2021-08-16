@@ -1,6 +1,6 @@
 from helpers.Enums import ForceEnum
 
-from .BrinkBoeker import BrinkBoeker
+from .BrinkBoeker import BrinkBoeker, GaussianSeries_JTScheme
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme
 from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
     CoulombForce, DensityDependentForce_JTScheme, KineticTwoBody_JTScheme
@@ -19,6 +19,8 @@ def switchMatrixElementType(force, J_scheme=False):
     
     if force == ForceEnum.Brink_Boeker:
         return BrinkBoeker
+    elif force == ForceEnum.GaussianSeries:
+        return GaussianSeries_JTScheme
     elif force == ForceEnum.Central:
         return CentralForce_JTScheme
     elif force == ForceEnum.Coulomb:

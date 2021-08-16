@@ -214,8 +214,10 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         """
         
         _dummy_me = _TalmiTransformationBase(
-            QN_2body_L_Coupling(QN_1body_radial(0, 0), QN_1body_radial(0, 0), 0),
-            QN_2body_L_Coupling(QN_1body_radial(0, 0), QN_1body_radial(0, 0), 0),
+            QN_2body_L_Coupling(QN_1body_radial(0, 0, mt=1), 
+                                QN_1body_radial(0, 0, mt=1), 0),
+            QN_2body_L_Coupling(QN_1body_radial(0, 0, mt=1), 
+                                QN_1body_radial(0, 0, mt=1), 0),
             run_it = False)
         
         _dummy_me._n   = n

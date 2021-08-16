@@ -17,7 +17,7 @@ class Constants:
     M_MEAN    = 938.918754      # (m_Proton + m_Neutron) / 2
     
     ALPHA     = 7.297353e-3
-    e_CHARGE  = 1.602176e-19   # C
+    e_CHARGE  = 1.602176e-19    # C
 
 
 #===============================================================================
@@ -379,6 +379,7 @@ def shellSHO_Notation(n, l, j=0):
 
 
 shell_filling_order = []
+shell_filling_order_ge_10 = []
 
 def _shellFilling():
     """
@@ -390,9 +391,11 @@ def _shellFilling():
         
         for spss in sp_states:
             n, l, j = readAntoine(spss)
+            st_ge_10 = str((10000*n) + (1000*l) + j)
             
             deg = j + 1
             shell_filling_order.append((spss, (n,l,j), deg))
+            shell_filling_order_ge_10.append((st_ge_10, (n,l,j), deg))
 
 _shellFilling()
 
@@ -407,7 +410,12 @@ def getStatesAndOccupationUpToLastOccupied(N, N_min=0):
     vals = []
     i, n = 0, 0
     while(not end_):
-        _, spss, deg = shell_filling_order[i]
+        
+        #if l_ge_10:
+        _, spss, deg = shell_filling_order_ge_10[i]
+        # else:
+        #     _, spss, deg = shell_filling_order[i]
+        
         n += deg
         i += 1
         if n > N_min:

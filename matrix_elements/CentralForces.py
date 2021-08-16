@@ -201,7 +201,9 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
 
 
-class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
+#4class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
+class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
+
     """
     Density term based on Fermi density distribution, (ordered filled up to A 
     mass number). 
@@ -256,14 +258,19 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
     def _LScoupled_MatrixElement(self):
         
         phs = ((-1)**self._S_bra)
-        fact = (1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0]))
+        fact = 1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0])
+        fact *= (1 - phs*((-1)**(self.T + self._L_bra + self.ket.l2 + self.ket.l1)))
+        if self.isNullValue(fact):
+            return 0.0
         fact *= ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
                  *(2*self.ket.l1 + 1)*(2*self.ket.l2 + 1))**0.5
         
         fact *= safe_3j_symbols(self.bra.l1, self._L_bra, self.bra.l2, 0, 0, 0)
-        fact *= safe_3j_symbols(self.ket.l1, self._L_bra, self.ket.l2, 0, 0, 0)
+        fact *= safe_3j_symbols(self.ket.l1, self._L_ket, self.ket.l2, 0, 0, 0)
         fact *= self.PARAMS_FORCE[DensityDependentParameters.constant]/ (4*np.pi)
         
+        if self.isNullValue(fact):
+            return 0.0
         args = (
             QN_1body_radial(self.bra.n1, self.bra.l1), 
             QN_1body_radial(self.bra.n2, self.bra.l2),
@@ -273,6 +280,9 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
             self.PARAMS_SHO.get(SHO_Parameters.A_Mass),
             self.PARAMS_FORCE.get(DensityDependentParameters.alpha)
         )
+        if self.DEBUG_MODE:
+            _RadialDensityDependentFermi.DEBUG_MODE = True
+        
         radial = _RadialDensityDependentFermi.integral(*args)
         
         return fact * radial

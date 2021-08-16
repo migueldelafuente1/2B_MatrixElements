@@ -117,8 +117,6 @@ class GaussianQuadrature:
             integral[0, +infinity] {dx exp(-x) function(x, **args)} 
             Args:
         :function  <function> f(x, *args, **kwargs)
-        :a         <float> lower limit
-        :b         <float> upper limit
         :order     <int>   order of the quadrature
         
         *args and **kwargs will be passed to the function (check argument introduction
@@ -130,9 +128,10 @@ class GaussianQuadrature:
         else:
             x_i, w_i = GaussianQuadrature._roots_weights_Laguerre.get(order)
         
-        integral = 0.0
-        for i in range(len(x_i)):
-            integral += w_i[i] * function(x_i[i], *args, **kwargs)
+        # integral = 0.0
+        # for i in range(len(x_i)):
+        #     integral += w_i[i] * function(x_i[i], *args, **kwargs)
+        integral = np.dot(w_i, function(x_i, *args, **kwargs))
         
         #print("order", order, "=",integral)
         return integral
@@ -669,7 +668,9 @@ class _RadialTwoBodyDecoupled():
     
     
     def _B_coeff(self, n1, l1, n2, l2, p):
-        """ Same accessor than Moshinsky transformation """
+        """ Same accessor than Moshinsky transformation, from [Llarena]:
+        B(n1,l1,n2,l2,p) =  c(1, without 2pi3)*c(2)*B(without 4pi3) / 2
+        """
         tpl = _B_coeff_memo_accessor(n1, l1, n2, l2, p)
         
         if not tpl in self._BCoeff_Decoup_Memo:
@@ -707,7 +708,7 @@ class _RadialTwoBodyDecoupled():
         for k in range(k_min, k_max +1):
             sum_ += 1 / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return ((-1)**(p)) * sum_ * self._norm_coeff(n1, l1, n2, l2)
+        return ((-1)**(p)) * sum_ * 2 * self._norm_coeff(n1, l1, n2, l2)
     
     
     def _D_coeff_eval(self, n1, l1, n2, l2, p):
@@ -719,7 +720,7 @@ class _RadialTwoBodyDecoupled():
         for k in range(k_min, k_max +1):
             sum_ += (2*k + l1) / self.__sum_aux_denominator(n1, l1, n2, l2, p, k)
         
-        return ((-1)**(p)) * sum_ * self._norm_coeff(n1, l1, n2, l2)
+        return ((-1)**(p)) * sum_ * 2 * self._norm_coeff(n1, l1, n2, l2)
     
     def _norm_coeff(self, n1, l1, n2, l2):
         """ Also extracted from Apendix D.1 of the thesis, 
@@ -810,7 +811,7 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
         
         # norm_fact = np.prod([self._norm_coeff(wf) for wf in 
         #                                 (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
-        norm_fact = 4 * b_length
+        norm_fact = b_length
         if self.DEBUG_MODE:
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             
@@ -820,6 +821,14 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
 
 class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
     
+    """
+    Args: call from <static method> integral(*args)
+        :wave_functions: wave functions <QN_1body_radial> bra_ 1, 2 ket_ 1, 2
+        :b_length: oscillator parameter 
+        :A <int>:  mass number
+        :alpha: coefficient over the density (1/3 only valid)
+    """
+    
     _instance = None
     
     @staticmethod
@@ -827,7 +836,14 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         if _RadialDensityDependentFermi._instance == None:
             _RadialDensityDependentFermi._instance = _RadialDensityDependentFermi()
             _RadialDensityDependentFermi._instance.A = -1
+            _RadialDensityDependentFermi._instance._nuclear_density = None
         return _RadialDensityDependentFermi._instance
+    
+    # @classmethod
+    # def _refreshInstance(cls, A):
+    #     cls._instance = None
+    #     cls._getInstance()
+        #cls.A = A
     
     def _FermiDensity(self, A, rOb):
         """
@@ -835,10 +851,13 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         
         the hypothetical nucleus is considered symmetric Z=N=A//2
         """
-        if A == self.A:
-            return self._densityIntegral
+        if hasattr(self, 'A') and A == self.A:
+            return self._nuclear_density
+        else:
+            #self._refreshInstance(A)
+            self.A = A
         
-        self.A = A
+        # self.A = A
         aux = 0.0 * rOb
         occupied_states = getStatesAndOccupationUpToLastOccupied(A//2)
         for i in range(len(occupied_states)):
@@ -851,11 +870,11 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             if N > 0:
                 aux_i = 0.0 * rOb
                 for p in range(2*ni +1):
-                    aux_i += self._B_coeff(ni, li, ni, li, p) * rOb**(2*(p + li))
-                aux += 2 * N * aux_i
+                    aux_i += self._B_coeff(ni,li,ni,li, p) * (rOb**(2*(p + li)))
+                aux += N * aux_i
                 # factor 2 come from the normalization coefficient
         
-        self._densityIntegral = aux
+        self._nuclear_density = aux
         return aux
     
     def _auxFunction(self, x, No2, A, alpha):
@@ -868,28 +887,28 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         self = _RadialDensityDependentFermi._getInstance()
         return self._auxFunction(x, No2, A, alpha)
     
-    def _r_dependentIntegral(self, No2, b_length, A, alpha):
+    def _r_dependentIntegral(self, No2, A, alpha):
         """ Radial integral for  (factors omitted)
             exp(-(alpha + 2)r**2) * r^2*No2 * fermi_density
         :No2 stands for N over 2, being N = 2*(p+p') + sum{l} + 2 
         """
-        x = np.arange(0, (alpha + 2)*((10/b_length)**2), 0.1)
-        cte = 0.5 / ((alpha + 2)**(No2 - 0.5))
+        #x = np.arange(0, (alpha + 2)*((10/b_length)**2), 0.1)
+        cte = 0.5 / ((alpha + 2)**(No2 + 0.5))
         
-        aux = GaussianQuadrature.laguerre(self._auxFunction,#self._auxFunction_static, 
-                                          80, No2, A, alpha)
-        # aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
+        # aux = GaussianQuadrature.laguerre(self._auxFunction,#self._auxFunction_static, #
         #                                   80, No2, A, alpha)
+        aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
+                                          80, No2, A, alpha)
         return cte * aux
 
     
     @staticmethod
     def integral(wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha): 
         """
-        wfs: wave fucntions bra 1, 2 ket 1, 2
-        b_length: oscillator parameter 
-        A: <int>  mass number
-        alpha: coefficient over the density (1/3 only valid)
+        :wfs: wave fucntions bra 1, 2 ket 1, 2
+        :b_length: oscillator parameter 
+        :A: <int>  mass number
+        :alpha: coefficient over the density (1/3 only valid)
         """
         self = _RadialDensityDependentFermi._getInstance()
         args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha)        
@@ -904,27 +923,27 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         
         sum_ = 0
         if self.DEBUG_MODE:
-            XLog.write("R_int", wf1=wf1_bra, wf2=wf2_bra, wf3=wf1_ket, wf4=wf2_ket)
+            XLog.write("R_int", a=wf1_bra, b=wf2_bra, c=wf1_ket, d=wf2_ket)
         
-        for p in range(n1+n2 +1):
-            ket_coeff = self._B_coeff(n1, l1, n2, l2, p)
+        for p1 in range(n1_q+n1 +1):
+            ket_coeff = self._B_coeff(n1_q, l1_q, n1, l1, p1)
             
-            if self.DEBUG_MODE: XLog.write("Ip", p=p, ket_C=ket_coeff)
-            for p_q in range(n1_q+n2_q +1):
-                bra_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
+            if self.DEBUG_MODE: XLog.write("Ip", p1=p1, ket_C=ket_coeff)
+            for p2 in range(n2_q+n2 +1):
+                bra_coeff = self._B_coeff(n2_q, l2_q, n2, l2, p2)
                 
                 # l1 + l2 + l1_q + l2_q is even
-                No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2) + 1
-                I_dd = self._r_dependentIntegral(No2, b_length, A, alpha)
+                No2 = (p1 + p2) + ((l1 + l2 + l1_q + l2_q)//2) + 1
+                I_dd = self._r_dependentIntegral(No2, A, alpha)
                 
                 if self.DEBUG_MODE:
-                    XLog.write("Ip_q", pq=p_q, bra_C=bra_coeff, N=No2, Idd=I_dd)
+                    XLog.write("Ip_q", p2=p2, bra_C=bra_coeff, N=No2, Idd=I_dd)
                 
                 aux = ket_coeff * bra_coeff * I_dd
                 sum_ += aux
                 if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
-        norm_fact = 4 * (b_length**(2 - 3*alpha))
+        norm_fact = b_length**(3*(1 - alpha - 2))
         if self.DEBUG_MODE:
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             
@@ -933,19 +952,38 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    A_max = getStatesAndOccupationUpToLastOccupied(100)
+    dr = 0.001
+    b_length = 1.2
+    
+    N_min = 0
+    N_max = 60
+    Z_states = getStatesAndOccupationUpToLastOccupied(N_max, N_min)
+    
     A = 0
+    A_prev = max(1, 2*N_min + 1)
     Z = 0
-    for spss, a in A_max:
-        A += 2*a
-        Z += a 
-        aux = _RadialDensityDependentFermi()
-        rOb = np.arange(0, 4, 0.01)
-        # den = aux._FermiDensity(A, rOb)
-        den = aux._auxFunction(rOb, 6, A, 1/3)
-        den /= np.exp((7/3) * rOb**2)
-        
+    r = np.arange(0, 6, dr)
+    rOb = r / b_length
+    for spss, z in Z_states:
         spss = shellSHO_Notation(*spss)
-        plt.plot(rOb, den, label=f"{A}({Z})={spss}")
+        Z += z
+        A = A_prev + 2*z
+        for a_ in range(A_prev, A + 1):
+            #A += 2*a
+             
+            aux = _RadialDensityDependentFermi()
+            
+            den = aux._FermiDensity(a_, rOb) 
+            # den = aux._auxFunction(rOb, 6, A, 1/3)
+            den /= np.exp(rOb**2)
+            # den /= np.exp((7/3) * rOb**2)
+            print(a_,'(', spss, ') integral=', 
+                  b_length**(-3) * sum(den* np.power(r, 2))*dr)
+            
+            if a_ == A:
+                plt.plot(rOb, den, label=f"A[{A}]={spss}")
+            else:
+                plt.plot(rOb, den, label=f"A[{A}]({a_})={spss}")
+        A_prev = A
     plt.legend()
     plt.show()

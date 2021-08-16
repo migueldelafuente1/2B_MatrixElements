@@ -51,6 +51,7 @@ class ForceEnum(Enum):
     SpinOrbit = 'SpinOrbit'
     SpinOrbitShortRange = 'SpinOrbitShortRange'
     Brink_Boeker  = 'Brink_Boeker'
+    GaussianSeries = 'GaussianSeries'
     Density_Dependent = 'Density_Dependent'
     Kinetic_2Body = 'Kinetic_2Body'
     Multipole_Expansion = 'Multipole_Expansion'
@@ -81,6 +82,9 @@ class BrinkBoekerParameters(Enum):
     Bartlett    = 'Bartlett'
     Heisenberg  = 'Heisenberg'
 
+class GaussianSeriesParameters(Enum):
+    part    = 'part'
+
 class DensityDependentParameters(Enum):
     constant    = 'constant' # t_0
     x0    = 'x0'
@@ -92,6 +96,7 @@ class DensityDependentParameters(Enum):
 
 ForceVariablesDict = {
     ForceEnum.Brink_Boeker : BrinkBoekerParameters,
+    ForceEnum.GaussianSeries : GaussianSeriesParameters,
     ForceEnum.Central : CentralMEParameters,
     ForceEnum.Coulomb : Enum,
     ForceEnum.Tensor  : CentralMEParameters,
@@ -103,18 +108,9 @@ ForceVariablesDict = {
     ForceEnum.Multipole_Expansion: None,
 }
 
-# from the input name for the force to a
-## TODO: this dictionary is deprecated (Remove)
-# ForceVariablesMatrixElementDict = {
-#     ForceEnum.Brink_Boeker : 'BrinkBoeker',
-#     ForceEnum.Central      : 'CentralForce',
-#     ForceEnum.Coulomb      : 'Coulomb',
-#     ForceEnum.Tensor       : 'TensorForce',
-#     ForceEnum.SpinOrbit    : 'SpinOrbitForce',
-#     ForceEnum.SpinOrbitShortRange : 'SpinOrbitShortRange',
-#     ForceEnum.Density_Dependent   : ''     
-# }
-
+ForcesWithRepeatedParametersList = [
+    ForceEnum.GaussianSeries,
+]
 class AttributeArgs(Enum):
     name    = 'name'
     details = 'details'

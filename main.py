@@ -18,11 +18,12 @@ from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
 from matrix_elements.BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce
 from helpers.Enums import PotentialForms, SHO_Parameters, BrinkBoekerParameters, \
-    ForceEnum, CentralMEParameters
+    ForceEnum, CentralMEParameters, DensityDependentParameters
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, ShortRangeSpinOrbit_JTScheme,\
     SpinOrbitForce_JTScheme 
 from helpers.Log import XLog
-from matrix_elements.CentralForces import CoulombForce, KineticTwoBody_JTScheme
+from matrix_elements.CentralForces import CoulombForce, KineticTwoBody_JTScheme,\
+    DensityDependentForce_JTScheme
 
 
 if __name__ == "__main__":
@@ -32,8 +33,9 @@ if __name__ == "__main__":
         # TODO: Define Parser and input process
         pass
     else:
+        pass
         # TODO: Run the program from a file 'input.xml' next to the main
-
+        
         _runner = TBME_Runner(filename='input.xml')
         _runner.run()
         print(" The program has ended without incidences.")
@@ -43,22 +45,28 @@ if __name__ == "__main__":
         SHO_Parameters.A_Mass       : 4,
         SHO_Parameters.b_length     : 1.4989,
         SHO_Parameters.hbar_omega   : 18.4586,
+        
         CentralMEParameters.potential : PotentialForms.Power,
         CentralMEParameters.mu_length : 1,
         CentralMEParameters.constant  : 1,
-        CentralMEParameters.n_power   : 0
+        CentralMEParameters.n_power   : 0,
+        
+        DensityDependentParameters.alpha : 1/3,
+        DensityDependentParameters.x0 : 1,
+        DensityDependentParameters.constant : 1
     }
-    J=2
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,2,3), J, 1)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,2,3), J, 1)
+    J = 2
+    T = 1
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
+                                   QN_1body_jj(0,2,5), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
+                                   QN_1body_jj(0,2,5), J, T)
     
-    SpinOrbitForce_JTScheme.turnDebugMode(True)
-    SpinOrbitForce_JTScheme.setInteractionParameters(**kwargs)
-    me = SpinOrbitForce_JTScheme(bra_, ket_)
-    print("me mosh: ", me.value)
-    me.saveXLog('me_LS')
+    DensityDependentForce_JTScheme.turnDebugMode(True)
+    DensityDependentForce_JTScheme.setInteractionParameters(**kwargs)
+    me = DensityDependentForce_JTScheme(bra_, ket_)
+    print("me: ", me.value)
+    me.saveXLog('me_dens')
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
     XLog.resetLog()
     
