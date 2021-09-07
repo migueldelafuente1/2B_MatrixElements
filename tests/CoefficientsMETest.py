@@ -179,6 +179,33 @@ class BDecoupledCoefficientsTest(unittest.TestCase):
                     print("  p={} B[n1l1({},{})n2l2({},{}):{:7.5}  -> B[n1l1({},{})n2l2({},{}):{:7.5}"
                           .format(p, n1,l1,n2,l2, B0, n2,l2,n1,l1, Bexch))
                 print()
+                
+    def test_sumDiagonalB_coeffs(self):
+        """ If we integrate any sho function norm it must return 1 
+        integral(|phi_(n,l)|^2) = c^2 sum B(nl,nl,p) Gamma(p + l + 3/2)/2
+        
+        integral(r^2 * exp(-r/b^2) * r^(2(p + l))) = Gamma(p+l+3/2) / 2
+        """
+        N_max = 8
+        Integrals_ = _RadialTwoBodyDecoupled()
+        print("\n==== TEST NORM SHO FUNCTION DECOUPLED B COEFFS  ====\n")
+        for N in range(N_max + 1):
+            print("N =", N)
+            for n in range(N // 2 +1):
+                l = N - 2*n
+                        
+                aux = 0.0
+                for p in range(2*n + 1):
+                    B0 = Integrals_._B_coeff(n, l, n, l, p)
+                    integ = np.exp(gamma_half_int(2*(p + l) + 3)) / 2
+                    aux += B0 * integ
+                
+                print("\t* integral(|phi(n,l)=(", n, l, ")|^2) =", aux)
+                self.assertAlmostEqual(1, aux, delta=1e-9, 
+                    msg="\nnorm of the function in terms of B decoupled "
+                        "is not 1.0 for (n,l)={}".format((n, l)))
+        
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

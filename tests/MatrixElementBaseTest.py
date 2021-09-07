@@ -55,6 +55,40 @@ class MatrixElementBaseTest(unittest.TestCase):
                     
         return final
     
+    def _evaluateParityConservationOfMatrixElements(self, spss_tuple):
+        
+        spss = combinations_with_replacement(spss_tuple, 4)
+        for sps in spss:
+            bra, ket = sps[:2], sps[2:]
+            s1 = QN_1body_jj(*readAntoine(bra[0]))
+            s2 = QN_1body_jj(*readAntoine(bra[1]))
+            s3 = QN_1body_jj(*readAntoine(ket[0]))
+            s4 = QN_1body_jj(*readAntoine(ket[1]))
+            
+            # Lm = max(abs(s1.l - s2.l), abs(s3.l - s4.l))
+            # LM = min(abs(s1.l + s2.l), abs(s3.l + s4.l))
+            Jm = max(abs(s1.j - s2.j), abs(s3.j - s4.j)) // 2
+            JM = min(s1.j + s2.j, s3.j + s4.j) // 2
+            
+            parity_break = (s1.l + s2.l) + (s3.l + s4.l) % 2 == 0
+            
+            for J in range(Jm, JM +1):
+                for T in (0, 1):
+                    
+                    try:
+                        bra = QN_2body_jj_JT_Coupling(s1, s2, J, T)
+                        ket = QN_2body_jj_JT_Coupling(s3, s4, J, T)
+                    except AssertionError:
+                        print(s1, s2, s3, s4, J,"->",Jm, JM)
+                        continue
+                    self.force.setInteractionParameters(**self.force_kwargs)
+                    self.me = self.force(bra, ket)
+                    if parity_break and not (self.me.isnull()):
+                        self.assertFalse(False, 
+                            "Matrix element [{}] breaks parity but is not null [{}]"
+                            .format(str(bra)+str(ket), self.me.value))
+        
+    
     def _evaluateSingleParticleStates(self, spss_tuple):
         
         spss = combinations_with_replacement(spss_tuple, 4)
@@ -92,6 +126,27 @@ class MatrixElementBaseTest(unittest.TestCase):
                             .format(str(bra)+str(ket), val,
                                     str(sts[0])+str(sts[1]), val_teor))
     
+    #===========================================================================
+    # TESTS:
+    #===========================================================================
+    
+    def test_paritySPSD_BrinkBoeker_diagonal(self):
+        
+        self.force = switchMatrixElementType(ForceEnum.Brink_Boeker)
+        att = AttributeArgs.ForceArgs.Brink_Boeker
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            BrinkBoekerParameters.mu_length : {att.part_1: 0.6, att.part_2: 1.2},
+            BrinkBoekerParameters.Wigner    : {att.part_1: 100, att.part_2: -50},
+            BrinkBoekerParameters.Majorana  : {att.part_1: -50, att.part_2: -50},
+            BrinkBoekerParameters.Heisenberg: {att.part_1: -50, att.part_2: -50},
+            BrinkBoekerParameters.Bartlett  : {att.part_1: 100, att.part_2: -50}
+            }
+    
+        for shell in ('S', 'P', 'SD'):
+            sts = tuple([*valenceSpacesDict[shell]])
+            self._evaluateParityConservationOfMatrixElements(sts)
+    
     def test_exchangeSPSD_BrinkBoeker_diagonal(self):
     
         self.force = switchMatrixElementType(ForceEnum.Brink_Boeker)
@@ -109,6 +164,25 @@ class MatrixElementBaseTest(unittest.TestCase):
             spss = tuple([*valenceSpacesDict[shell]])
             self._evaluateSingleParticleStates(spss)
     
+#------------------------------------------------------------------------------ 
+    def test_paritySPSD_BrinkBoeker_off_diag(self):
+        
+        att = AttributeArgs.ForceArgs.Brink_Boeker
+        self.force = switchMatrixElementType(ForceEnum.Brink_Boeker)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            BrinkBoekerParameters.mu_length : {att.part_1: 0.6, att.part_2: 1.2},
+            BrinkBoekerParameters.Wigner    : {att.part_1: 100, att.part_2: -50},
+            BrinkBoekerParameters.Majorana  : {att.part_1: -50, att.part_2: -50},
+            BrinkBoekerParameters.Heisenberg: {att.part_1: -50, att.part_2: -50},
+            BrinkBoekerParameters.Bartlett  : {att.part_1: 100, att.part_2: -50}
+            }
+    
+        sts = tuple([*valenceSpacesDict['S'], 
+                     *valenceSpacesDict['P'], 
+                     *valenceSpacesDict['SD']])
+        self._evaluateParityConservationOfMatrixElements(sts)
+    
     def test_exchangeSPSD_BrinkBoeker_off_diag(self):
     
         att = AttributeArgs.ForceArgs.Brink_Boeker
@@ -125,8 +199,21 @@ class MatrixElementBaseTest(unittest.TestCase):
         sts = tuple([*valenceSpacesDict['S'], 
                      *valenceSpacesDict['P'], 
                      *valenceSpacesDict['SD']])
-    
         self._evaluateSingleParticleStates(sts)
+        
+#------------------------------------------------------------------------------ 
+    def test_paritySPSD_Central_diagonal(self):
+        self.force = switchMatrixElementType(ForceEnum.Central)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            CentralMEParameters.constant  : 1,
+            CentralMEParameters.mu_length : 1,
+            CentralMEParameters.potential : PotentialForms.Gaussian
+            }
+    
+        for shell in ('S', 'P', 'SD'):
+            sts = tuple([*valenceSpacesDict[shell]])
+            self._evaluateParityConservationOfMatrixElements(sts)
     
     def test_exchangeSPSD_Central_diagonal(self):
     
@@ -141,6 +228,22 @@ class MatrixElementBaseTest(unittest.TestCase):
         for shell in ('S', 'P', 'SD'):
             spss = tuple([*valenceSpacesDict[shell]])
             self._evaluateSingleParticleStates(spss)
+    
+#------------------------------------------------------------------------------ 
+    def test_paritySPSD_Central_off_diag(self):
+        self.force = switchMatrixElementType(ForceEnum.Central)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            CentralMEParameters.constant  : 1,
+            CentralMEParameters.mu_length : 1,
+            CentralMEParameters.potential : PotentialForms.Gaussian
+            }
+    
+        sts = tuple([*valenceSpacesDict['S'], 
+                     *valenceSpacesDict['P'], 
+                     *valenceSpacesDict['SD']])
+    
+        self._evaluateParityConservationOfMatrixElements(sts)
     
     def test_exchangeSPSD_Central_off_diag(self):
     
@@ -157,6 +260,20 @@ class MatrixElementBaseTest(unittest.TestCase):
                      *valenceSpacesDict['SD']])
     
         self._evaluateSingleParticleStates(sts)
+        
+#------------------------------------------------------------------------------ 
+    def test_paritySPSD_ShortRangeLS_diagonal(self):
+        self.force = switchMatrixElementType(ForceEnum.SpinOrbitShortRange)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            CentralMEParameters.constant  : 1,
+            CentralMEParameters.potential : PotentialForms.Power,
+            CentralMEParameters.mu_length  : 1
+            }
+    
+        for shell in ('S', 'P', 'SD'):
+            sts = tuple([*valenceSpacesDict[shell]])
+            self._evaluateParityConservationOfMatrixElements(sts)
     
     def test_exchangeSPSD_ShortRangeLS_diagonal(self):
     
@@ -171,6 +288,20 @@ class MatrixElementBaseTest(unittest.TestCase):
         for shell in ('S', 'P', 'SD'):
             spss = tuple([*valenceSpacesDict[shell]])
             self._evaluateSingleParticleStates(spss)
+    
+    def test_paritySPSD_ShortRangeLS_off_diag(self):
+        self.force = switchMatrixElementType(ForceEnum.SpinOrbitShortRange)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            CentralMEParameters.constant  : 1,
+            CentralMEParameters.potential : PotentialForms.Power,
+            CentralMEParameters.mu_length  : 1
+            }
+    
+        sts = tuple([*valenceSpacesDict['S'], 
+                     *valenceSpacesDict['P'], 
+                     *valenceSpacesDict['SD']])
+        self._evaluateParityConservationOfMatrixElements(sts)
     
     def test_exchangeSPSD_ShortRangeLS_off_diag(self):
     
@@ -188,6 +319,21 @@ class MatrixElementBaseTest(unittest.TestCase):
     
         self._evaluateSingleParticleStates(sts)            
     
+    def test_paritySPSD_SpinOrbit(self):
+        self.force = switchMatrixElementType(ForceEnum.SpinOrbit)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            CentralMEParameters.constant  : 1,
+            CentralMEParameters.potential : PotentialForms.Power,
+            CentralMEParameters.mu_length : 1,
+            }
+        
+        sts = tuple([*valenceSpacesDict['S'], 
+                     *valenceSpacesDict['P'], 
+                     *valenceSpacesDict['SD']])
+        
+        self._evaluateParityConservationOfMatrixElements(sts)
+    
     def test_exchangeSPSD_SpinOrbit(self):
         
         self.force = switchMatrixElementType(ForceEnum.SpinOrbit)
@@ -203,6 +349,25 @@ class MatrixElementBaseTest(unittest.TestCase):
                      *valenceSpacesDict['SD']])
         
         self._evaluateSingleParticleStates(sts)
+#------------------------------------------------------------------------------ 
+    def test_paritySPSD_DensityDependant(self):
+        
+        self.force = switchMatrixElementType(ForceEnum.Density_Dependent)
+        self.force_kwargs = {
+            SHO_Parameters.b_length : 1,
+            SHO_Parameters.A_Mass   : 8,
+            DensityDependentParameters.constant  : 1,
+            CentralMEParameters.potential : PotentialForms.Power,
+            CentralMEParameters.mu_length : 1,
+            DensityDependentParameters.alpha    : 1/3,
+            DensityDependentParameters.x0 : 1,
+            }
+    
+        sts = tuple([*valenceSpacesDict['S'], 
+                     *valenceSpacesDict['P'], 
+                     *valenceSpacesDict['SD']])
+    
+        self._evaluateParityConservationOfMatrixElements(sts)
     
     def test_exchangeSPSD_DensityDependant(self):
     

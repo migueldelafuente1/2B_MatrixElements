@@ -36,14 +36,16 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
-        _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_Runner(filename='input.xml')
+        _runner = TBME_Runner(filename='input_D1S.xml')
         _runner.run()
         print(" The program has ended without incidences.")
-         
+        
         
     kwargs = {
         SHO_Parameters.A_Mass       : 4,
-        SHO_Parameters.b_length     : 1.4989,
+        SHO_Parameters.Z            : 2,
+        SHO_Parameters.b_length     : 1.5, #1.4989,
         SHO_Parameters.hbar_omega   : 18.4586,
         
         CentralMEParameters.potential : PotentialForms.Power,
@@ -53,14 +55,14 @@ if __name__ == "__main__":
         
         DensityDependentParameters.alpha : 1/3,
         DensityDependentParameters.x0 : 1,
-        DensityDependentParameters.constant : 1
+        DensityDependentParameters.constant : 1390.6
     }
     J = 2
-    T = 1
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
+    T = 0
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
                                    QN_1body_jj(0,2,5), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
-                                   QN_1body_jj(0,2,5), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
+                                   QN_1body_jj(0,2,3), J, T)
     
     DensityDependentForce_JTScheme.turnDebugMode(True)
     DensityDependentForce_JTScheme.setInteractionParameters(**kwargs)
