@@ -452,3 +452,15 @@ class _TwoBodyMatrixElement_Antisym_JTCoupled(_TwoBodyMatrixElement_JTCoupled):
             XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
 
 
+
+
+
+class _MatrixElementReader(_TwoBodyMatrixElement):
+    
+    """
+    Dummy matrix element for reading from file, assume JT scheme for simplicity
+    and could be settled when reading to J scheme accordingly to the file.
+    """
+    
+    COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
+    _BREAK_ISOSPIN = False

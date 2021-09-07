@@ -433,7 +433,36 @@ def getStatesUpToLastOccupied(N, N_min=0):
     vals = [val[0] for val in vals]
     return vals
 
-
+def getStatesAndOccupationOfFullNucleus(Z, N, NZ_min=0):
+    """ Do the same that getStatesAndOccupationUpToLastOccupied() but for proton
+    and Neutrons separatedly, the return is a tuple with all the states and the 
+    ocuppation for protons, neutrons:
+    
+    <list>[<tuple>(<tuple>spss, <int> occupation protons, <int> occ. neutrons)]
+    
+    Output: N=8, Z=5 N_min=2: 
+    [((0, 1, 3), 3, 4), 
+     ((0, 1, 1), 0, 2), 
+     ((1, 0, 1), 0, 0)] 
+    """
+    occupation_Z = getStatesAndOccupationUpToLastOccupied(Z, NZ_min)
+    occupation_N = getStatesAndOccupationUpToLastOccupied(N, NZ_min)
+    
+    qqnn = map(lambda x: x[0], max(occupation_Z, occupation_N))
+    occupation = []
+    i = 0
+    for spss in qqnn:
+        deg_Z = occupation_Z[i][1] if i < len(occupation_Z) else 0
+        deg_N = occupation_N[i][1] if i < len(occupation_N) else 0
+        
+        occupation.append((spss, deg_Z, deg_N))
+        i += 1
+    return occupation
+        
+        
+    
+    
+    
 # if __name__ == "__main__":
 #
 #     print('13=\n'+'\n'.join(map(lambda x: str(x), getStatesUpToLastOcupied(13))))

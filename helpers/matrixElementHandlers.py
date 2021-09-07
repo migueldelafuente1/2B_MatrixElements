@@ -8,19 +8,22 @@ from helpers.Helpers import prettyPrintDictionary, shell_filling_order,\
     shell_filling_order_ge_10
 from helpers.io_manager import readAntoine
 from copy import deepcopy
+from matplotlib.pyplot import tight_layout
+
 
 class MatrixElementFilesComparator:
     
     """ Read matrix elements from Antoine format J and T and check their values
     (script takes care of exchange sing), 
-    Can return a dictionary with invalid matrix (getFailedME()) and a summary of
-    the failures/miss/oks (getResults())
+    Can return a dictionary with invalid matrix (getFailedME()), a summary of
+    the failures/miss/oks (getResults()) and a the list of bench/test missing
+    elements with getMissingME().
     
     Usage:
     test = MatrixElementFilesComparator('../results/central_SPSDPF_bench.sho', 
                                         '../results/central_SPSDPF_2.sho')
     
-    _result = test.compareDictionaries()
+    test.compareDictionaries()
     
     print(" === TEST RESULTS:    =================================\n")
     prettyPrintDictionary(test.getResults())
@@ -74,7 +77,11 @@ class MatrixElementFilesComparator:
         self.l_ge_10 = l_ge_10
         
         self._results = deepcopy(self._results_initial)
+        self._passed_me = []
         self._failed_me = {}#{self.ME.diagonal: {}, self.ME.off_diag: {}}
+        self._failed_me_num = {}
+        self._missing_me = {'in_'+self.File.bench: [],
+                            'in_'+self.File.test: []}
         
         self.b_bench_diag = None
         self.b_bench_off  = None
@@ -180,31 +187,92 @@ class MatrixElementFilesComparator:
     
     def _appendFailureDetails(self, spss, jt, val, val_bench):
         
-        diff_abs, diff_rel = "[{}]t != [{}]b".format(val, val_bench), 'Non Zero'
+        diff_abs_str ="[{}]t != [{}]b".format(val, val_bench)
+        rel_str, diff_rel_str = 'Non Zero', 'Non Zero'
+        diff_abs, rel, diff_rel = 0, 1, 1
         
-        if val != 0:
-            diff_rel = "[{:+5.4f}={:+5.3f}%]".format(val_bench/val, 
-                                                     100*(val_bench/val))
+        if val_bench != 0:
+            rel =  val/val_bench
+            diff_abs = val - val_bench
+            diff_rel = diff_abs / val_bench
+            rel_str = "[{:+5.4f}={:+5.3f}%]".format(rel, 100*rel)
+            diff_rel_str = "[{:+5.4e}={:+5.3f}%]".format(diff_abs, 100*diff_rel)
+            
         if self._verbose: 
             print(spss, jt)
             print("... Not equal:", val, "must be", val_bench)
-            print("... ", diff_abs, '\t', diff_rel)
+            print("... ", diff_abs, '\t', diff_rel, '\t rel=', rel)
         
         if not spss in self._failed_me:
             self._failed_me[spss] = {}
+            self._failed_me_num[spss] = {}
         
-        fail = {'abs': diff_abs, 'rel': diff_rel}
+        fail = {'abs': diff_abs_str, 'rel': rel_str, 'diff_rel': diff_rel_str}
+        fail_num = {'abs': diff_abs, 'rel': rel, 'diff_rel': diff_rel}
         if jt in self._failed_me[spss]:
             self._failed_me[spss][jt] = fail
+            self._failed_me_num[spss][jt] = fail_num
         else:
             self._failed_me[spss] = {jt: fail}
+            self._failed_me_num[spss] = {jt: fail_num}
     
+    def _appendMissingDetails(self, in_file, spss):
+        
+        self._missing_me['in_'+in_file].append(spss)            
+        
     def getResults(self):
         return deepcopy(self._results)
     
     def getFailedME(self):
         return deepcopy(self._failed_me)
     
+    def getMissingME(self):
+        return deepcopy(self._missing_me)
+    
+    def plotFailedDifferences(self):
+        import numpy as np
+        import matplotlib
+        #matplotlib.rcParams['text.usetex'] = True
+        import matplotlib.pylab as plt
+        
+        rel = []
+        x = []
+        index = {}
+        i = 0
+        for spss, val_jt in self._failed_me_num.items():
+            # if not(10001 in spss):
+            #     continue
+            #     if spss.count(10001) >= 1:
+            #         continue
+            for jt, val in val_jt.items():
+                # if abs(val['diff_rel']) < 0.4:
+                #     continue
+                rel.append(val['diff_rel'])
+                x.append(i)
+                index[i] = "{}\t {}\t = {:.6f}".format(spss, jt, rel[-1])
+                i += 1
+        
+        
+        prettyPrintDictionary(index)
+        
+        fig, ax = plt.subplots(figsize=(6, 4), tight_layout=True)
+        ax.grid(True)
+        ax.set_xticks(np.arange(min(x), max(x)+1, 2.0))
+        ax.scatter(x, rel)
+        # ax.set_ylabel(r"$\frac{me - me_{bench}}{me_{bench}}$")
+        ax.set_ylabel(r"(x - bench) / bench")
+        ax.set_title("TBME relative differences")
+        #plt.show()
+        
+        fig2, ax2 = plt.subplots(tight_layout=True)
+        n, bins, patches = plt.hist(x=rel, bins='auto', color='#0504aa',
+                                    alpha=0.7, rwidth=0.85)
+        plt.grid(axis='y', alpha=0.75)
+        plt.xlabel(r"(x - bench) / bench")
+        plt.ylabel('Frequency')
+        plt.title('Distribution of difference')
+        plt.show()
+        
     def _meIndexInDict(self, spss, dict_):
         """ Return:
         :in_dict <bool>
@@ -250,7 +318,8 @@ class MatrixElementFilesComparator:
     def _compareDictionaries(self, d_bench, d_test):
         
         for spss_0, jt_block in d_bench.items():
-            
+            if spss_0 == (1,1,1,1):
+                _=0
             in_dict, spss, phs_pow = self._meIndexInDict(spss_0, d_test)
             
             head = spss_0 if spss_0==spss else str(spss_0)+" ->> "+str(spss)
@@ -258,6 +327,7 @@ class MatrixElementFilesComparator:
             
             if not in_dict:
                 if self._verbose: print("\n[Missing]", spss, "in m.e. to test:")
+                self._appendMissingDetails(self.File.test, spss)
                 self._countStatusFail(True, 1, missing=True)
                 continue
             
@@ -270,7 +340,8 @@ class MatrixElementFilesComparator:
                     val = d_test[spss][T][J]
                     if phs != 0:
                         val *= phs
-                    if abs(val_bench - val) > 0.00001:
+                    # if the difference is 0.1% greater than the bench value
+                    if abs(val_bench - val) > abs(0.0001 * val_bench):
                         str_jt = "JT:{},{}".format(J,T)
                                                 
                         self._appendFailureDetails(spss, str_jt, val, val_bench)
@@ -279,7 +350,13 @@ class MatrixElementFilesComparator:
                         if self._verbose: 
                             print("... Equal [OK]",  val, "=", val_bench, "(bench)")
                         self._countStatusFail(False, val)
-
+                        self._passed_me.append(spss)
+        
+        for spss_t in d_test.keys():
+            if spss_t not in d_bench:
+                self._appendMissingDetails(self.File.bench, spss_t)
+                self._countStatusFail(True, 1, missing=True)
+        
 #===============================================================================
 # PLOTING M.E (T channel) to be compared
 #===============================================================================~
@@ -424,12 +501,12 @@ class MatrixElements_PlotComparator():
         appear non-zero value in the other forces, remove an element if it's zero
         in all the files.
         """
-        self._forces = self.tbms.keys()
+        self.forces = self.tbms.keys()
             
         for spss, j_range in self._statesOrderedByEnergy():
             self._j_range = j_range
             all_null = True
-            for force in self._forces:
+            for force in self.forces:
                 in_ = self._meInForce(force, spss)
                 if in_:
                     all_null = False
@@ -449,7 +526,7 @@ class MatrixElements_PlotComparator():
         values for fixed T, then remove the J entry. 
         """
         if all_null:
-            for force in self._forces:
+            for force in self.forces:
                 del self.tbms[force][0][spss]
                 del self.tbms[force][1][spss]
                 del self.tbms_T0[force][spss]
@@ -459,12 +536,12 @@ class MatrixElements_PlotComparator():
         for j in j_range:
             jT_all_null = [True, True]
             
-            for force in self._forces:
+            for force in self.forces:
                 for T in (0, 1):
                     if abs(self.tbms[force][T][spss][j]) > 1e-10:
                         jT_all_null[T] = False
                 # if not True in jT_all_null: break
-            for force in self._forces:
+            for force in self.forces:
                 if jT_all_null[0]:
                     del self.tbms[force][0][spss][j]
                     del self.tbms_T0[force][spss][j]
@@ -503,7 +580,7 @@ class MatrixElements_PlotComparator():
                 self.tbms_T1[force][spss][j] = self.tbms[force][1][spss][j]
             return True
         # Create empty matrix element for the force
-        self._fillEmptyNewMatrixElement(force, spss)                
+        self._fillEmptyNewMatrixElement(force, spss)
         in_ = False
         if (bra == ket) and (bra_diag and ket_diag):
             return False
@@ -557,8 +634,45 @@ class MatrixElements_PlotComparator():
             
 if __name__ == "__main__":
     
-    plot_ = MatrixElements_PlotComparator(
-                shortRange_LS='../results/ls_short_SPSD.sho',
-                bb='../results/bb_SPSD.sho',
-                dd_fermi='../results/density_SPSD.sho')
+    test = MatrixElementFilesComparator(
+        '../results/dd_a1_b15_A16.2b', 
+        '../results/dens_test_a1_SPSD100.sho', verbose=False)
+    test.compareDictionaries()
+    print(" === TEST RESULTS:    =================================\n")
+    # prettyPrintDictionary(test.getResults())
+    # prettyPrintDictionary(test.getFailedME())
+    # test.plotFailedDifferences()
+    # prettyPrintDictionary(test.getMissingME())
+    
+    print("Missing in test file (but parity conserv)")
+    miss = test.getMissingME()
+    
+    def conservesParity(spss):
+        spss2 = [readAntoine(i, l_ge_10=True) for i in spss]
+        ll = [sp[1] for sp in spss2]
+        if (ll[0] + ll[1]) % 2 == (ll[2] + ll[3]) % 2:
+            return True, ll
+        return False, ll
+    
+    for spss in miss['in_test']:
+        parityOk, ll = conservesParity(spss)
+        if parityOk:
+            Lb_min, Lb_max = abs(ll[0] - ll[1]), ll[0] + ll[1]
+            Lk_min, Lk_max = abs(ll[2] - ll[3]), ll[2] + ll[3]
+            print(spss, 'L_bra', list(range(Lb_min, Lb_max+1)), 
+                        'L_ket', list(range(Lk_min, Lk_max+1)))
+    
+    print("\nMissing in bench file (non zero in our TBME)", len(miss['in_bench']))
+    for i, spss in enumerate(miss['in_bench']):
+        
+        parityOk, ll = conservesParity(spss)
+        if parityOk:
+            print(i, spss)
+        else:
+            print(i, "WRONG PARITY", spss)
+    
+    # plot_ = MatrixElements_PlotComparator(
+    #             shortRange_LS='../results/ls_short_SPSD.sho',
+    #             bb='../results/bb_SPSD.sho',
+    #             dd_fermi='../results/density_SPSD.sho')
     

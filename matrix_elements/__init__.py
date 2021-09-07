@@ -6,6 +6,7 @@ from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
     CoulombForce, DensityDependentForce_JTScheme, KineticTwoBody_JTScheme
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
     ShortRangeSpinOrbit_JTScheme
+from matrix_elements.MatrixElement import _MatrixElementReader
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -37,5 +38,8 @@ def switchMatrixElementType(force, J_scheme=False):
     
     elif force == ForceEnum.Tensor:
         return TensorForce_JTScheme
+    
+    if force == ForceEnum.Force_From_File:
+        return _MatrixElementReader
     else:
         raise Exception("Invalid force: [{}]".format(force))

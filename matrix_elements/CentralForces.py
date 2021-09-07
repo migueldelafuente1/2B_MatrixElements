@@ -138,8 +138,8 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
     _BREAK_ISOSPIN = True
     
-    COULOMB_CONST = 1.4522545041047  ## [MeV fm_ e^-2] K factor in natural units
-    # COULOMB_CONST = 1.44197028     ## constant extracted form HFBaxial code
+    # COULOMB_CONST = 1.4522545041047  ## [MeV fm_ e^-2] K factor in natural units
+    COULOMB_CONST = 1.44197028     ## constant extracted form HFBaxial code
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
@@ -182,7 +182,12 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
             _TwoBodyMatrixElement_JCoupled._run(self)
     
     def _deltaConditionsForCOM_Iteration(self):
-        return True
+        """ This condition ensure the antisymmetrization (without calling 
+        exchanged the matrix element)"""
+        if (((self._S_bra + 1 + self._l) % 2 == 1) and 
+            ((self._S_ket + 1 + self._l_q) % 2 == 1)):
+            return True
+        return False
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
@@ -201,7 +206,7 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
 
 
-#4class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
+# class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
 class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
 
     """
@@ -235,9 +240,12 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         
         _b = SHO_Parameters.b_length
         _a = SHO_Parameters.A_Mass
+        _z = SHO_Parameters.Z
         
         cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
         cls.PARAMS_SHO[_a] = int(kwargs.get(_a))
+        z = kwargs.get(_z)
+        cls.PARAMS_SHO[_z] = int(z) if z else None
         
         cls.PARAMS_FORCE = {}
         
@@ -259,7 +267,11 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         
         phs = ((-1)**self._S_bra)
         fact = 1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0])
-        fact *= (1 - phs*((-1)**(self.T + self._L_bra + self.ket.l2 + self.ket.l1)))
+        
+        ## Antisymmetrization factor 
+        fact *= (1 - ((-1)**(self.T + self._S_bra + 
+                             self._L_bra + self.ket.l2 + self.ket.l1)))
+        
         if self.isNullValue(fact):
             return 0.0
         fact *= ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
@@ -278,6 +290,7 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
             QN_1body_radial(self.ket.n2, self.ket.l2),
             self.PARAMS_SHO.get(SHO_Parameters.b_length),
             self.PARAMS_SHO.get(SHO_Parameters.A_Mass),
+            self.PARAMS_SHO.get(SHO_Parameters.Z),
             self.PARAMS_FORCE.get(DensityDependentParameters.alpha)
         )
         if self.DEBUG_MODE:

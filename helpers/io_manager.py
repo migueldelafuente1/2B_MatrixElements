@@ -5,12 +5,13 @@ Created on Feb 23, 2021
 '''
 from helpers.Enums import InputParts, SHO_Parameters, ForceEnum,\
     AttributeArgs, ValenceSpaceParameters, Output_Parameters,\
-    ForcesWithRepeatedParametersList
+    ForcesWithRepeatedParametersList, CoreParameters, OutputFileTypes
 from helpers.Enums import ForceVariablesDict
 import xml.etree.ElementTree as et
 from helpers.WaveFunctions import QN_1body_jj
 from helpers.Helpers import readAntoine, shellSHO_Notation, valenceSpacesDict_l_ge10,\
     getCoreNucleus
+from copy import deepcopy
 
 
 def castAntoineFormat2Str(state, l_ge_10=False):
@@ -175,8 +176,8 @@ class _JsonParser(_Parser):
             raise ParserException("missing 'protons' or 'neutrons' in {}"
                                   .format(InputParts.Core))
         
-        if not AttributeArgs.CoreArgs.innert_core in vals_dict:
-            vals_dict[AttributeArgs.CoreArgs.innert_core] = 'None'
+        if not CoreParameters.innert_core in vals_dict:
+            vals_dict[CoreParameters.innert_core] = 'None'
         
         return vals_dict
     
@@ -247,8 +248,11 @@ class _XMLParser(_Parser):
             _aux = elem.find(param)
             
             if _aux == None:
-                raise ParserException("missing parameter [{}] in {}"
-                                      .format(param, InputParts.SHO_Parameters))
+                if param != SHO_Parameters.Z:
+                    raise ParserException("missing parameter [{}] in {}"
+                                          .format(param, InputParts.SHO_Parameters))
+                else:
+                    continue
             vals_dict[param] = _aux.text
             
         return vals_dict
@@ -279,7 +283,7 @@ class _XMLParser(_Parser):
         elem = self._data.find(InputParts.Core)
         vals_dict = {}
         
-        for param in AttributeArgs.CoreArgs.members():
+        for param in CoreParameters.members():
             val_ = elem.find(param)
                     
             if val_ in (None, ''):
@@ -289,8 +293,13 @@ class _XMLParser(_Parser):
                 pass#val_ = 0
                     # raise ParserException("missing parameter [{}] in {}"
                     #                       .format(param, InputParts.Core))
-            if param == AttributeArgs.CoreArgs.innert_core:
-                val_ = val_.get(AttributeArgs.name) if val_ else getCoreNucleus(0, 0)
+            if param == CoreParameters.innert_core:
+                val_ = {}
+                for attr_ in AttributeArgs.CoreArgs.members():
+                    value = val_.get(attr_)
+                    val_[attr_] = value if value else 0
+                    if attr_ == AttributeArgs.name and not value:
+                        val_[attr_] = getCoreNucleus(0, 0)
             else:
                 val_ = '0' if val_ == None  else val_.text
             
@@ -446,14 +455,210 @@ class CalculationArgs(object):
         outp_fn = spc + ''.join(getattr(self, InputParts.Force_Parameters).keys())
         
         return outp_fn
-        
-        
-        
-        
+
+
+
+class TBME_Reader():
     
-
-
-
-
-
-
+    """ 
+    Parser for output two-body interaction matrix element files to be imported
+    both for Hamiltonian reading in TBME_Runner or for testing purpuses
+    
+    matrix elements are stored according the scheme.
+    """
+    
+    class _Scheme:
+        ## Only for inner use
+        J  = 'J'
+        JT = 'JT'
+    
+    _JSchemeIndexing = {
+        0: (1,  1,  1,  1),  # pppp 
+        1: (1, -1,  1, -1),  # pnpn 
+        2: (1, -1, -1,  1),  # pnnp 
+        3: (-1, 1,  1, -1),  # nppn 
+        4: (-1, 1, -1,  1),  # npnp 
+        5: (-1, -1,-1, -1),  # nnnn
+    }
+    
+    def __init__(self, filename, 
+                 ignorelines=None, constant=None, val_space=None, l_ge_10=True):
+        """
+        Args:
+            :filename
+        Optional arguments:
+            :ignorelines <int>, Number of lines to skip before the JT blocks 
+            :constant    <float>, Factor to multiply all the matrix elements
+            :val_space   <list of Antoine indexes>, when given, it skips matrix
+                          elements that contain other quantum numbers.
+        """
+        with open(filename, 'r') as f:
+            data = f.readlines()
+            if ignorelines:
+                data = data[int(ignorelines):]
+        if constant:
+            self.const = float(constant)
+        self.l_ge_10 = l_ge_10
+        
+        if filename.endswith(OutputFileTypes.sho):
+            self.scheme = self._Scheme.JT
+        elif filename.endswith(OutputFileTypes.twoBody):
+            self.scheme = self._Scheme.J
+        else:
+            raise ParserException("Unidentified Scheme for importing")
+        
+        self._elements = {}
+        self._valence_space = []
+        self._strict_val_space = False
+        if val_space:
+            self._strict_val_space = True
+            self._valence_space = [int(st) for st in val_space]
+        
+        self._importMatrixElements(data)
+    
+    def getMatrixElemnts(self):
+        """ Get the import matrix elements """
+        return deepcopy(self._elements)
+    
+    def _importMatrixElements(self, data):
+        if self.scheme == self._Scheme.JT:
+            self._getJTSchemeMatrixElements(data)
+        elif self.scheme == self._Scheme.J:
+            self._getJSchemeMatrixElements(data)
+    
+    
+    def _getJTSchemeMatrixElements(self, data):
+        
+        JT_block = {}
+        bra, ket = None, None
+        index    = 0
+        j_min, j_max, T = 0, 0, 0
+        
+        for line in data:
+            line = line.strip()
+            if index == 0:
+                bra, ket, j_min, j_max, skip = self._getBlockQN_HamilType(line)
+                if skip:
+                    index += 1
+                    continue
+                # JT_block[bra] = {0: {}, 1: {}}
+                phs_bra, phs_ket, bra, ket = self._getPermutatioPhase(bra, ket)
+                if bra in JT_block:
+                    if ket in JT_block[bra]:
+                        print("WARNING, while reading the file found repeated "
+                              "matrix element block:", bra, ket)
+                    JT_block[bra][ket] = {0: {}, 1: {}}
+                else:
+                    JT_block[bra] = {ket : {0: {}, 1: {}}}
+            elif index > 0 and (not skip):
+                T = index - 1
+                
+                line = line.split()
+                for i in range(j_max - j_min +1):
+                    J = j_min + i
+                    
+                    phs = 1
+                    if self.bra_exch:
+                        phs *= (-1)**(phs_bra + J + T)
+                    if self.ket_exch:
+                        phs *= (-1)**(phs_ket + J + T)
+                    
+                    JT_block[bra][ket][T][J] = self.const * phs * float(line[i])
+            
+            index = index + 1 if index < 2 else 0
+        
+        self._elements = JT_block
+    
+    
+    def _getJSchemeMatrixElements(self, data):
+        
+        J_block = {}
+        bra, ket = None, None
+        index = 0
+        j_min, j_max, J = 0, 0, 0
+        
+        for line in data:
+            line = line.strip()
+            if index == 0:
+                bra, ket, j_min, j_max, skip = self._getBlockQN_HamilType(line)
+                j_length = j_max - j_min + 1
+                if skip:
+                    index += 1
+                    continue
+                
+                j_dict = dict([(j, {}) for j in range(j_min, j_max+1)])
+                
+                phs_bra, phs_ket, bra, ket = self._getPermutatioPhase(bra, ket)
+                if bra in J_block:
+                    if ket in J_block[bra]:
+                        print("WARNING, while reading the file found repeated "
+                              "matrix element block:", bra, ket)
+                    J_block[bra][ket] = deepcopy(j_dict)
+                else:
+                    J_block[bra] = {ket : deepcopy(j_dict)}
+                
+            elif index > 0 and (not skip):
+                J = j_min + index - 1
+                
+                line = line.split()
+                phs = 1
+                if self.bra_exch:
+                    phs *= (-1)**(phs_bra + J + 1)
+                if self.ket_exch:
+                    phs *= (-1)**(phs_ket + J + 1)
+                
+                for T in self._JSchemeIndexing.keys():
+                    J_block[bra][ket][J][T] = self.const * phs * float(line[T])
+            
+            index = index + 1 if index < j_length else 0
+        
+        self._elements = J_block
+    
+    def _getBlockQN_HamilType(self, header):
+        """ 
+        :header <str>  with the sp states and JT values:
+               0       1       1     103     103     205       1       2
+               Tmin    Tmax    st1   st2     st3     st4       Jmin    Jmax
+        """ 
+        header = header.strip().split()
+        spss = [int(sp) for sp in header[2:6]]
+        
+        skip = False
+        for st in spss:
+            if st not in self._valence_space:
+                if self._strict_val_space:
+                    skip = True
+                else:
+                    self._valence_space.append(st)
+        
+        
+        bra = min(tuple(spss[0:2]), tuple(spss[2:4]))
+        ket = max(tuple(spss[0:2]), tuple(spss[2:4]))
+        
+        return bra, ket, int(header[-2]), int(header[-1]), skip
+    
+    def _getPermutatioPhase(self, bra, ket):
+        """ 
+        return the bra and the ket in increasing order (avoids repetition).
+        
+        phases do not have the (J + 1) or (J + T) part (append afterwards), 
+        just j1 + j2
+        """
+        
+        self.bra_exch  = False
+        self.ket_exch  = False
+        phs_bra, phs_ket    = 0, 0
+        
+        if bra[0] > bra[1]:
+            self.bra_exch = True
+            bra = (bra[1], bra[0])
+            phs_bra = (readAntoine(bra[0], self.l_ge_10)[2] + 
+                       readAntoine(bra[1], self.l_ge_10)[2]) // 2
+        if ket[0] > ket[1]:
+            self.ket_exch = True
+            ket = (ket[1], ket[0])
+            phs_ket = (readAntoine(ket[0], self.l_ge_10)[2] + 
+                       readAntoine(ket[1], self.l_ge_10)[2]) // 2
+            
+        return phs_bra, phs_ket, bra, ket
+            

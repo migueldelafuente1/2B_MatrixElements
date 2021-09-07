@@ -4,13 +4,13 @@ Created on Feb 23, 2021
 @author: Miguel
 '''
 from helpers.io_manager import CalculationArgs, readAntoine,\
-    castAntoineFormat2Str, valenceSpaceShellNames, ParserException
+    castAntoineFormat2Str, valenceSpaceShellNames, ParserException, TBME_Reader
 import json
 import time
 
 from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
     SHO_Parameters, InputParts, Output_Parameters, OutputFileTypes,\
-    CouplingSchemeEnum
+    CouplingSchemeEnum, ForceEnum, ForceFromFileParameters
 from matrix_elements import switchMatrixElementType
 from itertools import combinations_with_replacement
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
@@ -32,19 +32,18 @@ class TBME_Runner(object):
     
     RESULT_FOLDER = OUTPUT_FOLDER
     
-    class _Scheme:
-        ## Only for inner use
-        J  = 'J'
-        JT = 'JT'
+    _Scheme = TBME_Reader._Scheme
+        # ## Only for inner use
+        # J  = 'J'
+        # JT = 'JT'
     
-    _JSchemeIndexing = {
-        0: (1,  1,  1,  1),  # pppp 
-        1: (1, -1,  1, -1),  # pnpn 
-        2: (1, -1, -1,  1),  # pnnp 
-        3: (-1, 1,  1, -1),  # nppn 
-        4: (-1, 1, -1,  1),  # npnp 
-        5: (-1, -1,-1, -1),  # nnnn
-    }
+    _JSchemeIndexing = TBME_Reader._JSchemeIndexing
+        # 0: (1,  1,  1,  1),  # pppp 
+        # 1: (1, -1,  1, -1),  # pnpn 
+        # 2: (1, -1, -1,  1),  # pnnp 
+        # 3: (-1, 1,  1, -1),  # nppn 
+        # 4: (-1, 1, -1,  1),  # npnp 
+        # 5: (-1, -1,-1, -1),  # nnnn
     
     def __init__(self, filename='', manual_input={}):
         
@@ -265,7 +264,7 @@ class TBME_Runner(object):
                     .format(valence_space))
         else:
             # all were defined
-            pass        
+            pass
             
     def _computeForValenceSpaceJTCoupled(self, force=''):
         """ 
@@ -386,6 +385,40 @@ class TBME_Runner(object):
                                        force, self.interactionSchemes[force]))
             
     
+    def _readMatrixElementsFromFile(self, force_str, **params):
+        """ 
+        TODO: implement in an external reading io_manager.
+        
+        Proceed to read all the matrix elements from a file (J or JT scheme)
+        filename is mandatory.
+        """
+        filename = params.get(ForceFromFileParameters.file)[AttributeArgs.name]
+        options  = params.get(ForceFromFileParameters.options)
+        ## Options
+        ignorelines = options.get(AttributeArgs.FileReader.ignorelines)
+        if ignorelines:
+            ignorelines = int(ignorelines)
+        constant = options.get(AttributeArgs.FileReader.constant)
+        if constant:
+            constant = float(constant)
+        l_ge_10 = options.get(AttributeArgs.FileReader.l_ge_10)
+        if l_ge_10:
+            l_ge_10 = False if l_ge_10.lower() == 'false' else True
+        
+        valence_space = list(self.input_obj.Valence_Space.keys())
+        
+        data_ = TBME_Reader(filename, ignorelines, constant, valence_space, l_ge_10)
+        
+        if data_.scheme == self._Scheme.J:
+            self.interactionSchemes[force_str] = self._Scheme.J
+            if self._hamil_type in '12':
+                raise TBME_RunnerException("imported matrix elements [{}] are in"
+                    " the J scheme, but Hamiltype 1-2 (JT scheme)".format(filename))
+        
+        self.results = data_.getMatrixElemnts()
+        self.resultsByInteraction[force_str] = deepcopy(self.results)
+    
+    
     def combineAllResults(self):
         
         final_J  = {}
@@ -423,20 +456,25 @@ class TBME_Runner(object):
             i = 0
             for params in force_list:
                 force_str = force+str(i) if len(force_list) > 1 else force
+                tic_ = time.time()                
+                if force == ForceEnum.Force_From_File:
+                    ## read from file case
+                    self._readMatrixElementsFromFile(force_str, **params)
+                else:
+                    ## computable interaction
+                    sho_params = getattr(self.input_obj, ip.SHO_Parameters)
+                    
+                    self.tbme_class = switchMatrixElementType(force)
+                    self.tbme_class.resetInteractionParameters(also_SHO=True)
+                    self.tbme_class.setInteractionParameters(**params, **sho_params)
+                    
+                    self._computeForValenceSpace(force)
+                    
+                    self.resultsByInteraction[force_str] = deepcopy(self.results)
                 
-                tic_ = time.time()
-                sho_params = getattr(self.input_obj, ip.SHO_Parameters)
-                
-                self.tbme_class = switchMatrixElementType(force)
-                self.tbme_class.resetInteractionParameters(also_SHO=True)
-                self.tbme_class.setInteractionParameters(**params, **sho_params)
-                
-                self._computeForValenceSpace(force)
                 times_[force_str] = round(time.time() - tic_, 4)
                 print(" Force [{}] m.e. calculated: [{}]s"
                       .format(force, times_[force_str]))
-                # TODO: change to select resuts
-                self.resultsByInteraction[force_str] = deepcopy(self.results)
                 i += 1
         
         print("Finished computation, Total time (s): [", sum(times_.values()),"]=")
