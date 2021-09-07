@@ -148,15 +148,16 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
                 XLog.write('BB', mu=self.PARAMS_FORCE[i][CentralMEParameters.mu_length])
             
             # Exchange Part
-            _S_aux = (-1)**(self._S_bra)
-            _T_aux = (-1)**(self.T + 1)
-            _L_aux = -1 * _S_aux * _T_aux
+            # W + P(S)* B - P(T)* H - P(T)*P(S)* M
+            _S_aux = (-1)**(self._S_bra + 1)
+            _T_aux = (-1)**(self.T)
+            _L_aux = (-1)**(self.T + self._S_bra + 1)
             
             exchange_energy = (
                 self.PARAMS_FORCE[i].get(bb_p.Wigner),
-                self.PARAMS_FORCE[i].get(bb_p.Majorana)   * _L_aux,
                 self.PARAMS_FORCE[i].get(bb_p.Bartlett)   * _S_aux,
-                self.PARAMS_FORCE[i].get(bb_p.Heisenberg) * _T_aux
+                self.PARAMS_FORCE[i].get(bb_p.Heisenberg) * _T_aux,
+                self.PARAMS_FORCE[i].get(bb_p.Majorana)   * _L_aux
             )
             
             # Add up

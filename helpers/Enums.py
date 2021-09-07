@@ -35,6 +35,7 @@ class Output_Parameters(Enum):
 
 class SHO_Parameters(Enum):
     A_Mass      = 'A_mass'
+    Z           = 'Z'
     hbar_omega  = 'hbar_omega'
     b_length    = 'b_length'
 
@@ -43,6 +44,11 @@ class ValenceSpaceParameters(Enum):
     QN_Energies = 'QN_Energies'
     l_great_than_10 = 'l_great_than_10'
 
+class CoreParameters(Enum):
+    protons     = 'protons'
+    neutrons    = 'neutrons'
+    innert_core = 'innert_core'
+        
 class ForceEnum(Enum):
     SDI = 'SDI'
     Central = 'Central'
@@ -55,7 +61,7 @@ class ForceEnum(Enum):
     Density_Dependent = 'Density_Dependent'
     Kinetic_2Body = 'Kinetic_2Body'
     Multipole_Expansion = 'Multipole_Expansion'
-
+    Force_From_File = 'Force_From_File'
 
 class PotentialForms(Enum):
     Gaussian    = 'gaussian'                # exp(-(r/mu_)^2)
@@ -90,6 +96,10 @@ class DensityDependentParameters(Enum):
     x0    = 'x0'
     alpha = 'alpha'
 
+class ForceFromFileParameters(Enum):
+    file  = 'file'
+    options = 'options'
+
 # TODO: Update when adding forces, Enum implementations must be given
 # TODO: Implement also the attribute names in AttributeArgs.ForceArgs
 ## Use Enum if the interaction has no parameters
@@ -106,6 +116,7 @@ ForceVariablesDict = {
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI : None,
     ForceEnum.Multipole_Expansion: None,
+    ForceEnum.Force_From_File: ForceFromFileParameters
 }
 
 ForcesWithRepeatedParametersList = [
@@ -116,16 +127,16 @@ class AttributeArgs(Enum):
     details = 'details'
     value   = 'value'
     units   = 'units'
-    
+        
     class ValenceSpaceArgs(Enum):
         sp_state  = 'sp_state'
         sp_energy = 'sp_energy'
     
     class CoreArgs(Enum):
+        name        = 'name'
         protons     = 'protons'
         neutrons    = 'neutrons'
-        innert_core = 'innert_core'
-    
+        
     class ForceArgs(Enum):
         active = 'active'
         
@@ -135,6 +146,11 @@ class AttributeArgs(Enum):
         
         class Potential(Enum):
             name = 'name'
+        
+    class FileReader(Enum):
+        ignorelines = 'ignorelines'
+        constant    = 'constant'
+        l_ge_10     = 'l_ge_10'
 
 class Units(Enum):
     MeV = 'MeV'

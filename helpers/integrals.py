@@ -7,8 +7,9 @@ import numpy as np
 
 from helpers.Enums import PotentialForms
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
-    safe_clebsch_gordan, _B_coeff_memo_accessor, getStatesUpToLastOccupied,\
-    getStatesAndOccupationUpToLastOccupied, shellSHO_Notation
+    safe_clebsch_gordan, _B_coeff_memo_accessor,\
+    getStatesAndOccupationUpToLastOccupied, shellSHO_Notation,\
+    getStatesAndOccupationOfFullNucleus
 from helpers.Log import XLog
 
 class IntegralException(BaseException):
@@ -669,7 +670,8 @@ class _RadialTwoBodyDecoupled():
     
     def _B_coeff(self, n1, l1, n2, l2, p):
         """ Same accessor than Moshinsky transformation, from [Llarena]:
-        B(n1,l1,n2,l2,p) =  c(1, without 2pi3)*c(2)*B(without 4pi3) / 2
+        Include the normalization and the factor 2 from (4pi^3/2pi^3)
+        B(n1,l1,n2,l2,p) =  c(1, without 2pi3) * c(2) * B(without 4pi3) * 2
         """
         tpl = _B_coeff_memo_accessor(n1, l1, n2, l2, p)
         
@@ -700,7 +702,7 @@ class _RadialTwoBodyDecoupled():
         return np.exp(denominator)
     
     def _B_coeff_eval(self, n1, l1, n2, l2, p):
-        """ (4*pi^3) (-)^n1+n2 factor not multiplied here """
+        """ normalization factor multiplied here, factor 2 = (4*pi^3)/(2*pi^3) """
         sum_ = 0
         
         k_max = min(p, n1)
@@ -712,7 +714,7 @@ class _RadialTwoBodyDecoupled():
     
     
     def _D_coeff_eval(self, n1, l1, n2, l2, p):
-        """ (4*pi^3) (-)^n1+n2 factor not multiplied here """
+        """ normalization factor multiplied here, factor 2 = (4*pi^3)/(2*pi^3) """
         sum_ = 0
         
         k_max = min(p, n1)
@@ -836,105 +838,116 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         if _RadialDensityDependentFermi._instance == None:
             _RadialDensityDependentFermi._instance = _RadialDensityDependentFermi()
             _RadialDensityDependentFermi._instance.A = -1
+            _RadialDensityDependentFermi._instance.Z = -1
             _RadialDensityDependentFermi._instance._nuclear_density = None
         return _RadialDensityDependentFermi._instance
     
-    # @classmethod
-    # def _refreshInstance(cls, A):
-    #     cls._instance = None
-    #     cls._getInstance()
-        #cls.A = A
+    def _checkNucleusInstance(self, A, Z):
+        """ check if the density has been calculated """
+        if hasattr(self, 'A') and hasattr(self, 'Z'):
+            if A == self.A and Z == self.Z:
+                return True
+        return False
     
-    def _FermiDensity(self, A, rOb):
+    def _FermiDensity(self, A, rOb, Z=None):
         """
+        Radial Fermi density without the exponential (for real Fermi densty 
+        requires a 4pi angular factor: sum(|Y_lm|^2)[-l, l]) = (2*l + 1) / 4*pi
         :rOb = r/b
-        
-        the hypothetical nucleus is considered symmetric Z=N=A//2
+        :Z <int or None> default define an hypothetical symmetrical nucleus :
+            Z=A//2, N=A//2 + A%2
         """
-        if hasattr(self, 'A') and A == self.A:
+        if self._checkNucleusInstance(A, Z):
             return self._nuclear_density
-        else:
-            #self._refreshInstance(A)
+        else:            
             self.A = A
+            self.Z = Z if Z else A//2
+            self.N = A - self.Z
+            
+            if self.Z > A: 
+                raise IntegralException("Fermi density for A < Z !!")
         
-        # self.A = A
         aux = 0.0 * rOb
-        occupied_states = getStatesAndOccupationUpToLastOccupied(A//2)
+        occupied_states = getStatesAndOccupationOfFullNucleus(self.Z, self.N)
         for i in range(len(occupied_states)):
-            sps, deg = occupied_states[i]
+            sps, occ_Z, occ_N = occupied_states[i]
             ni, li, _ = sps
             
-            last = 0 if i < len(occupied_states) - 1 else A%2 
-            N = (2*deg) + last
-            
-            if N > 0:
+            #last = 0 if i < len(occupied_states) - 1 else self.A%2 
+            occ = occ_Z + occ_N# + last
+            if occ > 0:
                 aux_i = 0.0 * rOb
                 for p in range(2*ni +1):
                     aux_i += self._B_coeff(ni,li,ni,li, p) * (rOb**(2*(p + li)))
-                aux += N * aux_i
-                # factor 2 come from the normalization coefficient
+                aux += occ * aux_i
         
         self._nuclear_density = aux
         return aux
     
-    def _auxFunction(self, x, No2, A, alpha):
+    def _auxFunction(self, x, No2, A, Z, alpha):
         """ Function to be inserted in the Laguerre_ integral. """
-        return (x**(No2 - 0.5)) * self._FermiDensity(A, np.sqrt(x/(alpha + 2)))
+        density = self._FermiDensity(A, np.sqrt(x / (alpha + 2)), Z)
+        
+        return (x**(No2 - 0.5)) * (density ** alpha)
     
     @staticmethod
-    def _auxFunction_static(x, No2, A, alpha):
+    def _auxFunction_static(x, No2, A, Z, alpha):
     
         self = _RadialDensityDependentFermi._getInstance()
-        return self._auxFunction(x, No2, A, alpha)
+        return self._auxFunction(x, No2, A, Z, alpha)
     
-    def _r_dependentIntegral(self, No2, A, alpha):
+    def _r_dependentIntegral(self, No2, A, Z, alpha):
         """ Radial integral for  (factors omitted)
             exp(-(alpha + 2)r**2) * r^2*No2 * fermi_density
         :No2 stands for N over 2, being N = 2*(p+p') + sum{l} + 2 
         """
-        #x = np.arange(0, (alpha + 2)*((10/b_length)**2), 0.1)
-        cte = 0.5 / ((alpha + 2)**(No2 + 0.5))
+        cte = 2 * ((alpha + 2)**(No2 + 0.5))
         
-        # aux = GaussianQuadrature.laguerre(self._auxFunction,#self._auxFunction_static, #
-        #                                   80, No2, A, alpha)
         aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
-                                          80, No2, A, alpha)
-        return cte * aux
-
+                                          100, No2, A, Z, alpha)
+        if self.DEBUG_MODE: XLog.write("Ip_q", Lag_int=aux)
+        return aux / cte
     
     @staticmethod
-    def integral(wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha): 
+    def integral(wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha): 
         """
         :wfs: wave fucntions bra 1, 2 ket 1, 2
         :b_length: oscillator parameter 
         :A: <int>  mass number
-        :alpha: coefficient over the density (1/3 only valid)
+        :Z: <int or None>
+        :alpha: coefficient over the density
         """
         self = _RadialDensityDependentFermi._getInstance()
-        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha)        
+        args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha)        
         return self._integral(*args)
     
-    def _integral(self, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, alpha):
+    def _integral(self, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha):
                 
         n1_q, l1_q = wf1_bra.n, wf1_bra.l
         n2_q, l2_q = wf2_bra.n, wf2_bra.l
         n1, l1 = wf1_ket.n, wf1_ket.l
         n2, l2 = wf2_ket.n, wf2_ket.l
         
+        if (l1 + l2 + l1_q + l2_q) % 2 == 1:
+            raise IntegralException("(l1 + l2 + l1_q + l2_q) not even")
+        
         sum_ = 0
         if self.DEBUG_MODE:
             XLog.write("R_int", a=wf1_bra, b=wf2_bra, c=wf1_ket, d=wf2_ket)
         
-        for p1 in range(n1_q+n1 +1):
-            ket_coeff = self._B_coeff(n1_q, l1_q, n1, l1, p1)
+        for p1 in range(n1_q+n2_q +1):
+        # for p1 in range(n1_q+n1 +1):
+        #     ket_coeff = self._B_coeff(n1_q, l1_q, n1, l1, p1)
+            ket_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p1)
             
             if self.DEBUG_MODE: XLog.write("Ip", p1=p1, ket_C=ket_coeff)
-            for p2 in range(n2_q+n2 +1):
-                bra_coeff = self._B_coeff(n2_q, l2_q, n2, l2, p2)
-                
+            # for p2 in range(n2_q+n2 +1):
+            #     bra_coeff = self._B_coeff(n2_q, l2_q, n2, l2, p2)
+            for p2 in range(n1+n2 +1):
+                bra_coeff = self._B_coeff(n1, l1, n2, l2, p2)
                 # l1 + l2 + l1_q + l2_q is even
                 No2 = (p1 + p2) + ((l1 + l2 + l1_q + l2_q)//2) + 1
-                I_dd = self._r_dependentIntegral(No2, A, alpha)
+                I_dd = self._r_dependentIntegral(No2, A, Z, alpha)
                 
                 if self.DEBUG_MODE:
                     XLog.write("Ip_q", p2=p2, bra_C=bra_coeff, N=No2, Idd=I_dd)
@@ -943,7 +956,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                 sum_ += aux
                 if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
-        norm_fact = b_length**(3*(1 - alpha - 2))
+        norm_fact = b_length**(3*(1 - alpha - 2)) / ((4*np.pi)**alpha)
         if self.DEBUG_MODE:
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             
@@ -955,25 +968,26 @@ if __name__ == "__main__":
     dr = 0.001
     b_length = 1.2
     
-    N_min = 0
-    N_max = 60
-    Z_states = getStatesAndOccupationUpToLastOccupied(N_max, N_min)
+    N_min = 8
+    N_max = 8
+    NZ_states = getStatesAndOccupationUpToLastOccupied(N_max, N_min)
+    NZ_states = getStatesAndOccupationOfFullNucleus(N_min + 2, N_max, N_min)
     
     A = 0
     A_prev = max(1, 2*N_min + 1)
     Z = 0
     r = np.arange(0, 6, dr)
     rOb = r / b_length
-    for spss, z in Z_states:
+    for spss, z, n in NZ_states:
         spss = shellSHO_Notation(*spss)
         Z += z
-        A = A_prev + 2*z
+        A = A_prev + z + n
         for a_ in range(A_prev, A + 1):
             #A += 2*a
              
             aux = _RadialDensityDependentFermi()
             
-            den = aux._FermiDensity(a_, rOb) 
+            den = aux._FermiDensity(a_, rOb, z) 
             # den = aux._auxFunction(rOb, 6, A, 1/3)
             den /= np.exp(rOb**2)
             # den /= np.exp((7/3) * rOb**2)
