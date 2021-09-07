@@ -83,7 +83,7 @@ class MatrixElementBaseTest(unittest.TestCase):
                         continue
                     self.force.setInteractionParameters(**self.force_kwargs)
                     self.me = self.force(bra, ket)
-                    if parity_break and not (self.me.isnull()):
+                    if parity_break and not (self.me.isNullMatrixElement):
                         self.assertFalse(False, 
                             "Matrix element [{}] breaks parity but is not null [{}]"
                             .format(str(bra)+str(ket), self.me.value))
