@@ -831,6 +831,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         :alpha: coefficient over the density (1/3 only valid)
     """
     
+    _DENSITY_APROX = True
     _instance = None
     
     @staticmethod
@@ -881,12 +882,56 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                     aux_i += self._B_coeff(ni,li,ni,li, p) * (rOb**(2*(p + li)))
                 aux += occ * aux_i
         
+        # import matplotlib.pyplot as plt
+        # plt.plot(rOb, aux )
+        # plt.show()
+        
         self._nuclear_density = aux
         return aux
     
+    def _DensityProfile(self, A, rOb, Z=None):
+        """ 
+        Approximates the density with the form 
+                rho =    rho0 / (1 + exp((r - R)/a)) 
+        rho0 chosen for the R^3 integral to be A.
+        R = r0 * A^(1/3)
+        a = stiffness parameter
+        """
+        if self._checkNucleusInstance(A, Z):
+            return self._nuclear_density
+        else:            
+            self.A = A
+            self.Z = Z if Z else A//2
+        
+        # r0, a = 1.25, 0.65 # Borh Mothelson
+        # r0, a = 1.1,  0.5  # Greiner 
+        r0, a = 1.25, 0.524  # Kranne
+        # r0, a = 
+        
+        R  = r0 * (self.A**(1/3))
+        profile = lambda r: r**2 / (1 + np.exp((r - R)/a))
+        
+        aux  = GaussianQuadrature.legendre(profile, 0, 15, 50)
+        rho0 = self.A / aux
+        
+        aux = rho0 / (1 + np.exp((rOb - R) / a))
+        
+        aux2 = 4*np.pi * (self.b_length**(-3)) * np.exp(rOb/2)
+        import matplotlib.pyplot as plt
+        plt.plot(rOb, aux)
+        plt.show()
+        
+        self._nuclear_density = aux
+        return self._nuclear_density
+    
     def _auxFunction(self, x, No2, A, Z, alpha):
         """ Function to be inserted in the Laguerre_ integral. """
-        density = self._FermiDensity(A, np.sqrt(x / (alpha + 2)), Z)
+        if self._DENSITY_APROX:
+            # Fermi profile integral
+            density = self._DensityProfile(A, self.b_length * np.sqrt(x / 2), Z)
+        else:
+            # Fermi SHO density (density matrix = delta(i <= A))
+            density = self._FermiDensity(A,  np.sqrt(x / (alpha + 2)), Z)
         
         return (x**(No2 - 0.5)) * (density ** alpha)
     
@@ -901,7 +946,10 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             exp(-(alpha + 2)r**2) * r^2*No2 * fermi_density
         :No2 stands for N over 2, being N = 2*(p+p') + sum{l} + 2 
         """
-        cte = 2 * ((alpha + 2)**(No2 + 0.5))
+        if self._DENSITY_APROX:
+            cte = 2**(No2 + 1.5)
+        else:
+            cte = 2 * ((alpha + 2)**(No2 + 0.5))
         
         aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
                                           100, No2, A, Z, alpha)
@@ -928,6 +976,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         n1, l1 = wf1_ket.n, wf1_ket.l
         n2, l2 = wf2_ket.n, wf2_ket.l
         
+        self.b_length = b_length    ## keep for _DensityProfile
         if (l1 + l2 + l1_q + l2_q) % 2 == 1:
             raise IntegralException("(l1 + l2 + l1_q + l2_q) not even")
         
@@ -935,16 +984,16 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         if self.DEBUG_MODE:
             XLog.write("R_int", a=wf1_bra, b=wf2_bra, c=wf1_ket, d=wf2_ket)
         
-        for p1 in range(n1_q+n2_q +1):
-        # for p1 in range(n1_q+n1 +1):
-        #     ket_coeff = self._B_coeff(n1_q, l1_q, n1, l1, p1)
-            ket_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p1)
+        # for p1 in range(n1_q+n2_q +1):
+        for p1 in range(n1_q+n1 +1):
+            ket_coeff = self._B_coeff(n1_q, l1_q, n1, l1, p1)
+            # ket_coeff = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p1)
             
             if self.DEBUG_MODE: XLog.write("Ip", p1=p1, ket_C=ket_coeff)
-            # for p2 in range(n2_q+n2 +1):
-            #     bra_coeff = self._B_coeff(n2_q, l2_q, n2, l2, p2)
-            for p2 in range(n1+n2 +1):
-                bra_coeff = self._B_coeff(n1, l1, n2, l2, p2)
+            for p2 in range(n2_q+n2 +1):
+                bra_coeff = self._B_coeff(n2_q, l2_q, n2, l2, p2)
+            # for p2 in range(n1+n2 +1):
+                # bra_coeff = self._B_coeff(n1, l1, n2, l2, p2)
                 # l1 + l2 + l1_q + l2_q is even
                 No2 = (p1 + p2) + ((l1 + l2 + l1_q + l2_q)//2) + 1
                 I_dd = self._r_dependentIntegral(No2, A, Z, alpha)
@@ -956,7 +1005,10 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                 sum_ += aux
                 if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
-        norm_fact = b_length**(3*(1 - alpha - 2)) / ((4*np.pi)**alpha)
+        norm_fact = 1 / ((4*np.pi)**alpha * b_length**(3)) # b_length**(3*(1 - 2))
+        if self._DENSITY_APROX:
+            norm_fact /=  b_length**(3*alpha)
+        
         if self.DEBUG_MODE:
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             

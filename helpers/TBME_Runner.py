@@ -9,7 +9,7 @@ import json
 import time
 
 from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
-    SHO_Parameters, InputParts, Output_Parameters, OutputFileTypes,\
+    SHO_Parameters, Output_Parameters, OutputFileTypes,\
     CouplingSchemeEnum, ForceEnum, ForceFromFileParameters
 from matrix_elements import switchMatrixElementType
 from itertools import combinations_with_replacement
@@ -53,11 +53,12 @@ class TBME_Runner(object):
         self.l_ge_10    = False
         self.valence_space   = []
         self._hamil_type     = '1'
-        self._com_correction = '0'
+        self._com_correction = False
         
         self.results = {}
         self.resultsByInteraction = {}
         self.resultsSummedUp    = {}
+        self.com_2bme           = {}
         self.interactionSchemes = {}
         
         self.filename_output = 'out'
@@ -100,7 +101,7 @@ class TBME_Runner(object):
                 ParserException('Hamil_type value must be an integer in range 1 to 4')
         if com_ != None:
             if com_ in ('0','1'):
-                self._com_correction = com_
+                self._com_correction = bool(int(com_))
             else:
                 ParserException('COM_correction value must be an integer: 0 (off) or 1 (on)')
         
@@ -122,6 +123,14 @@ class TBME_Runner(object):
         
         self.input_obj = CalculationArgs(_root)
     
+    __advertence_Kin2Body = """
+    WARNING: [Kinetic_2Body] in not an available force, the interaction is only 
+to evaluate the 2Body center of mass correction. Set in the input the entry:
+    In <Output_Parameters> : <COM_correction>1</COM_correction>
+to get these matrix elements in a separated file (.com extension). 
+The program will exclude it from the interaction file and will produce the .com file.
+"""
+    
     def _checkHamilTypeAndForces(self):
         """ 
         Certain interactions cannot be expressed in JT formalism if they break
@@ -132,7 +141,8 @@ class TBME_Runner(object):
         This method checks that if HamilType is 0/1, then it must not be any 
         isospin_ breaking interactions (before any calculations).
         
-        Also fill the interaction schemes
+        Also fill the interaction schemes.
+        If com correction, add to the 
         """
         
         _forcesAttr = ip.Force_Parameters
@@ -155,6 +165,12 @@ class TBME_Runner(object):
                                            "class can only run in J or JT scheme")
             
             if (CouplingSchemeEnum.JJ in f_scheme):
+                if force == ForceEnum.Force_From_File: continue
+                elif force == ForceEnum.Kinetic_2Body:
+                    print(self.__advertence_Kin2Body)
+                    self._com_correction = True
+                    continue
+                
                 if (CouplingSchemeEnum.T in f_scheme):
                     JT_schemeForces.append(force)
                     self.interactionSchemes[force] = self._Scheme.JT
@@ -166,6 +182,12 @@ class TBME_Runner(object):
                 else:
                     J_schemeForces.append(force)
                     self.interactionSchemes[force] = self._Scheme.J
+        
+        if self._com_correction:
+            # append the K 2Body to the input force to compute (remove after)
+            getattr(self.input_obj, _forcesAttr)[ForceEnum.Kinetic_2Body] = [dict()]
+            JT_schemeForces.append(ForceEnum.Kinetic_2Body)
+            self.interactionSchemes[ForceEnum.Kinetic_2Body] = self._Scheme.JT
         
         if self._hamil_type in '12':
             if len(T_breaking) > 0:
@@ -414,6 +436,8 @@ class TBME_Runner(object):
             if self._hamil_type in '12':
                 raise TBME_RunnerException("imported matrix elements [{}] are in"
                     " the J scheme, but Hamiltype 1-2 (JT scheme)".format(filename))
+        elif data_.scheme == self._Scheme.JT:
+            self.interactionSchemes[force_str] = self._Scheme.JT
         
         self.results = data_.getMatrixElemnts()
         self.resultsByInteraction[force_str] = deepcopy(self.results)
@@ -421,25 +445,36 @@ class TBME_Runner(object):
     
     def combineAllResults(self):
         
+        kin_key = ForceEnum.Kinetic_2Body
         final_J  = {}
         final_JT = {}
         for force, results in self.resultsByInteraction.items():
             if self.interactionSchemes[force] == self._Scheme.J:
+                # Kin 2Body is a JT scheme interaction
                 recursiveSumOnDictionaries(results, final_J)
             else:
+                if force == kin_key:
+                    conv_2J = self._hamil_type in '34', False
+                    results = self._convertMatrixElemensScheme(results, *conv_2J)
+                    self.com_2bme = results
+                    continue # do not add the Kin 2Body
                 recursiveSumOnDictionaries(results, final_JT)
         
         if self._hamil_type in '12':
             final = final_JT
             # TODO: convert J dictionary to JT dictionary
-            final_J = self._convertMatrixElemensScheme(final_J, conv_2J=False)
+            final_J = self._convertMatrixElemensScheme(final_J, False, True)
             recursiveSumOnDictionaries(final_J, final)
         elif self._hamil_type in '34':
             final = final_J
             # TODO: convert JT dictionary to J dictionary
-            final_JT = self._convertMatrixElemensScheme(final_JT, conv_2J=True)
+            final_JT = self._convertMatrixElemensScheme(final_JT, True, False)
             recursiveSumOnDictionaries(final_JT, final)
         self.resultsSummedUp = final
+        
+        # remove the Kin Entry in thee Forces interaction
+        if kin_key in getattr(self.input_obj, ip.Force_Parameters):
+            del getattr(self.input_obj, ip.Force_Parameters)[kin_key]
                             
     
     def run(self):
@@ -483,6 +518,7 @@ class TBME_Runner(object):
         self.combineAllResults()
         
         self.printMatrixElementsFile()
+        self.printComMatrixElements()
     
     def _valenceSpaceLine(self):
         
@@ -532,6 +568,7 @@ class TBME_Runner(object):
             '0.300000', '0.000000']
         title += ' (Core: {})'.format(getCoreNucleus(*core_args[1:3]))
         core_args = '\t' + ' '.join(core_args) 
+        self.title = title
         
         return [title, valen, energ, core_args]
     
@@ -783,10 +820,46 @@ class TBME_Runner(object):
             print (">> 2body m.e. saved in [{}]"
                    .format(self.filename_output + OutputFileTypes.twoBody))
     
-    def _convertMatrixElemensScheme(self, me_dict, conv_2J=False):
+    
+    def printComMatrixElements(self):
+        """
+        Print the matrix elements for the 2 boody center of mas correction
+        in the corresponding scheme. First line of the file is ignored.
+        """
+        if not self._com_correction:
+            return
+        
+        # write .com file
+        strings_ = [self.title]
+        for bra, kets in self.com_2bme.items():
+            bra1 = castAntoineFormat2Str(bra[0], self.l_ge_10)
+            bra2 = castAntoineFormat2Str(bra[1], self.l_ge_10)
+            
+            for ket, block in kets.items():
+                ket1 = castAntoineFormat2Str(ket[0], self.l_ge_10)
+                ket2 = castAntoineFormat2Str(ket[1], self.l_ge_10)
+                
+                spss = (bra1, bra2, ket1, ket2)
+                
+                if self._hamil_type in '12':
+                    strings_ += self._write2BME_JTBlock(*spss, block)
+                else:
+                    strings_ += self._write2BME_JParticleLabeledBlock(*spss, block)
+        
+        strings_ = '\n'.join(strings_)
+        
+        with open(self.filename_output + OutputFileTypes.centerOfMass, 'w+') as f:
+            f.write(strings_)
+            print (">> Center of mass correction m.e. saved in [{}]"
+                   .format(self.filename_output + OutputFileTypes.centerOfMass))
+        
+    
+    def _convertMatrixElemensScheme(self, me_dict, conv_2J, conv_2JT):
         """ 
         Converter, take dictionary of the valence space computation and change 
         to the other scheme. It crashes if the current dictionary is in that scheme.
+        :conv_2J / conv_2JT explicit boolean only
+        
         Input:
         {(bra1 <int>, bra2 <int> ) : {
             (ket1 <int>, ket2 <int> ) : {
@@ -799,7 +872,13 @@ class TBME_Runner(object):
                 J <int> (jmax): {0: me_val, 2: me_val, ..., 5: me_val}
             }
         }
+        
+        
         """
+        assert (type(conv_2J), type(conv_2JT)) == (bool, bool), "give me explicit boolean  >:("
+        
+        if not (conv_2J or conv_2JT):
+            return me_dict
         
         for bra, kets in me_dict.items():
             b1 = castAntoineFormat2Str(bra[0], l_ge_10=True)
@@ -825,7 +904,7 @@ class TBME_Runner(object):
                                                                 J_vals_T1[j], j,
                                                                 b1, b2, k1, k2)
                     me_dict[bra][ket] = vals_J
-                else:
+                elif conv_2JT:
                     ## J scheme 2
                     #TODO: ("WARNING !! Converting from J scheme to JT TODO: verify")
                     

@@ -1,10 +1,10 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>dens_test_a1_SPSD100</Output_Filename>
+		<Output_Filename>BB_LS_2K_SPSD_ff</Output_Filename>
 		<!--Output_Filename>D1S_SPSDPF</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
-		<COM_correction>0</COM_correction>
+		<COM_correction>1</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
@@ -73,7 +73,7 @@
 			<constant	value='-100.0' 	units='MeV'/>
 			<mu_length	value='1.4' 	units='fm'/>
 		</Central>
-		<Coulomb active='True'>
+		<Coulomb active='False'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
 		<GaussianSeries active='False'>
@@ -132,11 +132,11 @@
 				f(r; mu, n), modulated by constant: V(r3)=C*f(r; mu, n)
 				-->
 			<potential 	name='power'/>
-			<constant	value='330.0' 	units='MeV*fm^-5'/>
+			<constant	value='115.0' 	units='MeV*fm^-5'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
-		<Density_Dependent active='True'>
+		<Density_Dependent active='False'>
 			<!-- Density dependent Force based on Fermi density for the nucleus,
 				parametrization from Gogny D1S:
 					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)
@@ -147,9 +147,9 @@
 			<alpha    value='1'/>
 			<x0		  value='1'/>
 		</Density_Dependent>
-		<Force_From_File active='False'>
+		<Force_From_File active='True'>
 			<!-- Import an interaction already saved -->
-			<file name='results/D1S_t0_SPSDPF.2b'/>
+			<file name='results/dd_alpha1_A16_SPSD.sho'/>
 			<options ignorelines='4' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>

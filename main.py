@@ -36,8 +36,8 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
-        # _runner = TBME_Runner(filename='input.xml')
-        _runner = TBME_Runner(filename='input_D1S.xml')
+        _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_Runner(filename='input_D1S.xml')
         _runner.run()
         print(" The program has ended without incidences.")
         
@@ -57,18 +57,18 @@ if __name__ == "__main__":
         DensityDependentParameters.x0 : 1,
         DensityDependentParameters.constant : 1390.6
     }
-    J = 2
+    J = 3
     T = 0
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                   QN_1body_jj(0,2,5), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,3), 
+                                   QN_1body_jj(0,1,3), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5), 
                                    QN_1body_jj(0,2,3), J, T)
     
-    DensityDependentForce_JTScheme.turnDebugMode(True)
-    DensityDependentForce_JTScheme.setInteractionParameters(**kwargs)
-    me = DensityDependentForce_JTScheme(bra_, ket_)
+    KineticTwoBody_JTScheme.turnDebugMode(True)
+    KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
+    me = KineticTwoBody_JTScheme(bra_, ket_)
     print("me: ", me.value)
-    me.saveXLog('me_dens')
+    me.saveXLog('me_kin')
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
     XLog.resetLog()
     

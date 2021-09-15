@@ -295,7 +295,8 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         )
         if self.DEBUG_MODE:
             _RadialDensityDependentFermi.DEBUG_MODE = True
-        
+            
+        _RadialDensityDependentFermi._DENSITY_APROX = False
         radial = _RadialDensityDependentFermi.integral(*args)
         
         return fact * radial
@@ -347,12 +348,15 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
         n_q , l_q = getattr(self.bra, "n"+part), getattr(self.bra, "l"+part)
         n , l     = getattr(self.ket, "n"+part), getattr(self.ket, "l"+part)
         
+        # n_q, n = 1 , 2
+        # l_q, l = 1 , 2
+        
         A_, B_ = 0, 0
         if l_q == (l + 1):
-            A_ = ((n**0.5) *(n_q==n-1)) + (((n + l + 1.5)**0.5) *(n_q==n))
+            A_ = ((n**0.5) *(n_q==(n-1))) + (((n + l + 1.5)**0.5) *(n_q==n))
             A_ = -1 * A_
         if l_q == (l - 1):
-            B_ = (((n + 1)**0.5) *(n_q==n+1)) + (((n + l + 0.5)**0.5) *(n_q==n))
+            B_ = (((n + 1)**0.5) *(n_q==(n+1))) + (((n + l + 0.5)**0.5) *(n_q==n))
         
         return (A_ * ((l + 1)**0.5)) - (B_ * (l**0.5))
     
@@ -360,7 +364,7 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
         
         if not hasattr(self, "_kin_factor"):
             self._kin_factor = (Constants.HBAR_C**2) / (
-                 2 * Constants.M_MEAN 
+                 Constants.M_MEAN 
                  * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
                  * self.PARAMS_SHO[SHO_Parameters.A_Mass])
         
