@@ -463,8 +463,8 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                     valid_qqnn.append((n, l, N, L))
         
         # TODO: Comment when not debugging
-        valid_qqnn = sorted(valid_qqnn, 
-                            key=lambda x: 1000*x[0]+100*x[1]+10*x[2]+x[3])
+        # valid_qqnn = sorted(valid_qqnn, 
+        #                     key=lambda x: 1000*x[0]+100*x[1]+10*x[2]+x[3])
         
         return valid_qqnn
     

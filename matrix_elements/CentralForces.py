@@ -16,7 +16,6 @@ from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs
 from helpers.Log import XLog
 from helpers.integrals import _RadialDensityDependentFermi
 from helpers.WaveFunctions import QN_1body_radial
-from future.builtins.misc import isinstance
 
 class CentralForce(TalmiTransformation):
     
@@ -303,7 +302,8 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
 
 
 
-class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
+class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
+    # _TwoBodyMatrixElement_JTCoupled): #
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     
@@ -348,29 +348,38 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
         n_q , l_q = getattr(self.bra, "n"+part), getattr(self.bra, "l"+part)
         n , l     = getattr(self.ket, "n"+part), getattr(self.ket, "l"+part)
         
-        # n_q, n = 1 , 2
-        # l_q, l = 1 , 2
-        
         A_, B_ = 0, 0
         if l_q == (l + 1):
             A_ = ((n**0.5) *(n_q==(n-1))) + (((n + l + 1.5)**0.5) *(n_q==n))
-            A_ = -1 * A_
         if l_q == (l - 1):
             B_ = (((n + 1)**0.5) *(n_q==(n+1))) + (((n + l + 0.5)**0.5) *(n_q==n))
         
-        return (A_ * ((l + 1)**0.5)) - (B_ * (l**0.5))
+        return (-A_ * ((l + 1)**0.5)) - (B_ * (l**0.5))
     
     def _LScoupled_MatrixElement(self):
         
         if not hasattr(self, "_kin_factor"):
-            self._kin_factor = (Constants.HBAR_C**2) / (
-                 Constants.M_MEAN 
-                 * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
-                 * self.PARAMS_SHO[SHO_Parameters.A_Mass])
+            ## Real constant, but  COM taurus multiplies by 2/(A*b^2) 
+            # self._kin_factor = (Constants.HBAR_C**2) / (
+            #      2 * Constants.M_MEAN
+            #      * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
+            #      * self.PARAMS_SHO[SHO_Parameters.A_Mass])
+            
+            self._kin_factor = 0.5 * (Constants.HBAR_C**2) / Constants.M_MEAN #= 20.74
+            # self._kin_factor = 1
+            # self._kin_factor = 1 / (self.PARAMS_SHO[SHO_Parameters.A_Mass] 
+            #         * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
+            #         * 2 * Constants.M_MEAN)
+        
+        # phs = self._L_ket + self.ket.l1 + self.ket.l2 - self.T - self._S_bra
+        # symm_fact = 1 - ((-1)**phs)
+        # if symm_fact == 0:
+        #     return 0.0
+        symm_fact = 1
         
         fact = safe_wigner_6j(self.bra.l1, self.bra.l2, self._L_bra, 
                               self.ket.l2, self.ket.l1, 1)
-        fact *= ((-1)**(self.bra.l1 + self.bra.l2 + self._L_bra))
+        fact *= ((-1)**(self.ket.l1 + self.bra.l2 + self._L_bra)) * symm_fact
             
         nabla_1 = self._nablaReducedMatrixElement(1)
         nabla_2 = self._nablaReducedMatrixElement(2)
