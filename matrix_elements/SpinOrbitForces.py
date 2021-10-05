@@ -15,7 +15,7 @@ from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
 from matrix_elements.transformations import TalmiTransformation
 from helpers.WaveFunctions import QN_2body_LS_Coupling, QN_1body_radial
 from helpers.integrals import _SpinOrbitPartialIntegral, _RadialIntegralsLS
-from copy import deepcopy, copy
+from copy import deepcopy
 from helpers.Log import XLog
 
 class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled, 
@@ -28,8 +28,8 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         # TODO: Might accept an LS coupled wave functions (when got that class)
         self.J = J
         
-        self._S_bra = bra.S
-        self._S_ket = ket.S
+        self.S_bra = bra.S
+        self.S_ket = ket.S
         
         TalmiTransformation.__init__(self, bra, ket, run_it=run_it)
         #raise Exception("Implement with jj coupled w.f.")
@@ -90,21 +90,21 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         
         NOTE: Redundant if run from JJ -> LS recoupling
         """
-        if (abs(self._L_bra - self._L_ket) > 1) :
+        if (abs(self.L_bra - self.L_ket) > 1) :
             return False
         return True
     
     def _deltaConditionsForCOM_Iteration(self):
         """ For the antisymmetrization_ of the wave functions. """
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
         return False
     
     def _totalSpinTensorMatrixElement(self):
         """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 
         boolean for skip"""
-        if (self._S_bra != self._S_ket) or (self._S_bra == 0):
+        if (self.S_bra != self.S_ket) or (self.S_bra == 0):
             return True, 0.0
         
         return False, 2.449489742783178 ## = np.sqrt(6)
@@ -121,8 +121,8 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         if skip:
             return 0
     
-        factor = safe_racah(self._L_bra, self._L_ket, 
-                            self._S_bra, self._S_ket,
+        factor = safe_racah(self.L_bra, self.L_ket, 
+                            self.S_bra, self.S_ket,
                             1, self.J)
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
@@ -130,16 +130,16 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         return  factor * spin_me * self._BrodyMoshinskyTransformation()
     
     def _globalInteractionCoefficient(self):
-        phase = (-1)**(self._S_bra + self._L_bra - self.J)
+        phase = (-1)**(self.S_bra + self.L_bra - self.J)
         #phase = (-1)**(self._l + self._L - self.J)
-        factor = 1#np.sqrt((2*self._L_bra + 1)*(2*self._L_ket + 1))
+        factor = 1#np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
     
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME
-        factor = safe_racah(self._L_bra, self._L_ket, 
+        factor = safe_racah(self.L_bra, self.L_ket, 
                             self._l, self._l_q,
                             1, self._L)
         if self.isNullValue(factor):
@@ -162,30 +162,30 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
     #     # if skip:
     #     #     return 0
     #
-    #     factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1))
-    #     factor *= ((-1)**(self._L_bra + self._L_ket))
+    #     factor = np.sqrt((2*self.L_bra + 1) * (2*self.L_ket + 1))
+    #     factor *= ((-1)**(self.L_bra + self.L_ket))
     #
     #     return  factor * self._BrodyMoshinskyTransformation()
     #
     # def _globalInteractionCoefficient(self):
-    #     factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1))
-    #     phase  = ((-1)**(self._L_bra + self._L_ket))
+    #     factor = np.sqrt((2*self.L_bra + 1) * (2*self.L_ket + 1))
+    #     phase  = ((-1)**(self.L_bra + self.L_ket))
     #
     #     return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     #
     #
     # def _interactionConstantsForCOM_Iteration(self):
     #     # no special internal c.o.m interaction constants for the Central ME
-    #     S = self._S_bra
+    #     S = self.S_bra
     #     if self.DEBUG_MODE:
     #         XLog.write('C_ls')
     #     factor = 0
-    #     for j in range(abs(self._S_bra - self._l), self._S_bra + self._l +1):
+    #     for j in range(abs(self.S_bra - self._l), self.S_bra + self._l +1):
     #
     #         aux  = safe_wigner_6j(j,  self._L, self.J,
-    #                                  self._L_bra, S, self._l)
+    #                                  self.L_bra, S, self._l)
     #         aux *= safe_wigner_6j(j,  self._L, self.J,
-    #                                  self._L_ket, S, self._l_q)
+    #                                  self.L_ket, S, self._l_q)
     #
     #         aux *= 0.5*((j*(j + 1)) - (self._l*(self._l + 1)) - (S*(S + 1)))
     #         aux *= (j*(j + 1))
@@ -216,8 +216,8 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
     def _deltaConditionsForCOM_Iteration(self):
         """ Antisymmetrization condition (*2 in BrodyMoshinkytransformation)"""
         #return True
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
         return False
     
@@ -226,7 +226,7 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         Return ket states <tuple> of the total spin, for tensor force impose 
         S = S' = 1, return nothing to skip the bracket spin S=0
         """
-        if self._S_bra == 0:
+        if self.S_bra == 0:
             return []
         return (1, )
     
@@ -238,11 +238,11 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         OJO: Moshinski, lambda' = lambda, lambda +- 1!!! as condition
         in the C_LS
         """
-        _L_min = max(0, self._L_bra - self._S_bra)
+        _L_min = max(0, self.L_bra - self.S_bra)
         
-        return (_L_ket for _L_ket in range(_L_min, self._L_bra + self._S_bra +1))
+        return (L_ket for L_ket in range(_L_min, self.L_bra + self.S_bra +1))
     
-    def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
@@ -281,7 +281,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         if self.DEBUG_MODE: 
             XLog.write('nas', ket=self.ket.shellStatesNotation)
     
-        self._value = 2 * self._non_antisymmetrized_ME()
+        self._value = 2 * self._LS_recoupling_ME()
     
         self._value *= self.bra.norm() * self.ket.norm()
     
@@ -302,11 +302,11 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         if skip or self.T == 0:
             return 0
         
-        # factor = safe_racah(self._L_bra, self._L_ket, self._S_bra, self._S_ket, 1, self.J)
-        factor = safe_wigner_6j(self._L_bra,      1,  self._L_ket,
-                                self._S_bra, self.J, self._S_ket)
+        # factor = safe_racah(self.L_bra, self.L_ket, self.S_bra, self.S_ket, 1, self.J)
+        factor = safe_wigner_6j(self.L_bra,      1,  self.L_ket,
+                                self.S_bra, self.J, self.S_ket)
          
-        factor *= (-1)**(self._L_ket + self.J) * spin_me
+        factor *= (-1)**(self.L_ket + self.J) * spin_me
         
         if (self.isNullValue(factor) 
             or not self.deltaConditionsForGlobalQN()):
@@ -318,7 +318,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         exch  = self._L_tensor_MatrixElement(exchanged=True)
         
         factor *= self.PARAMS_FORCE.get(CentralMEParameters.constant)
-        aux = factor * (dir_ + ((-1)**(self._L_bra+self._L_ket))*exch)
+        aux = factor * (dir_ + ((-1)**(self.L_bra+self.L_ket))*exch)
         
         if self.DEBUG_MODE: 
             XLog.write("LSme", factor=factor, dir=dir_, exch=exch, value=aux)
@@ -362,27 +362,27 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         if ((l1 + l2) + (l1_q + l2_q))%2 == 1:
             return 0
         
-        factor = np.sqrt((2*self._L_bra + 1) * (2*self._L_ket + 1)
+        factor = np.sqrt((2*self.L_bra + 1) * (2*self.L_ket + 1)
                          * (2*l1 + 1) * (2*l2 + 1) * (2*l1_q + 1) * (2*l2_q + 1))
         factor /= 4 * np.pi * (b**6)
         
         # Factor include the effect of oscillator length b!= 1
         
-        aux0 = ((-1)**self._L_ket) * np.sqrt(2*l2*(l2 + 1)) * (
-              safe_3j_symbols(l1_q, l2_q,   self._L_bra, 0,0, 0)
-            * safe_3j_symbols(l2,   l1,     self._L_ket, 1,0,-1)
-            * safe_3j_symbols(1,    self._L_bra, self._L_ket, 1,0,-1))
+        aux0 = ((-1)**self.L_ket) * np.sqrt(2*l2*(l2 + 1)) * (
+              safe_3j_symbols(l1_q, l2_q,   self.L_bra, 0,0, 0)
+            * safe_3j_symbols(l2,   l1,     self.L_ket, 1,0,-1)
+            * safe_3j_symbols(1,    self.L_bra, self.L_ket, 1,0,-1))
         
-        aux1 = ((-1)**self._L_bra) * np.sqrt(2*l1_q*(l1_q + 1)) * (
-              safe_3j_symbols(l1_q, l2_q,   self._L_bra, 1,0,-1)
-            * safe_3j_symbols(l2,   l1,     self._L_ket, 0,0, 0)
-            * safe_3j_symbols(1, self._L_ket, self._L_bra, 1,0,-1))
+        aux1 = ((-1)**self.L_bra) * np.sqrt(2*l1_q*(l1_q + 1)) * (
+              safe_3j_symbols(l1_q, l2_q,   self.L_bra, 1,0,-1)
+            * safe_3j_symbols(l2,   l1,     self.L_ket, 0,0, 0)
+            * safe_3j_symbols(1, self.L_ket, self.L_bra, 1,0,-1))
         
-        aux2 = ((-1)**(self._L_bra + self._L_ket + l1 + l2)) \
+        aux2 = ((-1)**(self.L_bra + self.L_ket + l1 + l2)) \
             * np.sqrt(l1_q*(l1_q + 1) * l2*(l2 + 1)) * (
-                  safe_3j_symbols(l1_q, l2_q,   self._L_bra, 1,0,-1)
-                * safe_3j_symbols(l2,   l1,     self._L_ket, 1,0,-1)
-                * safe_3j_symbols(1,    self._L_ket, self._L_bra, 0,1,-1))
+                  safe_3j_symbols(l1_q, l2_q,   self.L_bra, 1,0,-1)
+                * safe_3j_symbols(l2,   l1,     self.L_ket, 1,0,-1)
+                * safe_3j_symbols(1,    self.L_ket, self.L_bra, 0,1,-1))
         
         if self.DEBUG_MODE:
             XLog.write('Ltens', fact= factor, aux0=aux0, aux1=aux1, aux2=aux2)
@@ -415,7 +415,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         if not hasattr(self, 'test_value_diagonal'):
             self.test_value_diagonal = [{}, {}]
         
-        if self._L_bra != self._L_ket or self._L_bra % 2 == 0:
+        if self.L_bra != self.L_ket or self.L_bra % 2 == 0:
             return
         elif (self.bra.n1 != self.bra.n2) and (self.bra.l1 != self.bra.l2):
             return
@@ -432,7 +432,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
                 return 
         
         l = self.bra.l1
-        L = self._L_bra
+        L = self.L_bra
         
         aux = safe_racah(L, L, 1, 1, 1, self.J) * np.sqrt(6)\
             * ((-1)**(L+1+self.J)) /3
@@ -466,16 +466,16 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         
         self._diagonalMatrixElement_Test()
         
-        factor = safe_racah(self._L_bra, self._L_ket, 
-                            self._S_bra, self._S_ket,
+        factor = safe_racah(self.L_bra, self.L_ket, 
+                            self.S_bra, self.S_ket,
                             1, self.J)
         factor *= np.sqrt(2*self.J + 1)
         # phase resulting from wigner-eckart and the racah_W to 6j coefficients
-        factor *= (-1)**(self._S_ket + self._L_bra + self.J)
+        factor *= (-1)**(self.S_ket + self.L_bra + self.J)
         
         if (self.isNullValue(factor) 
             or not self.deltaConditionsForGlobalQN()):
-            #or ((self._L_ket + self._L_bra) % 2 != 1)): # no parity condition
+            #or ((self.L_ket + self.L_bra) % 2 != 1)): # no parity condition
             # same delta conditions act here, since tensor is rank 1
             _ =0
             return 0
@@ -495,10 +495,10 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         element (l, m_l)
         """
         
-        M_aux = min(self._L_bra, self._L_ket) # it could only fail in L=L'=0
+        M_aux = min(self.L_bra, self.L_ket) # it could only fail in L=L'=0
         
-        factor = np.sqrt(2*self._L_bra + 1) \
-            / safe_clebsch_gordan(self._L_bra, 1, self._L_ket, M_aux,0, M_aux)
+        factor = np.sqrt(2*self.L_bra + 1) \
+            / safe_clebsch_gordan(self.L_bra, 1, self.L_ket, M_aux,0, M_aux)
         
         qn_cc1 = QN_1body_radial(self.bra.n1, self.bra.l1) # conjugated
         qn_cc2 = QN_1body_radial(self.bra.n2, self.bra.l2) # conjugated
@@ -513,7 +513,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
             if abs(m2) > self.bra.l2:
                 continue
             
-            clg_bra = safe_clebsch_gordan(qn_cc1.l, qn_cc2.l, self._L_bra,
+            clg_bra = safe_clebsch_gordan(qn_cc1.l, qn_cc2.l, self.L_bra,
                                           m1, m2, M_aux)
             qn_cc1.m_l = m1
             qn_cc2.m_l = m2
@@ -527,7 +527,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
                 if abs(m4) > self.ket.l2:
                     continue
                 
-                clg_ket = safe_clebsch_gordan(qn_3.l, qn_4.l, self._L_ket,
+                clg_ket = safe_clebsch_gordan(qn_3.l, qn_4.l, self.L_ket,
                                                m3, m4 ,M_aux)
                 qn_3.m_l = m3
                 qn_4.m_l = m4

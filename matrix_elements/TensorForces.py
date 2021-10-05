@@ -9,13 +9,12 @@ from sympy.physics.wigner import clebsch_gordan
 from helpers.Enums import BrinkBoekerParameters as BBparams, CouplingSchemeEnum,\
     CentralMEParameters
 from helpers.Enums import AttributeArgs
-from helpers.Enums import SHO_Parameters
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Helpers import safe_racah
-from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_LS_Coupling
+from helpers.WaveFunctions import QN_2body_LS_Coupling
 from helpers.Log import XLog
 
 
@@ -29,8 +28,8 @@ class TensorForce(TalmiTransformation):#):
         # TODO: Might accept an LS coupled wave functions (when got that class)
         self.J = J
          
-        self._S_bra = bra.S
-        self._S_ket = ket.S
+        self.S_bra = bra.S
+        self.S_ket = ket.S
          
         TalmiTransformation.__init__(self, bra, ket, run_it=run_it)
         #raise Exception("Implement with jj coupled w.f.")
@@ -92,20 +91,20 @@ class TensorForce(TalmiTransformation):#):
         
         NOTE: Redundant if run from JJ -> LS recoupling
         """
-        if (abs(self._L_bra - self._L_ket) > 2):
+        if (abs(self.L_bra - self.L_ket) > 2):
             return False
         return True
     
     def _deltaConditionsForCOM_Iteration(self):
         """ For the antisymmetrization_ of the wave functions. """
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
         return False
     
     def _totalSpinTensorMatrixElement(self):
         """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 """
-        if (self._S_bra != self._S_ket) or (self._S_bra == 0):
+        if (self.S_bra != self.S_ket) or (self.S_bra == 0):
             return True, 0.0
         
         return False, 3.872983346207417 ## = np.sqrt(15)
@@ -119,8 +118,8 @@ class TensorForce(TalmiTransformation):#):
         if skip:
             return 0
         
-        factor = safe_racah(self._L_bra, self._L_ket, 
-                            self._S_bra, self._S_ket,
+        factor = safe_racah(self.L_bra, self.L_ket, 
+                            self.S_bra, self.S_ket,
                             2, self.J)
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
@@ -130,14 +129,14 @@ class TensorForce(TalmiTransformation):#):
     def _globalInteractionCoefficient(self):
         # no special interaction constant for the Central ME
         phase = (-1)**(1 + self.rho_bra - self.J)
-        factor = np.sqrt(8*(2*self._L_bra + 1)*(2*self._L_ket + 1))
+        factor = np.sqrt(8*(2*self.L_bra + 1)*(2*self.L_ket + 1))
         
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME
-        factor = safe_racah(self._L_bra, self._L_ket, 
+        factor = safe_racah(self.L_bra, self.L_ket, 
                             self._l, self._l_q,
                             2, self._L)
         if self.isNullValue(factor):
@@ -169,14 +168,14 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
         Return ket states <tuple> of the total spin, for tensor force impose 
         S = S' = 1, return nothing to skip the bracket spin S=0
         """
-        if self._S_bra == 0:
+        if self.S_bra == 0:
             return []
         return (1, )
     
     def _deltaConditionsForCOM_Iteration(self):
         """ For the antisymmetrization_ of the wave functions. """
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
         return False
     
@@ -188,11 +187,11 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
         OJO: Moshinski, lambda' = lambda, lambda +-1, lambda +-2!!! as condition
         in the C_Tensor, due rank 2 tensor coupling
         """
-        _L_min = max(0, self._L_bra - self._S_bra - 1)
+        _L_min = max(0, self.L_bra - self.S_bra - 1)
         
-        return (l_q for l_q in range(_L_min, self._L_bra + self._S_bra + 2))
+        return (l_q for l_q in range(_L_min, self.L_bra + self.S_bra + 2))
     
-    def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """

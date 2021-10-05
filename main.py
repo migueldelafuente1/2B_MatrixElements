@@ -57,12 +57,12 @@ if __name__ == "__main__":
         DensityDependentParameters.x0 : 1,
         DensityDependentParameters.constant : 1390.6
     }
-    J = 0
-    T = 1
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,0,1), J, T)
+    J = 1
+    T = 0
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
+                                   QN_1body_jj(0,2,3), J, T)
     ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                   QN_1body_jj(0,1,1), J, T)
+                                   QN_1body_jj(0,2,3), J, T)
     
     KineticTwoBody_JTScheme.turnDebugMode(True)
     KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)

@@ -67,15 +67,15 @@ class CentralForce(TalmiTransformation):
         
         NOTE: Redundant if run from JJ -> LS recoupling
         """
-        if (self._L_bra != self._L_ket):
+        if (self.L_bra != self.L_ket):
             return False
         return True
     
     def _deltaConditionsForCOM_Iteration(self):
         """ This condition ensure the antisymmetrization (without calling 
         exchanged the matrix element)"""
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):
             return True
         return False
     
@@ -118,13 +118,13 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
-        return (self._S_bra, )
+        return (self.S_bra, )
     
     def _validKetTotalAngularMomentums(self):
         """ For Central Interaction, <L |Vc| L'> != 0 only if  L=L' """
-        return (self._L_bra, )
+        return (self.L_bra, )
     
-    def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
@@ -183,20 +183,20 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     def _deltaConditionsForCOM_Iteration(self):
         """ This condition ensure the antisymmetrization (without calling 
         exchanged the matrix element)"""
-        if (((self._S_bra + 1 + self._l) % 2 == 1) and 
-            ((self._S_ket + 1 + self._l_q) % 2 == 1)):
+        if (((self.S_bra + 1 + self._l) % 2 == 1) and 
+            ((self.S_ket + 1 + self._l_q) % 2 == 1)):
             return True
         return False
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
-        return (self._S_bra, )
+        return (self.S_bra, )
     
     def _validKetTotalAngularMomentums(self):
         """ For Central Interaction, <L |Vc| L'> != 0 only if  L=L' """
-        return (self._L_bra, )
+        return (self.L_bra, )
     
-    def _LScoupled_MatrixElement(self):#, L, S, _L_ket=None, _S_ket=None):
+    def _LScoupled_MatrixElement(self):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
@@ -257,27 +257,27 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         #cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
     
     def _validKetTotalAngularMomentums(self):
-        return (self._L_bra, )
+        return (self.L_bra, )
     
     def _validKetTotalSpins(self):
-        return (self._S_bra, )
+        return (self.S_bra, )
     
     def _LScoupled_MatrixElement(self):
         
-        phs = ((-1)**self._S_bra)
+        phs = ((-1)**self.S_bra)
         fact = 1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0])
         
         ## Antisymmetrization factor 
-        fact *= (1 - ((-1)**(self.T + self._S_bra + 
-                             self._L_bra + self.ket.l2 + self.ket.l1)))
+        fact *= (1 - ((-1)**(self.T + self.S_bra + 
+                             self.L_bra + self.ket.l2 + self.ket.l1)))
         
         if self.isNullValue(fact):
             return 0.0
         fact *= ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
                  *(2*self.ket.l1 + 1)*(2*self.ket.l2 + 1))**0.5
         
-        fact *= safe_3j_symbols(self.bra.l1, self._L_bra, self.bra.l2, 0, 0, 0)
-        fact *= safe_3j_symbols(self.ket.l1, self._L_ket, self.ket.l2, 0, 0, 0)
+        fact *= safe_3j_symbols(self.bra.l1, self.L_bra, self.bra.l2, 0, 0, 0)
+        fact *= safe_3j_symbols(self.ket.l1, self.L_ket, self.ket.l2, 0, 0, 0)
         fact *= self.PARAMS_FORCE[DensityDependentParameters.constant]/ (4*np.pi)
         
         if self.isNullValue(fact):
@@ -337,10 +337,10 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
     
     
     def _validKetTotalAngularMomentums(self):
-        return (self._L_bra, )
+        return (self.L_bra, )
     
     def _validKetTotalSpins(self):
-        return (self._S_bra, )
+        return (self.S_bra, )
     
     def _nablaReducedMatrixElement(self, particle):
         part = str(particle)
@@ -371,15 +371,15 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
             #         * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
             #         * 2 * Constants.M_MEAN)
         
-        # phs = self._L_ket + self.ket.l1 + self.ket.l2 - self.T - self._S_bra
+        # phs = self.L_ket + self.ket.l1 + self.ket.l2 - self.T - self.S_bra
         # symm_fact = 1 - ((-1)**phs)
         # if symm_fact == 0:
         #     return 0.0
         symm_fact = 1
         
-        fact = safe_wigner_6j(self.bra.l1, self.bra.l2, self._L_bra, 
+        fact = safe_wigner_6j(self.bra.l1, self.bra.l2, self.L_bra, 
                               self.ket.l2, self.ket.l1, 1)
-        fact *= ((-1)**(self.ket.l1 + self.bra.l2 + self._L_bra)) * symm_fact
+        fact *= ((-1)**(self.ket.l1 + self.bra.l2 + self.L_bra)) * symm_fact
             
         nabla_1 = self._nablaReducedMatrixElement(1)
         nabla_2 = self._nablaReducedMatrixElement(2)

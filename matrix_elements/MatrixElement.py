@@ -4,17 +4,11 @@ Created on Feb 23, 2021
 @author: Miguel
 '''
 import numpy as np
-# from sympy.physics.wigner import wigner_9j
 
-import matrix_elements.BM_brackets as bmb
-from matrix_elements.BM_brackets import fact
-
-from helpers.WaveFunctions import QN_2body_jj_JT_Coupling,\
-    QN_2body_jj_J_Coupling
+from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Coupling
 from helpers.Helpers import safe_wigner_9j
-from helpers.Enums import Enum, CouplingSchemeEnum
+from helpers.Enums import CouplingSchemeEnum
 from helpers.Log import XLog
-# from helpers.WaveFunctions import 
 
 class MatrixElementException(BaseException):
     pass
@@ -159,6 +153,8 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         self.ket = ket
         
         self.J = bra.J
+        self.exchange_phase = None
+        self.exch_2bme = None
         
         if (bra.J != ket.J):
             print("Bra J [{}]doesn't match with ket's J [{}]"
@@ -221,7 +217,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
             XLog.write('nas_me', ket=self.ket.shellStatesNotation)
     
         # antisymmetrization_ taken in the inner evaluation
-        self._value = self._non_antisymmetrized_ME()
+        self._value = self._LS_recoupling_ME()
     
         if self.DEBUG_MODE:
             XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
@@ -265,36 +261,43 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         w9j_bra = safe_wigner_9j(
             *self.bra.getAngularSPQuantumNumbers(1, j_over2=True), 
             *self.bra.getAngularSPQuantumNumbers(2, j_over2=True),
-            self._L_bra, self._S_bra, self.bra.J)        
+            self.L_bra, self.S_bra, self.bra.J)        
 
         if not self.isNullValue(w9j_bra):
             recoupling = np.sqrt((self.bra.j1 + 1)*(self.bra.j2 + 1)) * w9j_bra
             if self.DEBUG_MODE:
-                re1 = ((self.bra.j1 + 1)*(self.bra.j2 + 1)*(2*self._S_bra + 1)
-                       *(2*self._L_bra + 1))**.5 * w9j_bra 
-                XLog.write('recoup', Lb=self._L_bra, Sb=self._S_bra, re_b=re1)
+                re1 = ((self.bra.j1 + 1)*(self.bra.j2 + 1)*(2*self.S_bra + 1)
+                       *(2*self.L_bra + 1))**.5 * w9j_bra 
+                XLog.write('recoup', Lb=self.L_bra, Sb=self.S_bra, re_b=re1)
             
             w9j_ket = safe_wigner_9j(
                 *self.ket.getAngularSPQuantumNumbers(1, j_over2=True), 
                 *self.ket.getAngularSPQuantumNumbers(2, j_over2=True),
-                self._L_ket, self._S_ket, self.ket.J)
+                self.L_ket, self.S_ket, self.ket.J)
             
             if not self.isNullValue(w9j_ket):
                 recoupling *= w9j_ket
                 recoupling *= np.sqrt((self.ket.j1 + 1)*(self.ket.j2 + 1))
-                recoupling *= np.sqrt((2*self._S_bra + 1)*(2*self._L_bra + 1)
-                                      *(2*self._S_ket + 1)*(2*self._L_ket + 1))
+                recoupling *= np.sqrt((2*self.S_bra + 1)*(2*self.L_bra + 1)
+                                      *(2*self.S_ket + 1)*(2*self.L_ket + 1))
                 
                 if self.DEBUG_MODE:
-                    re2 = ((self.ket.j1 + 1)*(self.ket.j2 + 1)*(2*self._S_ket + 1)
-                           *(2*self._L_ket + 1))**.5 * w9j_ket
-                    XLog.write('recoup', Lk=self._L_ket, Sk=self._S_ket, cts=re1*re2)
+                    re2 = ((self.ket.j1 + 1)*(self.ket.j2 + 1)*(2*self.S_ket + 1)
+                           *(2*self.L_ket + 1))**.5 * w9j_ket
+                    XLog.write('recoup', Lk=self.L_ket, Sk=self.S_ket, cts=re1*re2)
                 
                 return (False, recoupling)
         return (True, 0.0)
     
+    def _antisymmetrized_LS_element(self):
+        """
+        Mediator function to evaluate the direct and exchange LS m.e, 
+        in the case of non explicitly antysimetrized_ m.e is just the _LScoupledMatrixElement()
+        """
+        return self._LScoupled_MatrixElement()
     
-    def _non_antisymmetrized_ME(self):
+    def _LS_recoupling_ME(self):
+    #def _non_antisymmetrized_ME(self):
         """ 
         Obtains the non antisymmetrized matrix elements by recoupling to total
         L and S and call the Inner Interaction recoupled to LS - T scheme.
@@ -306,22 +309,22 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         L_min = abs(self.bra.l1-self.bra.l2)
         
         for S in (0, 1):
-            self._S_bra = S
+            self.S_bra = S
             
             for S_ket in self._validKetTotalSpins():
-                self._S_ket = S_ket
+                self.S_ket = S_ket
                 
                 for L in range(L_min, L_max +1):
-                    self._L_bra = L
+                    self.L_bra = L
                     
                     for L_ket in self._validKetTotalAngularMomentums():
-                        self._L_ket = L_ket
+                        self.L_ket = L_ket
                         
                         null, coupling = self._angularRecouplingCoefficiens()
                         if null:
                             continue
                         
-                        sum_ += coupling * self._LScoupled_MatrixElement()
+                        sum_ += coupling * self._antisymmetrized_LS_element()
                 
         return sum_
     
@@ -331,6 +334,25 @@ class _TwoBodyMatrixElement_Antisym_JCoupled(_TwoBodyMatrixElement_JCoupled):
     Overwriting of the explicit implementation of the antysymmetrization_
     """
     
+    def _antisymmetrized_LS_element(self):
+        """
+        Mediator function to evaluate the direct and exchange LS m.e, 
+        This is an explicitly antysimetrized_ m.e, it evaluates the both direct
+        and exchange matrix elements in the LS scheme.
+        """
+        direct = self._LScoupled_MatrixElement()
+        
+        phase_9j  = (self.ket.j1 + self.ket.j2)// 2 + self.J
+        phase_9j += 1 + self.S_ket + self.ket.l1 + self.ket.l2 + self.L_ket
+        
+        self.exch_2bme.S_bra = self.S_bra
+        self.exch_2bme.S_ket = self.S_ket
+        self.exch_2bme.L_bra = self.L_bra
+        self.exch_2bme.L_ket = self.L_ket
+        
+        exch = self.exch_2bme._LScoupled_MatrixElement()
+        return direct - (((-1)**(phase_9j)) * self.exchange_phase * exch)  
+    
     def _run(self):
         """ Calculate the explicit antisymmetric matrix element value. """
         if self.isNullMatrixElement:
@@ -338,25 +360,18 @@ class _TwoBodyMatrixElement_Antisym_JCoupled(_TwoBodyMatrixElement_JCoupled):
         
         # construct the exchange ket
         phase, exchanged_ket = self.ket.exchange()
-        exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        self.exchange_phase = phase
+        self.exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
         
         if self.DEBUG_MODE: 
             XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
         
-        direct = self._non_antisymmetrized_ME()
-        
-        if self.DEBUG_MODE:
-            XLog.write('na_me', value=direct)
-            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation)
-            
-        exchan = exch_2bme._non_antisymmetrized_ME()
-        
-        self._value =  direct - (phase * exchan)
         # value is always M=0, M_T=0
+        self._value =  self._LS_recoupling_ME()
         self._value *= self.bra.norm() * self.ket.norm()
         
         if self.DEBUG_MODE: 
-            XLog.write('na_me', value=exchan, phs=phase)
+            XLog.write('na_me', phs=phase)
             XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
     
 
@@ -383,6 +398,9 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
         
         self.J = bra.J
         self.T = bra.T
+        
+        self.exchange_phase = None
+        self.exch_2bme = None
         
         if (bra.J != ket.J) or (bra.T != ket.T):
             print("Bra JT [{}]doesn't match with ket's JT [{}]"
@@ -430,29 +448,39 @@ class _TwoBodyMatrixElement_Antisym_JTCoupled(_TwoBodyMatrixElement_JTCoupled):
         
         # construct the exchange ket
         phase, exchanged_ket = self.ket.exchange()
-        exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        self.exchange_phase  = phase
+        self.exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
         
         if self.DEBUG_MODE: 
             XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
         
-        direct = self._non_antisymmetrized_ME()
-        
-        if self.DEBUG_MODE:
-            XLog.write('na_me', value=direct)
-            XLog.write('na_me', p='EXCHANGED', ket=exchanged_ket.shellStatesNotation)
-            
-        exchan = exch_2bme._non_antisymmetrized_ME()
-        
-        self._value =  direct - (phase * exchan)
         # value is always M=0, M_T=0
+        self._value = self._LS_recoupling_ME()
         self._value *= self.bra.norm() * self.ket.norm()
         
         if self.DEBUG_MODE: 
-            XLog.write('na_me', value=exchan, phs=phase)
+            XLog.write('na_me', phs=phase)
             XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
-
-
-
+    
+    def _antisymmetrized_LS_element(self):
+        """
+        Mediator function to evaluate the direct and exchange LS m.e, 
+        This is an explicitly antysimetrized_ m.e, it evaluates the both direct
+        and exchange matrix elements in the LS scheme.
+        """
+        direct = self._LScoupled_MatrixElement()
+        
+        phase_9j  = (self.ket.j1 + self.ket.j2)// 2 + self.J
+        phase_9j += 1 + self.S_ket + self.ket.l1 + self.ket.l2 + self.L_ket
+        
+        self.exch_2bme.S_bra = self.S_bra
+        self.exch_2bme.S_ket = self.S_ket
+        self.exch_2bme.L_bra = self.L_bra
+        self.exch_2bme.L_ket = self.L_ket
+        
+        exch = self.exch_2bme._LScoupled_MatrixElement()
+        return direct - (((-1)**(phase_9j)) * self.exchange_phase * exch)
+            
 
 
 class _MatrixElementReader(_TwoBodyMatrixElement):

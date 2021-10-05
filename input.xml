@@ -1,19 +1,19 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>Central_Coul_SPSDPF</Output_Filename>
+		<Output_Filename>test_d1s_SPSDPF</Output_Filename>
 		<!--Output_Filename>kin2_geo_SPSD</Output_Filename-->
-		<Hamil_Type>1</Hamil_Type>
+		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
 			   are not required parameters, define values only for explicit 
-			   setting 18.431586884467016
+			   setting
 			-->
 		<A_mass>4</A_mass>
 		<Z>2</Z>
-		<hbar_omega units='MeV'>0.0000000000001</hbar_omega >
+		<hbar_omega units='MeV'>18.431586884467016</hbar_omega >
 		<b_length units='fm'>1.5</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
@@ -53,12 +53,10 @@
 			<mu_length 	part_1='0.7' 		part_2='1.4' 		units='fm'/>
 			<Wigner		part_1='595.55' 	part_2='-72.21' 	units='MeV'/>
 			<Majorana	part_1='-206.05'	part_2='-68.39'		units='MeV'/>
-			<!--Wigner		part_1='0.0' 	part_2='-70.0' 	units='MeV'/>
-			<Majorana	part_1='0.0'	part_2='0.0'		units='MeV'/-->
 			<Bartlett 	part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 			<Heisenberg part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 		</Brink_Boeker>
-		<Brink_Boeker active='False'>
+		<Brink_Boeker active='True'>
 			<!-- Brink-Boeker force: D1S, Wls=120 t0=1390.6 -->
 			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
 			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
@@ -75,7 +73,7 @@
 			<constant	value='-70.0' 	units='MeV'/>
 			<mu_length	value='1.4' 	units='fm'/>
 		</Central>
-		<Central active='True'>
+		<Central active='False'>
 			<!-- Central force potential,
 				Shaped as exponential, gaussian, power term, yukawa or coulomb 
 				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
@@ -84,7 +82,7 @@
 			<constant	value='1.44197028' 	units='MeV'/>
 			<mu_length	value='1' 	units='fm'/>
 		</Central>
-		<Coulomb active='False'>
+		<Coulomb active='True'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
 		<GaussianSeries active='False'>
@@ -127,7 +125,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbit>
-		<SpinOrbitShortRange active='False'>
+		<SpinOrbitShortRange active='True'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 

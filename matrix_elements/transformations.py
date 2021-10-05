@@ -53,8 +53,8 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         self.ket = ket
         
         # set L state as protected to fix with 2BME_JT coupled attributes
-        self._L_bra = bra.L
-        self._L_ket = ket.L
+        self.L_bra = bra.L
+        self.L_ket = ket.L
         
         ## protected internal variables for the iterations
         self._n = None
@@ -425,7 +425,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
     def _validCOM_Bra_qqnn(self):
                 
         rho = self.rho_bra
-        lambda_ = self._L_bra
+        lambda_ = self.L_bra
         ## Notation: big_Lambda = L + l, big_N = N + n
         
         
@@ -487,7 +487,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
             
             bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, 
                                  self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, 
-                                 self._L_bra)
+                                 self.L_bra)
             if self.isNullValue(bmb_bra):
                 continue
             
@@ -502,7 +502,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 
                 bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, 
                                      self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
-                                     self._L_ket)
+                                     self.L_ket)
                 if self.isNullValue(bmb_ket):
                     continue
                 
@@ -541,7 +541,7 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
                              self._N, self._L, 
                              self.bra.n1, self.bra.l1, 
                              self.bra.n2, self.bra.l2, 
-                             self._L_bra)
+                             self.L_bra)
         if self.isNullValue(bmb_bra):
             return 0.0
         
@@ -549,7 +549,7 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
                              self._N, self._L,
                              self.ket.n1, self.ket.l1,
                              self.ket.n2, self.ket.l2,
-                             self._L_ket)
+                             self.L_ket)
         if self.isNullValue(bmb_ket):
             return 0.0
         
@@ -586,9 +586,9 @@ class _TalmiTransformation_MinimalIter(_TalmiTransformationBase):
         
         ## Notation: big_Lambda = L + l, big_N = N + n
         rho = self.rho_bra
-        lambda_ = self._L_bra
+        lambda_ = self.L_bra
         rho_q   = self.rho_ket
-        lambda_q = self._L_ket
+        lambda_q = self.L_ket
         
         big_Lambda_min = self._getBigLambdaMinimum(lambda_, rho)
         big_Lambda_q_min = self._getBigLambdaMinimum(lambda_q, rho_q)

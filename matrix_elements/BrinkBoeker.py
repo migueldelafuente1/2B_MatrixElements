@@ -12,8 +12,7 @@ from helpers.Enums import BrinkBoekerParameters as bb_p, CentralMEParameters,\
 from helpers.Enums import AttributeArgs
 from helpers.Enums import SHO_Parameters
 from helpers.integrals import talmiIntegral
-#from tests.GaussianInteractionIntegral import _gaussian2BMatrixElement
-#from helpers.WaveFunctions import QN_2body_L_Coupling
+
 from helpers.Log import XLog
 
 class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
@@ -53,11 +52,11 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
-        return (self._S_bra, )
+        return (self.S_bra, )
     
     def _validKetTotalAngularMomentums(self):
         """ For Central Interaction, <L |Vc| L'> != 0 only if  L=L' """
-        return (self._L_bra, )
+        return (self.L_bra, )
     
     def _validKet_relativeAngularMomentums(self):
         """ Central interaction only allows l'==l"""
@@ -78,8 +77,8 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         
         NOTE: Redundant if run from JJ -> LS recoupling
         """
-        if ((self._L_bra != self._L_ket)
-            or (self._S_bra != self._S_ket)
+        if ((self.L_bra != self.L_ket)
+            or (self.S_bra != self.S_ket)
             or (self._l != self._l_q)):
             
             if self.DEBUG_MODE:
@@ -91,8 +90,8 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
     
     def _deltaConditionsForCOM_Iteration(self):
         """ condition for the antisymmetrization_  """
-        if (((self._S_bra + self.T + self._l) % 2 == 1) and 
-            ((self._S_ket + self.T + self._l_q) % 2 == 1)):
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):
                 return True
         return False
     
@@ -149,9 +148,9 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
             
             # Exchange Part
             # W + P(S)* B - P(T)* H - P(T)*P(S)* M
-            _S_aux = (-1)**(self._S_bra + 1)
+            _S_aux = (-1)**(self.S_bra + 1)
             _T_aux = (-1)**(self.T)
-            _L_aux = (-1)**(self.T + self._S_bra + 1)
+            _L_aux = (-1)**(self.T + self.S_bra + 1)
             
             exchange_energy = (
                 self.PARAMS_FORCE[i].get(bb_p.Wigner),
