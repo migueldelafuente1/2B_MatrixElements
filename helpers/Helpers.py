@@ -6,15 +6,16 @@ Created on Feb 25, 2021
 #===============================================================================
 #%% Constants
 #===============================================================================
+
 class Constants:
     HBAR      = 6.582119e-22    # MeV s
-    HBAR_C    = 197.326963      # MeV fm
+    HBAR_C    = 197.327053# << value in Taurus ## 197.326963      # MeV fm 
     
-    M_PROTON  = 938.272088      # MeV/c2
-    M_NEUTRON = 939.565420      # MeV/c2
+    M_PROTON  = 938.27208816      # MeV/c2
+    M_NEUTRON = 939.56542052      # MeV/c2
     M_NUCLEON = 931.494028      # MeV/c2
     M_ELECTRON= 0.51099891      # MeV/c2
-    M_MEAN    = 938.918754      # (m_Proton + m_Neutron) / 2
+    M_MEAN    = 938.91875434      # (m_Proton + m_Neutron) / 2
     
     ALPHA     = 7.297353e-3
     e_CHARGE  = 1.602176e-19    # C

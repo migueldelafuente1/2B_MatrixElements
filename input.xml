@@ -1,19 +1,19 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>BB_LS_2K_SPSD_ff</Output_Filename>
-		<!--Output_Filename>D1S_SPSDPF</Output_Filename-->
-		<Hamil_Type>4</Hamil_Type>
-		<COM_correction>1</COM_correction>
+		<Output_Filename>Central_Coul_SPSDPF</Output_Filename>
+		<!--Output_Filename>kin2_geo_SPSD</Output_Filename-->
+		<Hamil_Type>1</Hamil_Type>
+		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
 			   are not required parameters, define values only for explicit 
-			   setting.4989
+			   setting 18.431586884467016
 			-->
-		<A_mass>16</A_mass>
-		<Z>8</Z>
-		<hbar_omega units='MeV'>18.4315</hbar_omega>
+		<A_mass>4</A_mass>
+		<Z>2</Z>
+		<hbar_omega units='MeV'>0.0000000000001</hbar_omega >
 		<b_length units='fm'>1.5</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
@@ -22,7 +22,7 @@
 		<Q_Number sp_state='101' sp_energy=''/>
 		<Q_Number sp_state='103' sp_energy=''/>
 		
-		<!--Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='205' sp_energy=''/>
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		
@@ -31,9 +31,9 @@
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
-		<Q_Number sp_state='409' sp_energy=''/-->
+		<!--Q_Number sp_state='409' sp_energy=''/>
 		
-		<!--Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
 		<Q_Number sp_state='20001' sp_energy=''/>
 		<Q_Number sp_state='10203' sp_energy=''/>
@@ -43,7 +43,7 @@
 		<innert_core protons='0' neutrons ='0' name=''/>
 	</Core>
 	<Force_Parameters>
-		<Brink_Boeker active='True'>
+		<Brink_Boeker active='False'>
 			<!-- Brink-Boeker force: 
 				Effective force mediated by 2 gaussians of length :mu fm.
 				Gaussian radial functions are shared by a central term (Wigner)
@@ -53,6 +53,8 @@
 			<mu_length 	part_1='0.7' 		part_2='1.4' 		units='fm'/>
 			<Wigner		part_1='595.55' 	part_2='-72.21' 	units='MeV'/>
 			<Majorana	part_1='-206.05'	part_2='-68.39'		units='MeV'/>
+			<!--Wigner		part_1='0.0' 	part_2='-70.0' 	units='MeV'/>
+			<Majorana	part_1='0.0'	part_2='0.0'		units='MeV'/-->
 			<Bartlett 	part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 			<Heisenberg part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 		</Brink_Boeker>
@@ -70,8 +72,17 @@
 				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
 				-->
 			<potential 	name='gaussian'/>
-			<constant	value='-100.0' 	units='MeV'/>
+			<constant	value='-70.0' 	units='MeV'/>
 			<mu_length	value='1.4' 	units='fm'/>
+		</Central>
+		<Central active='True'>
+			<!-- Central force potential,
+				Shaped as exponential, gaussian, power term, yukawa or coulomb 
+				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
+				-->
+			<potential 	name='coulomb'/>
+			<constant	value='1.44197028' 	units='MeV'/>
+			<mu_length	value='1' 	units='fm'/>
 		</Central>
 		<Coulomb active='False'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
@@ -94,15 +105,6 @@
 		<Kinetic_2Body active='False'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
 		</Kinetic_2Body>
-		<Central active='False'>
-			<!-- Central force potential,
-				Shaped as exponential, gaussian, power term, yukawa or coulomb 
-				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
-				-->
-			<potential 	name='coulomb'/>
-			<constant	value='1.44163' units='MeV'/>
-			<mu_length	value='1.0' 	units='fm'/>
-		</Central>
 		<Tensor active='False'>
 			<!-- Tensor Force.
 				Standard non central force S_12 parameterized with exponential, 
@@ -132,7 +134,7 @@
 				f(r; mu, n), modulated by constant: V(r3)=C*f(r; mu, n)
 				-->
 			<potential 	name='power'/>
-			<constant	value='115.0' 	units='MeV*fm^-5'/>
+			<constant	value='130.0' 	units='MeV*fm^-5'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
@@ -147,9 +149,9 @@
 			<alpha    value='1'/>
 			<x0		  value='1'/>
 		</Density_Dependent>
-		<Force_From_File active='True'>
+		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
-			<file name='results/dd_alpha1_A16_SPSD.sho'/>
+			<file name='results/.sho'/>
 			<options ignorelines='4' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>

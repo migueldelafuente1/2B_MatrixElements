@@ -636,3 +636,23 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
                         return True
                     
         return False
+    
+    
+
+#==============================================================================
+# HELPERS with W.F
+#==============================================================================
+def getMinMaxAngularMomentum(j1, j2, j3, j4):
+    
+    if isinstance(j1, int):
+        Jmin = max(abs(j1 - j2), abs(j3 - j4))
+        Jmax = min(j1 + j2, j3 + j4)
+    elif isinstance(j1, QN_1body_jj):
+        Jmin = max(abs(j1.j - j2.j), abs(j3.j - j3.j))
+        Jmax = min(j1.j + j2.j, j3.j + j4.j)
+    elif isinstance(j1, QN_1body_radial):
+        Jmin = max(abs(j1.j - j2.j), abs(j3.j - j3.j))
+        Jmax = min(j1.j + j2.j, j3.j + j4.j)
+    else:
+        raise BaseException("Invalid type for angular momentum")
+    return Jmin, Jmax

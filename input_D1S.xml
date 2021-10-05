@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_16O_SPSDPF</Output_Filename>
+		<Output_Filename>D1S_4He_SPSDPF</Output_Filename>
 		<!--Output_Filename>D1S_SPSDPF</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
@@ -50,7 +50,7 @@
 		</Force_From_File>
 		<Force_From_File active='True'>
 			<!-- Import an interaction already saved -->
-			<file name='results/D1S_t0_SPSD.2b'/>
+			<file name='results/D1S_t0_SPSDPF.2b'/>
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>

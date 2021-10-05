@@ -850,11 +850,12 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                 return True
         return False
     
-    def _FermiDensity(self, A, rOb, Z=None):
+    def _FermiDensity(self, A, r, Z=None):
         """
         Radial Fermi density without the exponential (for real Fermi densty 
         requires a 4pi angular factor: sum(|Y_lm|^2)[-l, l]) = (2*l + 1) / 4*pi
-        :rOb = r/b
+        :r = r (the factor 1/b should be multiplied externally to r if you want
+                the real density for the system of length b)
         :Z <int or None> default define an hypothetical symmetrical nucleus :
             Z=A//2, N=A//2 + A%2
         """
@@ -868,7 +869,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             if self.Z > A: 
                 raise IntegralException("Fermi density for A < Z !!")
         
-        aux = 0.0 * rOb
+        aux = 0.0 * r
         occupied_states = getStatesAndOccupationOfFullNucleus(self.Z, self.N)
         for i in range(len(occupied_states)):
             sps, occ_Z, occ_N = occupied_states[i]
@@ -877,9 +878,10 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             #last = 0 if i < len(occupied_states) - 1 else self.A%2 
             occ = occ_Z + occ_N# + last
             if occ > 0:
-                aux_i = 0.0 * rOb
+                aux_i = 0.0 * r
                 for p in range(2*ni +1):
-                    aux_i += self._B_coeff(ni,li,ni,li, p) * (rOb**(2*(p + li)))
+                    aux_r  = ((r)**(2*(p + li)))   #
+                    aux_i += self._B_coeff(ni,li,ni,li, p) * aux_r
                 aux += occ * aux_i
         
         # import matplotlib.pyplot as plt
@@ -889,7 +891,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         self._nuclear_density = aux
         return aux
     
-    def _DensityProfile(self, A, rOb, Z=None):
+    def _DensityProfile(self, A, r, Z=None):
         """ 
         Approximates the density with the form 
                 rho =    rho0 / (1 + exp((r - R)/a)) 
@@ -909,17 +911,17 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         # r0, a = 
         
         R  = r0 * (self.A**(1/3))
-        profile = lambda r: r**2 / (1 + np.exp((r - R)/a))
+        profile = lambda rr: rr**2 / (1 + np.exp((rr - R)/a))
         
         aux  = GaussianQuadrature.legendre(profile, 0, 15, 50)
         rho0 = self.A / aux
         
-        aux = rho0 / (1 + np.exp((rOb - R) / a))
+        aux = rho0 * np.exp((r / self.b_length)**2) / (1 + np.exp((r - R) / a))
         
-        aux2 = 4*np.pi * (self.b_length**(-3)) * np.exp(rOb/2)
-        import matplotlib.pyplot as plt
-        plt.plot(rOb, aux)
-        plt.show()
+        # aux2 = 4*np.pi * (self.b_length**(-3)) * np.exp(rOb/2)
+        # import matplotlib.pyplot as plt
+        # plt.plot(rOb, aux)
+        # plt.show()
         
         self._nuclear_density = aux
         return self._nuclear_density
@@ -928,10 +930,10 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         """ Function to be inserted in the Laguerre_ integral. """
         if self._DENSITY_APROX:
             # Fermi profile integral
-            density = self._DensityProfile(A, self.b_length * np.sqrt(x / 2), Z)
+            density = self._DensityProfile(A, self.b_length * np.sqrt(x / (2 + alpha)), Z)
         else:
             # Fermi SHO density (density matrix = delta(i <= A))
-            density = self._FermiDensity(A,  np.sqrt(x / (alpha + 2)), Z)
+            density = self._FermiDensity(A, np.sqrt(x / (alpha + 2)), Z) # 
         
         return (x**(No2 - 0.5)) * (density ** alpha)
     
@@ -949,7 +951,9 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         if self._DENSITY_APROX:
             cte = 2**(No2 + 1.5)
         else:
-            cte = 2 * ((alpha + 2)**(No2 + 0.5))
+            ## TODO: pon la constante del llenado aqui tras la prueba
+            pass
+        cte = 2 * ((alpha + 2)**(No2 + 0.5))
         
         aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
                                           100, No2, A, Z, alpha)
@@ -1006,7 +1010,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                 if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
         norm_fact = 1 / ((4*np.pi)**alpha * b_length**(3)) # b_length**(3*(1 - 2))
-        if self._DENSITY_APROX:
+        if not self._DENSITY_APROX:
             norm_fact /=  b_length**(3*alpha)
         
         if self.DEBUG_MODE:

@@ -45,9 +45,10 @@ class TBME_Runner(object):
         # 4: (-1, 1, -1,  1),  # npnp 
         # 5: (-1, -1,-1, -1),  # nnnn
     
-    def __init__(self, filename='', manual_input={}):
+    def __init__(self, filename='', verbose=True, manual_input={}):
         
         self.filename   = filename
+        self.PRINT_LOG  = verbose
         self.input_obj  = None
         self.tbme_class = None
         self.l_ge_10    = False
@@ -233,6 +234,9 @@ The program will exclude it from the interaction file and will produce the .com 
                 if b_length == None:
                     b_length = Constants.HBAR_C 
                     b_length /= np.sqrt(Constants.M_NUCLEON * hbar_omega)
+                else:
+                    hbar_omega  = Constants.HBAR_C**2 
+                    hbar_omega /= (Constants.M_MEAN * (b_length**2))
         else:
             hbar_omega = float(hbar_omega)
             if b_length == None:
@@ -593,13 +597,18 @@ The program will exclude it from the interaction file and will produce the .com 
             if abs(mat_elem) > self.NULL_TOLERANCE:
                 all_null = False
                 
-                if abs(mat_elem) < 1.e-6:
-                    values.append("{: .3e}".format(mat_elem))
+                if abs(mat_elem) < 1.e-10:
+                    values.append("{: 12.10e}".format(mat_elem))
                 else:
-                    values.append("{: .6f}".format(mat_elem))
+                    values.append("{: 12.10f}".format(mat_elem))
+                # if abs(mat_elem) < 1.e-6:
+                #     values.append("{: .3e}".format(mat_elem))
+                # else:
+                #     values.append("{: .6f}".format(mat_elem))
             else:
                 try:
-                    values.append("{: .6f}".format(mat_elem))
+                    values.append("{: .10f}".format(mat_elem))
+                    # values.append("{: .6f}".format(mat_elem))
                 except TypeError as tp:
                     # TODO: 
                     pass
@@ -664,8 +673,11 @@ The program will exclude it from the interaction file and will produce the .com 
             self._printHamilType_12_File()
         elif self._hamil_type == '3':
             # J scheme 3 file output  (0, 1 & 2 body Hamiltonian_)
+            print("WARNING :: hamil_type=3 not jet implemented, running hamil_type=4")
+            self._printHamilType_34_Files()
             # TODO: Implement
-            raise TBME_RunnerException("hamil_type=3 not jet implemented")
+            
+            # raise TBME_RunnerException("hamil_type=3 not jet implemented")
         else:
             # J scheme "bare" hamiltonian, return .sho header and .2b files
             self._printHamilType_34_Files()
@@ -720,12 +732,18 @@ The program will exclude it from the interaction file and will produce the .com 
         strings_ = self._headerFileWriting()
         
         for bra, kets in self.resultsSummedUp.items():
-            bra1 = castAntoineFormat2Str(bra[0])
-            bra2 = castAntoineFormat2Str(bra[1])
+            bra1 = readAntoine(bra[0], l_ge_10=self.l_ge_10)
+            bra2 = readAntoine(bra[1], self.l_ge_10)
+            ## The first step converts to the real n, l; then cast as l < 10
+            bra1 = castAntoineFormat2Str(bra1, l_ge_10 = True)
+            bra2 = castAntoineFormat2Str(bra2, True)
             
             for ket, T_vals in kets.items():
-                ket1 = castAntoineFormat2Str(ket[0])
-                ket2 = castAntoineFormat2Str(ket[1])
+                ket1 = readAntoine(ket[0], self.l_ge_10)
+                ket2 = readAntoine(ket[1], self.l_ge_10)
+                
+                ket1 = castAntoineFormat2Str(ket1, True)
+                ket2 = castAntoineFormat2Str(ket2, True)
                 
                 spss = (bra1, bra2, ket1, ket2)
                 
@@ -829,15 +847,17 @@ The program will exclude it from the interaction file and will produce the .com 
         if not self._com_correction:
             return
         
+        l_fmt = self.l_ge_10
         # write .com file
         strings_ = [self.title]
         for bra, kets in self.com_2bme.items():
-            bra1 = castAntoineFormat2Str(bra[0], self.l_ge_10)
-            bra2 = castAntoineFormat2Str(bra[1], self.l_ge_10)
+            ## The first step converts to the real n, l; then cast as l < 10
+            bra1 = castAntoineFormat2Str(readAntoine(bra[0], l_ge_10=l_fmt), l_fmt)
+            bra2 = castAntoineFormat2Str(readAntoine(bra[1], l_fmt), l_fmt)
             
             for ket, block in kets.items():
-                ket1 = castAntoineFormat2Str(ket[0], self.l_ge_10)
-                ket2 = castAntoineFormat2Str(ket[1], self.l_ge_10)
+                ket1 = castAntoineFormat2Str(readAntoine(ket[0], l_fmt), l_fmt)
+                ket2 = castAntoineFormat2Str(readAntoine(ket[1], l_fmt), l_fmt)
                 
                 spss = (bra1, bra2, ket1, ket2)
                 

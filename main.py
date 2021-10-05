@@ -57,12 +57,12 @@ if __name__ == "__main__":
         DensityDependentParameters.x0 : 1,
         DensityDependentParameters.constant : 1390.6
     }
-    J = 3
-    T = 0
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,3), 
-                                   QN_1body_jj(0,1,3), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5), 
-                                   QN_1body_jj(0,2,3), J, T)
+    J = 0
+    T = 1
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
+                                   QN_1body_jj(0,0,1), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
+                                   QN_1body_jj(0,1,1), J, T)
     
     KineticTwoBody_JTScheme.turnDebugMode(True)
     KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
@@ -72,6 +72,26 @@ if __name__ == "__main__":
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
     XLog.resetLog()
     
+    with open('results/BB_LS_SPSDPF_1.com', 'r') as f:
+        data = f.readlines()[1:]
+    
+    k = 0
+    for i in range(len(data)):
+        if k == 0:
+            _, _, a, b, c, d, _, _ = data[i].split()
+            Ls = []
+            for x in (a, b, c, d):
+                x = int(x)
+                lx = (x - (x//10000))//100
+                Ls.append(lx)
+            if (Ls[0] + Ls[1]) % 2 != (Ls[2] + Ls[3]) % 2:
+                print("Not good parity:", a, b, c, d) 
+        elif k == 2:
+            k = 0
+            continue
+        k += 1
+            
+    print('end')
     # kwargs[CentralMEParameters.n_power] = 0
     # ShortRangeSpinOrbit_JTScheme.turnDebugMode()
     # ShortRangeSpinOrbit_JTScheme.setInteractionParameters(**kwargs)

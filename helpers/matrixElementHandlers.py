@@ -257,7 +257,8 @@ class MatrixElementFilesComparator:
         
         fig, ax = plt.subplots(figsize=(6, 4), tight_layout=True)
         ax.grid(True)
-        ax.set_xticks(np.arange(min(x), max(x)+1, 2.0))
+        ticks = max(float(len(x) // 30), 1.0)
+        ax.set_xticks(np.arange(min(x), max(x)+1, ticks))
         ax.scatter(x, rel)
         # ax.set_ylabel(r"$\frac{me - me_{bench}}{me_{bench}}$")
         ax.set_ylabel(r"(x - bench) / bench")
@@ -341,7 +342,7 @@ class MatrixElementFilesComparator:
                     if phs != 0:
                         val *= phs
                     # if the difference is 0.1% greater than the bench value
-                    if abs(val_bench - val) > abs(0.0001 * val_bench):
+                    if abs(val_bench - val) > abs(0.00000001 * val_bench):
                         str_jt = "JT:{},{}".format(J,T)
                                                 
                         self._appendFailureDetails(spss, str_jt, val, val_bench)
@@ -635,14 +636,18 @@ class MatrixElements_PlotComparator():
 if __name__ == "__main__":
     
     test = MatrixElementFilesComparator(
-        '../results/dd_a1_b15_A16.2b', 
-        '../results/dens_test_a1_SPSD100.sho', verbose=False)
+        # '../results/dd_a1_b15_A16.2b', 
+        # '../results/dd_alpha1_16O_SPSD.sho',
+        # '../results/dd_alpha1_16O_SPSD_rob.sho', verbose=False)
+        '../results/kin2_bench.com', 
+        '../results/kin2.com', verbose=False)
+    
     test.compareDictionaries()
     print(" === TEST RESULTS:    =================================\n")
-    # prettyPrintDictionary(test.getResults())
+    prettyPrintDictionary(test.getResults())
     # prettyPrintDictionary(test.getFailedME())
-    # test.plotFailedDifferences()
-    # prettyPrintDictionary(test.getMissingME())
+    test.plotFailedDifferences()
+    prettyPrintDictionary(test.getMissingME())
     
     print("Missing in test file (but parity conserv)")
     miss = test.getMissingME()

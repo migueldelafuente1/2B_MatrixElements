@@ -40,7 +40,7 @@ def castAntoineFormat2Str(state, l_ge_10=False):
         else:
             state = str(1000*state[0] + 100*state[1] + state[2])
     else:
-        raise Exception('invalid type for the state to read (onlu str, int or list)')
+        raise Exception('invalid type for the state to read (only str, int or list)')
     
     if state == '1':
         return '001'
@@ -248,11 +248,13 @@ class _XMLParser(_Parser):
             _aux = elem.find(param)
             
             if _aux == None:
-                if param != SHO_Parameters.Z:
-                    raise ParserException("missing parameter [{}] in {}"
-                                          .format(param, InputParts.SHO_Parameters))
-                else:
-                    continue
+                vals_dict[param] = None
+                continue
+                # if param != SHO_Parameters.Z:
+                #     raise ParserException("missing parameter [{}] in {}"
+                #                           .format(param, InputParts.SHO_Parameters))
+                # else:
+                #     continue
             vals_dict[param] = _aux.text
             
         return vals_dict
