@@ -1,10 +1,10 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_4He_SPSDPF</Output_Filename>
+		<Output_Filename>D1S_t0_MZMax5</Output_Filename>
 		<!--Output_Filename>D1S_SPSDPF</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
-		<COM_correction>0</COM_correction>
+		<COM_correction>1</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
@@ -13,7 +13,7 @@
 			-->
 		<A_mass>4</A_mass>
 		<Z>2</Z>
-		<hbar_omega units='MeV'>18.4315</hbar_omega>
+		<hbar_omega units='MeV'>18.431586884467016</hbar_omega>
 		<b_length units='fm'>1.5</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
@@ -27,17 +27,30 @@
 		<Q_Number sp_state='203' sp_energy=''/>
 		
 		<Q_Number sp_state='307' sp_energy=''/>
-		
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
-		<!--Q_Number sp_state='409' sp_energy=''/-->
 		
-		<!--Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='409' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
 		<Q_Number sp_state='20001' sp_energy=''/>
 		<Q_Number sp_state='10203' sp_energy=''/>
-		<Q_Number sp_state='511' sp_energy=''/-->
+		
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
+		
+		<Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/>
 	</Valence_Space>
 	<Core/>
 	<Force_Parameters>
@@ -48,7 +61,7 @@
 			<options ignorelines='4' constant='1390.6' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
-		<Force_From_File active='True'>
+		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
 			<file name='results/D1S_t0_SPSDPF.2b'/>
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
@@ -60,7 +73,7 @@
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
-		<Brink_Boeker active='False'>
+		<Brink_Boeker active='True'>
 			<!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 -->
 			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
 			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
@@ -68,13 +81,13 @@
 			<Heisenberg part_1='-1813.53' 	part_2='162.812' 	units='MeV'/>
 			<Majorana	part_1='1397.6'		part_2='-223.934'	units='MeV'/>
 		</Brink_Boeker>
-		<Coulomb active='False'>
+		<Coulomb active='True'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
 		<Kinetic_2Body active='False'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
 		</Kinetic_2Body>
-		<SpinOrbitShortRange active='False'>
+		<SpinOrbitShortRange active='True'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
@@ -85,7 +98,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
-		<Density_Dependent active='True'>
+		<Density_Dependent active='False'>
 			<!-- Density dependent Force based on Fermi density for the nucleus,
 				parametrization from Gogny D1S:
 					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)

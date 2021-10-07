@@ -36,8 +36,8 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
-        _runner = TBME_Runner(filename='input.xml')
-        # _runner = TBME_Runner(filename='input_D1S.xml')
+        # _runner = TBME_Runner(filename='input.xml')
+        _runner = TBME_Runner(filename='input_D1S.xml')
         _runner.run()
         print(" The program has ended without incidences.")
         
