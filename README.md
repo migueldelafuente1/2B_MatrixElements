@@ -3,29 +3,29 @@ This is a research project with the goal of implementing and evaluate different 
 
 ## Installation
 Clone or download the repository. The package requirements are:
-1. Python 3, at least version 3.8 due the internal way of usage of dictionaries and functions arguments.
-2. numpy, scipy & sympy
-3. pandas     (for testing)
-4. matplotlib (for testing)
+* **Python 3**, at least version 3.8 due the internal way of usage of dictionaries and functions arguments.
+* numpy, scipy & sympy
+* pandas     (for testing)
+* matplotlib (for testing)
 
-I.e using ```pip`` for the libraries:
+I.e using ``pip`` for the libraries:
 
 ```
 pip install pandas
 ```
 
-To update Python into a newer version see i.e. [https://tech.serhatteker.com/post/2019-12/upgrade-python38-on-ubuntu/](How to Upgrade to Python 3.8 on Ubuntu)
+To update Python into a newer version see i.e. [How to Upgrade to Python 3.8 on Ubuntu](https://tech.serhatteker.com/post/2019-12/upgrade-python38-on-ubuntu/)
 
 ## Theory
 Many nuclear codes require require the implementation of a certain Hamiltonian two body interaction, for example, *Interaction-Shell-model* solves the Schrödinger equation by direct diagonalization of these hamiltonians. Others, like *Mean Field-HFB* like codes implement internally (predefined) the two-body Hamiltonian to access large valence spaces
 
-In this suite, we develop the tools to implement them and program several commonly use potentials. The main base of single-particle wave functions is the *spherical harmonic oscillator SHO* (but could be extended to another bases).
+In this suite, we develop the tools to implement them and program several commonly use potentials. The main base of single-particle wave functions is the *spherical harmonic oscillator (SHO)* (but could be extended to another bases).
 
 The suite have extensions to connect with **taurus_vap** code, also for the different types of Hamiltonians and for the *center of mass* correction of this program for *no core* calculations. See details of that code in:
 
-[![DOI](https://doi.org/10.1140/epja/s10050-021-00369-z)](Symmetry-projected variational calculations with the numerical suite TAURUS)
+[Symmetry-projected variational calculations with the numerical suite TAURUS](https://doi.org/10.1140/epja/s10050-021-00369-z.svg)
 
-Interactions are deal with the *object oriented paradigm*, in order to deal with their hierarchical complexity (coupling schemes, radial implementation, wave functions or specific constructions) and reusage of certain process. Details of these ideas and the parameters/definitions of currently implemented matrix elements are in [https://github.com/migueldelafuente1/2B_MatrixElements/blob/main/docs/How_to_2B_MatrixElements.pdf](docs/How_to_2B_MatrixElements.pdf).
+Interactions are deal with the *object oriented paradigm*, in order to deal with their hierarchical complexity (coupling schemes, radial implementation, wave functions or specific constructions) and reusage of certain process. Details of these ideas and the parameters/definitions of currently implemented matrix elements are in [docs/How_to_2B_MatrixElements.pdf](https://github.com/migueldelafuente1/2B_MatrixElements/blob/main/docs/How_to_2B_MatrixElements.pdf).
 
 ## Usage: 
 ### Compute a whole valence space using TBME_Runner, m.e format à la Antoine
@@ -47,14 +47,14 @@ computation.run()
 ```
 
 Currently implemented two body interactions (All computed in JT scheme):
-1. **Central** interactions in the form of gaussians, r powers, 1/r or yukawa.
-2. **Coulomb** interaction (J scheme)
-3. **Brink-Boeker** like interactions or gaussian potential series.
-4. **Short range Spin-Orbit** approximation potential
-5. Fixed **Density dependent** (Nuclear Fermi shell filling approximation).
-6. **Series of gaussians**, an extension of the Brink-Boeker sum of gaussians to as many you want (To expand another potentials).
-7. Get them **from a file**, reuse previous computations to save time (also valid to multiply the results by a global factor).
-8. **Kinetic two-body** matrix element, necessary to evaluate the *center of mass* correction. Be careful with the internal setting of nucleon mass and *HbarC* constants in the code.
+* **Central** interactions in the form of gaussians, r powers, 1/r or yukawa.
+* **Coulomb** interaction (J scheme)
+* **Brink-Boeker** like interactions or gaussian potential series.
+* **Short range Spin-Orbit** approximation potential
+* Fixed **Density dependent** (Nuclear Fermi shell filling approximation).
+* **Series of gaussians**, an extension of the Brink-Boeker sum of gaussians to as many you want (To expand another potentials).
+* Get them **from a file**, reuse previous computations to save time (also valid to multiply the results by a global factor).
+* **Kinetic two-body** matrix element, necessary to evaluate the *center of mass* correction. Be careful with the internal setting of nucleon mass and *HbarC* constants in the code.
 
 ### Evaluating matrix elements individually
 
