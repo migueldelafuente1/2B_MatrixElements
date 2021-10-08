@@ -11,6 +11,11 @@ from helpers.Helpers import gamma_half_int, fact, angular_condition,\
     getStatesAndOccupationUpToLastOccupied, shellSHO_Notation,\
     getStatesAndOccupationOfFullNucleus
 from helpers.Log import XLog
+from . import SCIPY_INSTALLED
+
+if SCIPY_INSTALLED:
+    from scipy.special import gammaincc
+
 
 class IntegralException(BaseException):
     pass
@@ -32,23 +37,12 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     elif potential == PotentialForms.Coulomb:
         return (b_param**2) * np.exp(fact(p) - gamma_half_int(2*p + 3)) / (2**.5)
     
-    elif potential == PotentialForms.Yukawa:
-        sum_ = 0.
-        for i in range(2*p+1 +1):
-            aux = fact(2*p + 1) - fact(i) - fact(2*p + 1 - i)
-            if i % 2 == 0:
-                aux += fact((i + 1)//2)
-            else:
-                aux += gamma_half_int(i + 1)
-            
-            aux += (2*p + 1 - i) * np.log(b_param/(2*mu_param))
-            
-            sum_ += (-1)**(2*p + 1 - i) * np.exp(aux)
-            
-        sum_ *= mu_param * (b_param**2) * np.exp((b_param/(2*mu_param))**2) 
-        sum_ /= np.exp(gamma_half_int(2*p + 3))
+    elif potential == PotentialForms.Gaussian_power:
+        aux = gamma_half_int(2*p + 3 - n_power) - gamma_half_int(2*p + 3)
+        aux = (b_param**3) * np.exp(aux)
         
-        return sum_
+        x = (2**0.5) * b_param / mu_param
+        return aux / ((x**n_power) * ((1 + x**2)**(p + 1.5 - (n_power/2))))
     
     elif potential == PotentialForms.Power:
         if n_power == 0:
@@ -56,9 +50,43 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         aux =  gamma_half_int(2*p + 3 + n_power) - gamma_half_int(2*p + 3)
         aux += n_power * ((np.log(2)/2) - np.log(mu_param))
         return np.exp(aux + ((n_power + 3)*np.log(b_param)))
+    
+    elif potential == PotentialForms.Yukawa:
+        sum_ = 0.
+        cte_k = b_param / ((2**0.5) * mu_param)
+        cte_k_log = np.log(cte_k)
         
-    elif potential == PotentialForms.Gaussian_power:
-        raise IntegralException("Talmi integral 'gaussian_power' not implemented")
+        for k in range(2*p + 1 +1):
+            aux  = fact(2*p + 1) - fact(k) - fact(2*p + 1 - k)            
+            aux += (2*p + 1 - k) * cte_k_log
+            aux += gamma_half_int(k + 1) ## normalization of gammaincc_
+            aux  = np.exp(aux)
+            
+            sum_ += (-1)**(2*p + 1 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
+            
+        sum_ *= mu_param * (b_param**2) / np.exp(0.5 * (b_param/(mu_param))**2) 
+        sum_ /= np.exp(gamma_half_int(2*p + 3)) * (2**0.5)
+        
+        return sum_
+    
+    elif potential == PotentialForms.Exponential:
+        sum_ = 0.
+        cte_k = b_param / ((2**0.5) * mu_param)
+        cte_k_log = np.log(cte_k)
+        
+        for k in range(2*p + 2 +1):
+            aux  = fact(2*p + 2) - fact(k) - fact(2*p + 2 - k)            
+            aux += (2*p + 2 - k) * cte_k
+            aux += gamma_half_int(k + 1) ## normalization of gammaincc_
+            aux  = np.exp(aux)
+            
+            sum_ += (-1)**(2*p + 2 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
+            
+        sum_ *= (b_param**3) / np.exp(0.5 * (b_param/(mu_param))**2) 
+        sum_ /= np.exp(gamma_half_int(2*p + 3))
+        
+        return sum_
+    
     else:
         raise IntegralException("Talmi integral [{}] is not defined, valid potentials: {}"
                         .format(potential, PotentialForms.members()))
@@ -1021,6 +1049,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    
     dr = 0.001
     b_length = 1.2
     
