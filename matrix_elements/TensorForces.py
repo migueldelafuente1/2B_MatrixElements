@@ -188,8 +188,8 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
         in the C_Tensor, due rank 2 tensor coupling
         """
         _L_min = max(0, self.L_bra - self.S_bra - 1)
-        
-        return (l_q for l_q in range(_L_min, self.L_bra + self.S_bra + 2))
+        gen_ = (l_q for l_q in range(_L_min, self.L_bra + self.S_bra + 2))
+        return tuple(gen_)
     
     def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 

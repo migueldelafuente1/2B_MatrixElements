@@ -3,12 +3,12 @@ This is a research project with the goal of implementing and evaluate different 
 
 ## Installation
 Clone or download the repository. The package requirements are:
-* **Python 3**, at least version 3.8 due the internal way of usage of dictionaries and functions arguments.
+* **Python 3**, at least version 3.8 due the internal use of dictionaries and functions arguments (syntactic sugar).
 * numpy, scipy & sympy
 * pandas     (for testing)
 * matplotlib (for testing)
 
-I.e using ``pip`` for the libraries:
+I.e, using ``pip`` for the libraries:
 
 ```
 pip install pandas

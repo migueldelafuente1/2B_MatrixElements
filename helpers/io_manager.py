@@ -356,8 +356,8 @@ class _XMLParser(_Parser):
         for param in ForceVariablesDict[force].members():
             param_elem = force_elem.find(param)
             if param_elem == None:
-                print("WARNING {}!: missing parameter [{}] in Force [{}]"
-                      .format(self.__class__, param, force))
+                print("WARNING [{}]!: missing parameter [{}] in Force [{}] (might be optional)"
+                      .format(self.__class__.__name__, param, force))
                 continue
             params[param] = param_elem.attrib
         
@@ -379,8 +379,8 @@ class _XMLParser(_Parser):
             else:
                 param_elem = param_elems[0]
                 if param_elem == None:
-                    print("WARNING {}!: missing parameter [{}] in Force [{}]"
-                          .format(self.__class__, param, force))
+                    print("WARNING [{}]!: missing parameter [{}] in Force [{}] (might be optional)"
+                          .format(self.__class__.__name__, param, force))
                     continue
                 params[param] = param_elem.attrib
         

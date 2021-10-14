@@ -12,12 +12,14 @@ from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
     SHO_Parameters, Output_Parameters, OutputFileTypes,\
     CouplingSchemeEnum, ForceEnum, ForceFromFileParameters
 from matrix_elements import switchMatrixElementType
+from matrix_elements.MatrixElement import _TwoBodyMatrixElement
 from itertools import combinations_with_replacement
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
     QN_2body_jj_J_Coupling
 from copy import deepcopy
 from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
     Constants, almostEqual
+
 import os
 import numpy as np
 
@@ -27,7 +29,7 @@ class TBME_Runner(object):
     The two body matrix element runner evaluate all matrix elements for a given
     valence space and Force parameters.
     '''
-    NULL_TOLERANCE = 1.e-12
+    NULL_TOLERANCE = _TwoBodyMatrixElement.NULL_TOLERANCE
     PRINT_LOG = True
     
     RESULT_FOLDER = OUTPUT_FOLDER
@@ -495,7 +497,7 @@ The program will exclude it from the interaction file and will produce the .com 
             i = 0
             for params in force_list:
                 force_str = force+str(i) if len(force_list) > 1 else force
-                tic_ = time.time()                
+                tic_ = time.time()
                 if force == ForceEnum.Force_From_File:
                     ## read from file case
                     self._readMatrixElementsFromFile(force_str, **params)
@@ -841,7 +843,7 @@ The program will exclude it from the interaction file and will produce the .com 
     
     def printComMatrixElements(self):
         """
-        Print the matrix elements for the 2 boody center of mas correction
+        Print the matrix elements for the 2 body center of mas correction
         in the corresponding scheme. First line of the file is ignored.
         """
         if not self._com_correction:

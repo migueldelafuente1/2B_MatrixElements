@@ -239,8 +239,8 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         in the C_LS
         """
         _L_min = max(0, self.L_bra - self.S_bra)
-        
-        return (L_ket for L_ket in range(_L_min, self.L_bra + self.S_bra +1))
+        gen_ = (L_ket for L_ket in range(_L_min, self.L_bra + self.S_bra +1))
+        return tuple(gen_)
     
     def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 
@@ -281,7 +281,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         if self.DEBUG_MODE: 
             XLog.write('nas', ket=self.ket.shellStatesNotation)
     
-        self._value = 2 * self._LS_recoupling_ME()
+        self._value = self._LS_recoupling_ME()
     
         self._value *= self.bra.norm() * self.ket.norm()
     
@@ -316,9 +316,12 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
         
         dir_  = self._L_tensor_MatrixElement()
         exch  = self._L_tensor_MatrixElement(exchanged=True)
+        # Notice that the matrix element is not antisymmetrized_  (exchanged is
+        # just a name), tbme_ are permutable, then the factor *2 to antisymmetr_ 
         
         factor *= self.PARAMS_FORCE.get(CentralMEParameters.constant)
-        aux = factor * (dir_ + ((-1)**(self.L_bra+self.L_ket))*exch)
+        aux = 2 * factor * (dir_ + ((-1)**(self.L_bra + self.L_ket))*exch)
+        #     ^-- factor 2 for the antisymmetrization_
         
         if self.DEBUG_MODE: 
             XLog.write("LSme", factor=factor, dir=dir_, exch=exch, value=aux)

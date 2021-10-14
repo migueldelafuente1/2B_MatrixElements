@@ -450,7 +450,7 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
     def exchange(self):
         """ 
         Returns <tuple>:
-            [0] Phase shift on JT due exchange of the elements of the ket.
+            [0] Phase change on JT due exchange of the elements.
             [1] Exchanged wave function.
         """
         # CG coefficients: when permutation of two elements:
@@ -587,7 +587,7 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
     def exchange(self):
         """ 
         Returns <tuple>:
-            [0] Phase shift on JT due exchange of the elements of the ket.
+            [0] Phase change on JT due exchange of the elements.
             [1] Exchanged wave function.
         """
         return (

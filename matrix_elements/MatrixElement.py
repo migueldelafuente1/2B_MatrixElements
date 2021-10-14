@@ -27,10 +27,13 @@ class _TwoBodyMatrixElement:
     
     COUPLING = None
     _BREAK_ISOSPIN = None
+    ## Explicit antisymmetrization_ of the matrix element, <ab V cd> - <ab V dc>
+    ## set False if the matrix element do it implicitly.
+    EXPLICIT_ANTISYMM = True
     
     DEBUG_MODE = False
     
-    NULL_TOLERANCE = 1.e-10
+    NULL_TOLERANCE = 1.e-14
     
     def __init__(self, bra, ket, run_it=True):
         raise MatrixElementException("Abstract method, implement me!")
@@ -50,7 +53,7 @@ class _TwoBodyMatrixElement:
         if also_SHO:
             cls.PARAMS_SHO   = {}
     
-    def permute(self):
+    def getExchangedME(self):
         """ Permute single particle functions """
         raise MatrixElementException("Abstract method, implement me!")
     
@@ -144,6 +147,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     
     _BREAK_ISOSPIN = True
     COUPLING = CouplingSchemeEnum.JJ
+    EXPLICIT_ANTISYMM = False
     
     def __init__(self, bra, ket, run_it=True):
         
@@ -157,11 +161,11 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         self.exch_2bme = None
         
         if (bra.J != ket.J):
-            print("Bra J [{}]doesn't match with ket's J [{}]"
-                  .format(bra.J, ket.J))
+            print("Bra J [{}]doesn't match with ket's J [{}]".format(bra.J, ket.J))
             self._value = 0.0
         else:
             self._nullConditionForSameOrbit()
+            self._nullConditionsOnParticleLabelStates()
         
         if not self.isNullMatrixElement and run_it:
             # evaluate the normal and antisymmetrized me
@@ -181,6 +185,13 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         if bra.isospin_3rdComponent != ket.isospin_3rdComponent:
             self._value = 0.0
             self._isNullMatrixElement = True
+    
+    def getExchangedME(self):
+        if self.exch_2bme == None:
+            _, exch_ket = self.ket.exchange()
+            self.exch_2bme = self.__class__(self.bra, exch_ket, run_it=False)
+        
+        return self.exch_2bme
         
     def saveXLog(self, title=None):
         if title == None:
@@ -193,7 +204,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                             self.__class__.__name__,
                             self.ket.shellStatesNotation.replace('/2', '.2'),
                             self.J, auxT_))
-        
+    
     def _nullConditionForSameOrbit(self):
         """ When the  two nucleons of the bra or the ket are in the same orbit,
         total J and T must obey angular momentum coupling restriction. 
@@ -203,6 +214,14 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
             if self.J % 2 == 1:
                 self._value = 0.0
                 self._isNullMatrixElement = True
+    
+    def _nullConditionsOnParticleLabelStates(self):
+        """ 
+        This function checks if the label states are valid to skip at __init__
+        IMPLEMENTATION !! set here self.value = 0 and _isnullMatrixElement =True
+        (i.e. Coulomb only on <pp | pp>)"""
+        
+        raise MatrixElementException("abstract method, implement me!!")
     
     def _run(self):
         """ 
@@ -333,6 +352,7 @@ class _TwoBodyMatrixElement_Antisym_JCoupled(_TwoBodyMatrixElement_JCoupled):
     """ 
     Overwriting of the explicit implementation of the antysymmetrization_
     """
+    EXPLICIT_ANTISYMM = True
     
     def _antisymmetrized_LS_element(self):
         """
@@ -388,6 +408,7 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     _BREAK_ISOSPIN = False
+    EXPLICIT_ANTISYMM = False
     
     def __init__(self, bra, ket, run_it=True):
         
@@ -440,6 +461,7 @@ class _TwoBodyMatrixElement_Antisym_JTCoupled(_TwoBodyMatrixElement_JTCoupled):
     """ 
     Overwriting of the explicit implementation of the antysymmetrization_
     """
+    EXPLICIT_ANTISYMM = True
     
     def _run(self):
         """ Calculate the explicit antisymmetric matrix element value. """

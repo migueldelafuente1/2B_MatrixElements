@@ -164,21 +164,29 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
     
     def __init__(self, bra, ket, run_it=True):
-        
         _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
+            
     
-    def _run(self):
-        
-        if self.isNullMatrixElement:
-            return
+    # def _run(self):
+    #
+    #     if self.isNullMatrixElement:
+    #         return
+    #     if self.bra.isospin_3rdComponent != 1: 
+    #         ## same number of p or n for bra and ket_ already verified.
+    #         self._value = 0
+    #         self._isNullMatrixElement = True
+    #         return False
+    #     else:
+    #         _TwoBodyMatrixElement_JCoupled._run(self)
+    
+    def _nullConditionsOnParticleLabelStates(self):
         
         if self.bra.isospin_3rdComponent != 1: 
             ## same number of p or n for bra and ket_ already verified.
             self._value = 0
             self._isNullMatrixElement = True
-            
-        else:
-            _TwoBodyMatrixElement_JCoupled._run(self)
+            return False
+        return True
     
     def _deltaConditionsForCOM_Iteration(self):
         """ This condition ensure the antisymmetrization (without calling 
@@ -200,7 +208,6 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
-        
         return self.centerOfMassMatrixElementEvaluation()
     
 
@@ -267,7 +274,7 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         phs = ((-1)**self.S_bra)
         fact = 1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0])
         
-        ## Antisymmetrization factor 
+        ## Antisymmetrization_ factor 
         fact *= (1 - ((-1)**(self.T + self.S_bra + 
                              self.L_bra + self.ket.l2 + self.ket.l1)))
         
@@ -323,7 +330,6 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
         
         method bypasses calling from main or io_manager
         """
-                
         # Refresh the Force parameters
         if cls.PARAMS_FORCE:
             cls.PARAMS_FORCE = {}
@@ -371,20 +377,15 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
             #         * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
             #         * 2 * Constants.M_MEAN)
         
-        # phs = self.L_ket + self.ket.l1 + self.ket.l2 - self.T - self.S_bra
-        # symm_fact = 1 - ((-1)**phs)
-        # if symm_fact == 0:
-        #     return 0.0
-        symm_fact = 1
-        
         fact = safe_wigner_6j(self.bra.l1, self.bra.l2, self.L_bra, 
                               self.ket.l2, self.ket.l1, 1)
-        fact *= ((-1)**(self.ket.l1 + self.bra.l2 + self.L_bra)) * symm_fact
+        fact *= ((-1)**(self.ket.l1 + self.bra.l2 + self.L_bra))
             
         nabla_1 = self._nablaReducedMatrixElement(1)
         nabla_2 = self._nablaReducedMatrixElement(2)
         if self.DEBUG_MODE:
-            XLog.write("Lme", nabla1=nabla_1, nabla2=nabla_2, f=fact, kin_f= self._kin_factor)
+            XLog.write("Lme", nabla1=nabla_1, nabla2=nabla_2, f=fact, 
+                       kin_f= self._kin_factor)
             
         return fact * self._kin_factor * nabla_1 * nabla_2
         

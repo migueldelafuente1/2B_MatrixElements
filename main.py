@@ -23,7 +23,8 @@ from matrix_elements.SpinOrbitForces import SpinOrbitForce, ShortRangeSpinOrbit_
     SpinOrbitForce_JTScheme 
 from helpers.Log import XLog
 from matrix_elements.CentralForces import CoulombForce, KineticTwoBody_JTScheme,\
-    DensityDependentForce_JTScheme
+    DensityDependentForce_JTScheme, CentralForce_JTScheme
+from helpers.TBME_SpeedRunner import TBME_SpeedRunner
 
 
 if __name__ == "__main__":
@@ -36,8 +37,12 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
+        # _runner = TBME_Runner(filename='input_D1S.xml')
         # _runner = TBME_Runner(filename='input.xml')
-        _runner = TBME_Runner(filename='input_D1S.xml')
+        # _runner.run()
+        
+        # _runner = TBME_SpeedRunner(filename='input_D1S.xml')
+        _runner = TBME_SpeedRunner(filename='input.xml')
         _runner.run()
         print(" The program has ended without incidences.")
         
@@ -48,50 +53,52 @@ if __name__ == "__main__":
         SHO_Parameters.b_length     : 1.5, #1.4989,
         SHO_Parameters.hbar_omega   : 18.4586,
         
-        CentralMEParameters.potential : PotentialForms.Power,
-        CentralMEParameters.mu_length : 1,
+        CentralMEParameters.potential : PotentialForms.Exponential,
+        CentralMEParameters.mu_length : 1.5,
         CentralMEParameters.constant  : 1,
         CentralMEParameters.n_power   : 0,
         
-        DensityDependentParameters.alpha : 1/3,
-        DensityDependentParameters.x0 : 1,
-        DensityDependentParameters.constant : 1390.6
+        # DensityDependentParameters.alpha : 1/3,
+        # DensityDependentParameters.x0 : 1,
+        # DensityDependentParameters.constant : 1390.6
     }
-    J = 1
+    J = 0
     T = 0
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                   QN_1body_jj(0,2,3), J, T)
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
+                                   QN_1body_jj(0,0,1), J, T)
     ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                   QN_1body_jj(0,2,3), J, T)
+                                   QN_1body_jj(0,1,1), J, T)
     
-    KineticTwoBody_JTScheme.turnDebugMode(True)
-    KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
-    me = KineticTwoBody_JTScheme(bra_, ket_)
+    CentralForce_JTScheme.turnDebugMode(True)
+    CentralForce_JTScheme.setInteractionParameters(**kwargs)
+    me = CentralForce_JTScheme(bra_, ket_)
     print("me: ", me.value)
     me.saveXLog('me_kin')
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
     XLog.resetLog()
     
-    with open('results/BB_LS_SPSDPF_1.com', 'r') as f:
-        data = f.readlines()[1:]
+    # with open('results/BB_LS_SPSDPF_1.com', 'r') as f:
+    #     data = f.readlines()[1:]
+    #
+    # k = 0
+    # for i in range(len(data)):
+    #     if k == 0:
+    #         _, _, a, b, c, d, _, _ = data[i].split()
+    #         Ls = []
+    #         for x in (a, b, c, d):
+    #             x = int(x)
+    #             lx = (x - (x//10000))//100
+    #             Ls.append(lx)
+    #         if (Ls[0] + Ls[1]) % 2 != (Ls[2] + Ls[3]) % 2:
+    #             print("Not good parity:", a, b, c, d) 
+    #     elif k == 2:
+    #         k = 0
+    #         continue
+    #     k += 1
+    #
+    # print('end')
     
-    k = 0
-    for i in range(len(data)):
-        if k == 0:
-            _, _, a, b, c, d, _, _ = data[i].split()
-            Ls = []
-            for x in (a, b, c, d):
-                x = int(x)
-                lx = (x - (x//10000))//100
-                Ls.append(lx)
-            if (Ls[0] + Ls[1]) % 2 != (Ls[2] + Ls[3]) % 2:
-                print("Not good parity:", a, b, c, d) 
-        elif k == 2:
-            k = 0
-            continue
-        k += 1
-            
-    print('end')
+    
     # kwargs[CentralMEParameters.n_power] = 0
     # ShortRangeSpinOrbit_JTScheme.turnDebugMode()
     # ShortRangeSpinOrbit_JTScheme.setInteractionParameters(**kwargs)
@@ -100,10 +107,10 @@ if __name__ == "__main__":
     # print("me short: ", me.value)
     # me.saveXLog('me_shortLS')
     
-    # KineticTwoBody_JTScheme.turnDebugMode(True)
-    # KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
-    # me = KineticTwoBody_JTScheme(bra_, ket_)
-    # me.saveXLog("kin2B")
+    KineticTwoBody_JTScheme.turnDebugMode(True)
+    KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
+    me = KineticTwoBody_JTScheme(bra_, ket_)
+    me.saveXLog("kin2B")
     
     
     
