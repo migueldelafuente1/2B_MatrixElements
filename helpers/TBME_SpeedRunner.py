@@ -127,7 +127,7 @@ class TBME_SpeedRunner(TBME_Runner):
     
     def _calculateCommonPhaseKet9j(self):
         """ Common phase for the direct antisymmetrized m.e. """
-        pwr = 2*(self.ket_1.j + self.ket_2.j) + self.ket_1.l + self.ket_2.l
+        pwr = (self.ket_1.j + self.ket_2.j)//2 + self.ket_1.l + self.ket_2.l
         self._common_phs_9j = (-1)**(pwr + self.J + 1)
     
     def _computeForValenceSpaceJCoupled(self):
