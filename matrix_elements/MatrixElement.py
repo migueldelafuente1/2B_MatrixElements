@@ -41,6 +41,32 @@ class _TwoBodyMatrixElement:
     def __checkInputArguments(self, *args, **kwargs):
         raise MatrixElementException("Abstract method, implement me!")
     
+    @staticmethod
+    def _automaticParseInteractionParameters(map_, kwargs_dict):
+        """ 
+        perform the parsing for standard arguments, map must have the Attribute
+        scheme to import from any incoming dictionary.
+        i.e:
+        :map_ <dict>:{k: <tuple>} (internal attr_ key, type_class to convert it)
+        
+        _map = {
+            CentralMEParameters.potential : (AttributeArgs.name, str),
+            CentralMEParameters.constant  : (AttributeArgs.value, float),
+            CentralMEParameters.mu_length : (AttributeArgs.value, float),
+            CentralMEParameters.n_power   : (AttributeArgs.value, int)
+            }
+        :kwargs
+        """
+        for arg, value in kwargs_dict.items():
+            if arg in map_:
+                attr_parser = map_[arg]
+                attr_, parser_ = attr_parser
+                kwargs_dict[arg] = parser_(kwargs_dict[arg].get(attr_))
+            elif isinstance(value, str):
+                kwargs_dict[arg] = float(value) if '.' in value else int(value)
+            
+        return kwargs_dict
+    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """ Implement the parameters for the interaction calculations. """
@@ -148,6 +174,8 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     _BREAK_ISOSPIN = True
     COUPLING = CouplingSchemeEnum.JJ
     EXPLICIT_ANTISYMM = False
+    RECOUPLES_LS = True  
+    ## Set RECOUPLES_LS as False if the interaction don't require LS re_coupling
     
     def __init__(self, bra, ket, run_it=True):
         

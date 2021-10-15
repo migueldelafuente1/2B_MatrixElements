@@ -7,6 +7,7 @@ from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
     ShortRangeSpinOrbit_JTScheme
 from matrix_elements.MatrixElement import _MatrixElementReader
+from matrix_elements.ZeroRangeForces import SDI_JTScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -30,6 +31,8 @@ def switchMatrixElementType(force, J_scheme=False):
         return KineticTwoBody_JTScheme
     elif force == ForceEnum.Density_Dependent:
         return DensityDependentForce_JTScheme
+    elif force == ForceEnum.SDI:
+        return SDI_JTScheme
     
     elif force == ForceEnum.SpinOrbit:
         return SpinOrbitForce_JTScheme

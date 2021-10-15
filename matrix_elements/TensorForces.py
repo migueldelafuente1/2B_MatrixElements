@@ -58,13 +58,14 @@ class TensorForce(TalmiTransformation):#):
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
-            for arg, value in kwargs.items():
-                if arg in _map:
-                    attr_parser = _map[arg]
-                    attr_, parser_ = attr_parser
-                    kwargs[arg] = parser_(kwargs[arg].get(attr_))
-                elif isinstance(value, str):
-                    kwargs[arg] = float(value) if '.' in value else int(value)
+            # for arg, value in kwargs.items():
+            #     if arg in _map:
+            #         attr_parser = _map[arg]
+            #         attr_, parser_ = attr_parser
+            #         kwargs[arg] = parser_(kwargs[arg].get(attr_))
+            #     elif isinstance(value, str):
+            #         kwargs[arg] = float(value) if '.' in value else int(value)
+            kwargs = TensorForce._automaticParseInteractionParameters(_map, kwargs)
         
         super(TensorForce, cls).setInteractionParameters(*args, **kwargs)
     

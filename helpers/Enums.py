@@ -96,6 +96,9 @@ class DensityDependentParameters(Enum):
     x0    = 'x0'
     alpha = 'alpha'
 
+class SDIParameters(Enum):
+    constants = 'constants'
+
 class ForceFromFileParameters(Enum):
     file  = 'file'
     options = 'options'
@@ -114,7 +117,7 @@ ForceVariablesDict = {
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.Density_Dependent : DensityDependentParameters,
     ForceEnum.Kinetic_2Body : Enum,
-    ForceEnum.SDI : None,
+    ForceEnum.SDI           : SDIParameters,
     ForceEnum.Multipole_Expansion: None,
     ForceEnum.Force_From_File: ForceFromFileParameters
 }
@@ -146,6 +149,13 @@ class AttributeArgs(Enum):
         
         class Potential(Enum):
             name = 'name'
+        
+        class SDI(Enum):
+            A_T0 = 'AT0'
+            A_T1 = 'AT1'
+            B = 'B' # when activated, MSDI interaction
+            C = 'C'
+            # Brussaard_ & Glaudemans_ book (1977)
         
     class FileReader(Enum):
         ignorelines = 'ignorelines'

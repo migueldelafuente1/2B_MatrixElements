@@ -9,7 +9,7 @@ import numpy as np
 
 from helpers.TBME_Runner import TBME_Runner, TBME_RunnerException
 from helpers.Enums import InputParts as ip, ForceEnum, CouplingSchemeEnum
-from helpers.Helpers import safe_wigner_9j, readAntoine
+from helpers.Helpers import safe_wigner_9j, readAntoine, printProgressBar
 from matrix_elements import switchMatrixElementType
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_J_Coupling,\
     QN_2body_jj_JT_Coupling
@@ -33,7 +33,8 @@ class TBME_SpeedRunner(TBME_Runner):
     
     def __init__(self, filename='', verbose=True, manual_input={}):
         TBME_Runner.__init__(self, filename,  verbose, manual_input)
-            
+        
+        self._allForcesAreLS = True
         # what's new??
         self.results_J  = {}
         self.results_JT = {}
@@ -51,29 +52,31 @@ class TBME_SpeedRunner(TBME_Runner):
         TBME_Runner._checkHamilTypeAndForces(self)
     
     def _setForces(self):
-        
+        """ Set the properties of the m.e. classes: 
+            Explicit Antisymmetrization_, Scheme
+        and instance the auxiliary lists to put the L/S quantum numbers, norms ...
+        """
         _forcesAttr = ip.Force_Parameters
-        
         sho_params = getattr(self.input_obj, ip.SHO_Parameters)
         
         for force, force_list in getattr(self.input_obj, _forcesAttr).items():
             if len(force_list) > 1:
                 ## Verify forces do not repeat
                 if force == ForceEnum.Force_From_File:
-                    i = 0
-                    for params in force_list:
+                    for i, params in enumerate(force_list):
                         force_str = force + str(i)
-                        ## read from file case
+                        ## read from file case 
                         self._readMatrixElementsFromFile(force_str, **params)
+                    continue ## skip the rest of the steps
                 else:
                     raise TBME_SpdRunnerException("Cannot compute two times "
                         "the same interaction: [{}] len={}".format(force, 
                                                                    len(force_list)))
-            ## define interactions            
+            ## define interactions
+            self._allForcesAreLS *= force.RECOUPLES_LS
+            
             self.forces.append(switchMatrixElementType(force))
             self.forcesDict[force] = len(self.forces) - 1
-            ## unnecessary
-            # self.tbme_class.resetInteractionParameters(also_SHO=True) 
             self.forces[-1].setInteractionParameters(**force_list[0], **sho_params)
             
             self.forcesIsAntisym.append(self.forces[-1].EXPLICIT_ANTISYMM)
@@ -89,12 +92,7 @@ class TBME_SpeedRunner(TBME_Runner):
             self.valid_L_forKets.append([None]*dim_t)
             self.valid_S_forKets.append([None]*dim_t)
             self.forcesNorms.append([None]*dim_t)
-            
-            
-        if self._com_correction:
-            ## add JT kinetic term for calculation (the last)
-            pass
-        
+    
     def run(self):
         ## 
         """
@@ -179,10 +177,9 @@ class TBME_SpeedRunner(TBME_Runner):
                 self._tic = time()
                 
                 for J in range(J_min, J_max +1):
-                    self.J = J
-                    self._calculateCommonPhaseKet9j()
-                    
+                    self.J = J                    
                     self._evaluateMatrixElementValues_recoplingJtoLS()
+    
     
     def _evaluateMatrixElementValues_recoplingJtoLS(self):
         """ 
@@ -192,26 +189,22 @@ class TBME_SpeedRunner(TBME_Runner):
         self._phs_exch_J = 1 # TODO: Is the same for all mt states ??? j1+j2+J
         self._phs_exch_T = [1, 1]
         self._phase_9j   = 1
+        self._calculateCommonPhaseKet9j()
         
-        bra, ket = self._qqnn_curr
-        if bra == (1, 1) and ket == (101, 101):
-            _ = 0
-        for force, f in self.forcesDict.items():
-            
+        for _, f in self.forcesDict.items():
             if self.forcesScheme[f] == self._Scheme.J:
                 self._instance_J_SchemeWF(f)
             else:
                 self._instance_JT_SchemeWF(f)
         
+        self._non_LS_Forces_ME()
         self._LS_recoupling_ME()
-        ## TODO: multiply here the normalization
+    
     
     def _instance_J_SchemeWF(self, force_index):
         f = force_index
         ## TODO: remove self.bra and ket if is not necessary out of this method
         for m, mts in self._JSchemeIndexing.items():
-            #tic = time()
-            
             self.bra_1.m_t = mts[0]
             self.bra_2.m_t = mts[1]
             self.ket_1.m_t = mts[2]
@@ -302,13 +295,39 @@ class TBME_SpeedRunner(TBME_Runner):
         elif qn == 'L':
             self._validKetTotalAngularMomentums = set(valids)
         
+    def _non_LS_Forces_ME(self):
+        """ Append to the results J or JT directly.
+        
+        WARNING !! : doesn't multiply by forceNorms or Antisymmetrize:
+         
+        Forces in this scheme must be implicitly Normalized (since the normali-
+        zation takes place in the _run() and does not go trough _LScoupled_ME())
+        
+        """
+        if self._allForcesAreLS:
+            return
+        
+        for f, force in enumerate(self.forces):
+            _ = 0
+            if not force.RECOUPLES_LS:
+                bra, ket = self._qqnn_curr
+                if self.forcesScheme[f] == self._Scheme.JT:
+                    for t in (0, 1):
+                        val = self.me_instances[f][t].value
+                        self.results_JT[bra][ket][t][self.J] += val
+                else:
+                    for t in range(6):
+                        val = self.me_instances[f][t].value
+                        self.results_J[bra][ket][self.J][t] += val
+                    
+            
+    
     def _LS_recoupling_ME(self):
         """ 
         Obtains the non antisymmetrized matrix elements by recoupling to total
         L and S and call the Inner Interaction recoupled to LS - T scheme.
         """
         #sum_ = 0.
-        
         L_max = self.bra_1.l + self.bra_2.l
         L_min = abs(self.bra_1.l - self.bra_2.l)
         
@@ -338,9 +357,7 @@ class TBME_SpeedRunner(TBME_Runner):
     def __auxSkipCurrentME(self, f, t):
         """ auxiliary function to skip invalid matrix elements """
         if self.me_instances[f][t].isNullMatrixElement:
-            return True
-        # if self.isNullValue(self.forcesNorms[f][t]):
-        #     return True  
+            return True 
         if self.S_ket not in self.valid_S_forKets[f][t]:
             return True
         if self.L_ket not in self.valid_L_forKets[f][t]:
@@ -359,8 +376,6 @@ class TBME_SpeedRunner(TBME_Runner):
         all_null = True
         _last = len(self.me_instances) - 1
         for f in range(len(self.me_instances)):
-            if f == _last:
-                _ = 0
             for t in range(len(self.me_instances[f])):
                 
                 if self.__auxSkipCurrentME(f, t):
@@ -400,11 +415,11 @@ class TBME_SpeedRunner(TBME_Runner):
                         self.results_JT[bra][ket][t][self.J] += value
                     
                 all_null = all_null and self.isNullValue(value)
-                    
-                ## TODO: print times/ count progress
-        if not all_null and self.PRINT_LOG:
-            print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})>'
-                  .format(self._count, self._total_me, time() - self._tic, 
-                          bra, ket, self.J))
-            # print('\t= {:.8} '.format(me.value))
-    
+        
+        if not all_null:
+            if self.PRINT_LOG:
+                print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})>'
+                      .format(self._count, self._total_me, time() - self._tic, 
+                              bra, ket, self.J))
+            else: 
+                printProgressBar(self._count, self._total_me)

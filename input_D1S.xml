@@ -51,6 +51,7 @@
 		<Q_Number sp_state='10407' sp_energy=''/>
 		<Q_Number sp_state='30001' sp_energy=''/>
 		<Q_Number sp_state='20203' sp_energy=''/>
+		<!-- valence space-->
 	</Valence_Space>
 	<Core/>
 	<Force_Parameters>

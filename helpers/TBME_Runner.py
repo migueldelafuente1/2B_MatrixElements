@@ -18,7 +18,7 @@ from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
     QN_2body_jj_J_Coupling
 from copy import deepcopy
 from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
-    Constants, almostEqual
+    Constants, almostEqual, printProgressBar
 
 import os
 import numpy as np
@@ -152,6 +152,7 @@ The program will exclude it from the interaction file and will produce the .com 
         J_schemeForces = []
         JT_schemeForces = []
         T_breaking = []
+        self._forces2ReadFromFile = False
         
         for force in getattr(self.input_obj, _forcesAttr):
             
@@ -168,7 +169,9 @@ The program will exclude it from the interaction file and will produce the .com 
                                            "class can only run in J or JT scheme")
             
             if (CouplingSchemeEnum.JJ in f_scheme):
-                if force == ForceEnum.Force_From_File: continue
+                if force == ForceEnum.Force_From_File: 
+                    self._forces2ReadFromFile = True
+                    continue
                 elif force == ForceEnum.Kinetic_2Body:
                     print(self.__advertence_Kin2Body)
                     self._com_correction = True
@@ -196,7 +199,7 @@ The program will exclude it from the interaction file and will produce the .com 
             if len(T_breaking) > 0:
                 raise TBME_RunnerException("Cannot compute isospin-breaking interactions"
                     "{} to write in hamilType format 1-2 (JT scheme)".format(T_breaking))
-            if len(JT_schemeForces) == 0:
+            if len(JT_schemeForces) == 0 and (not self._forces2ReadFromFile):
                 # TODO: might convert to JT scheme J forces.
                 raise TBME_RunnerException("Cannot compute J forces JT scheme")
         
@@ -293,10 +296,11 @@ The program will exclude it from the interaction file and will produce the .com 
         else:
             # all were defined
             pass
-            
-    def _computeForValenceSpaceJTCoupled(self, force=''):
+    
+    def _sortQQNNFromTheValenceSpace(self):
         """ 
-        method to run the whole valence space m.e. in the JT scheme
+        sort and combine in order q. numbers for the two body wave functions
+        access by attribute self._twoBodyQuantumNumbersSorted
         """
         q_numbs = getattr(self.input_obj, ip.Valence_Space)
         self.valence_space = valenceSpaceShellNames(q_numbs)
@@ -305,8 +309,14 @@ The program will exclude it from the interaction file and will produce the .com 
         q_numbs = sorted(q_numbs)#, reverse=True)
         q_numbs = list(combinations_with_replacement(q_numbs, 2))
         
-        count_ = 0
-        total_me_ = len(q_numbs)*(len(q_numbs)+1)//2
+        self._twoBodyQuantumNumbersSorted = q_numbs
+    
+    def _computeForValenceSpaceJTCoupled(self, force=''):
+        """ 
+        method to run the whole valence space m.e. in the JT scheme
+        """
+        q_numbs = self._twoBodyQuantumNumbersSorted
+        
         for i in range(len(q_numbs)):
             n1_bra = QN_1body_jj(*readAntoine(q_numbs[i][0], l_ge_10=True))
             n2_bra = QN_1body_jj(*readAntoine(q_numbs[i][1], True))
@@ -325,7 +335,7 @@ The program will exclude it from the interaction file and will produce the .com 
                 J_min = max(abs(n1_ket.j - n2_ket.j) // 2, J_bra_min)
                 J_max = min((n1_ket.j + n2_ket.j) // 2,    J_bra_max)
                 
-                count_ += 1
+                self._count += 1
                 for T in (0, 1):
                     # assume M.E. cannot couple <(JT)|V|J'T'> if J', T' != J, T
                     for J in range(J_min, J_max +1):
@@ -339,8 +349,8 @@ The program will exclude it from the interaction file and will produce the .com 
                         
                         if me.value and self.PRINT_LOG:
                             print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{}T:{})> {}'
-                                  .format(count_, total_me_,
-                                          time.time()-tic, 
+                                  .format(self._count, self._total_me,
+                                          time.time()-tic,
                                           bra.shellStatesNotation, 
                                           ket.shellStatesNotation, J, T, force))
                             print('\t= {:.8} '.format(me.value))                        
@@ -351,15 +361,8 @@ The program will exclude it from the interaction file and will produce the .com 
         Indexing for J row:
             {0: pppp, 1:pnpn, 2:pnnp, 3:nppn, 4:npnp, 5:nnnn}
         """
-        q_numbs = getattr(self.input_obj, ip.Valence_Space)
-        self.valence_space = valenceSpaceShellNames(q_numbs)
+        q_numbs = self._twoBodyQuantumNumbersSorted
         
-        q_numbs = map(lambda qn: int(qn), q_numbs)
-        q_numbs = sorted(q_numbs)#, reverse=True)
-        q_numbs = list(combinations_with_replacement(q_numbs, 2))
-        
-        count_ = 0
-        total_me_ = len(q_numbs)*(len(q_numbs)+1)//2
         for i in range(len(q_numbs)):
             n1_bra = QN_1body_jj(*readAntoine(q_numbs[i][0], l_ge_10=True))
             n2_bra = QN_1body_jj(*readAntoine(q_numbs[i][1], True))
@@ -379,7 +382,7 @@ The program will exclude it from the interaction file and will produce the .com 
                 aux = [(J, {}) for J in range(J_min, J_max +1)]
                 self.results[q_numbs[i]][q_numbs[j]] = deepcopy(dict(aux))
                 
-                count_ += 1
+                self._count += 1
                 for J in range(J_min, J_max +1):
                     for m, mts in self._JSchemeIndexing.items():
                         tic = time.time()
@@ -397,13 +400,20 @@ The program will exclude it from the interaction file and will produce the .com 
                         
                         if me.value and self.PRINT_LOG:
                             print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})> {}'
-                                  .format(count_, total_me_,
+                                  .format(self._count, self._total_me,
                                           time.time()-tic, 
                                           bra, ket, J, force))
-                            print('\t= {:.8} '.format(me.value))                        
-    
+                            print('\t= {:.8} '.format(me.value))
+                if not self.PRINT_LOG:
+                    printProgressBar(self._count, self._total_me, 
+                                     prefix='Progress '+force+':')
     
     def _computeForValenceSpace(self, force):
+        len_q_numbs = len(self._twoBodyQuantumNumbersSorted)
+        # start the count for printing
+        self._count = 0
+        self._total_me = (len_q_numbs * (len_q_numbs + 1)) // 2
+        
         if self.interactionSchemes[force] == self._Scheme.J:
             self._computeForValenceSpaceJCoupled(force)
         elif self.interactionSchemes[force] == self._Scheme.JT:
@@ -488,8 +498,10 @@ The program will exclude it from the interaction file and will produce the .com 
         Calculate all the matrix elements for all the interactions, and 
         print its combination in a file.
         """
-        self._defineValenceSpaceEnergies()        
+        self._defineValenceSpaceEnergies()
+        self._sortQQNNFromTheValenceSpace()      
         self._checkHamilTypeAndForces()
+        
         
         _forcesAttr = ip.Force_Parameters
         times_ = {}

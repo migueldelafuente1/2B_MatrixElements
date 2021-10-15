@@ -45,15 +45,16 @@ class CentralForce(TalmiTransformation):
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
+            #
+            # for arg, value in kwargs.items():
+            #     if arg in _map:
+            #         attr_parser = _map[arg]
+            #         attr_, parser_ = attr_parser
+            #         kwargs[arg] = parser_(kwargs[arg].get(attr_))
+            #     elif isinstance(value, str):
+            #         kwargs[arg] = float(value) if '.' in value else int(value)
+            kwargs = CentralForce._automaticParseInteractionParameters(_map, kwargs)
             
-            for arg, value in kwargs.items():
-                if arg in _map:
-                    attr_parser = _map[arg]
-                    attr_, parser_ = attr_parser
-                    kwargs[arg] = parser_(kwargs[arg].get(attr_))
-                elif isinstance(value, str):
-                    kwargs[arg] = float(value) if '.' in value else int(value)
-        
         super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
     
     def _validKet_relativeAngularMomentums(self):
@@ -323,10 +324,7 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
         
         :b_length 
         :hbar_omega
-        :potential       <str> in PotentialForms Enumeration
-        :mu_length       <float>  fm
-        :constant        <float>  MeV
-        :n_power         <int>
+        __ THIS INTERACTION CANNOT BE FIXED __
         
         method bypasses calling from main or io_manager
         """

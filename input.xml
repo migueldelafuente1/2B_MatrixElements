@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>test_d1s_SPSDPF</Output_Filename>
+		<Output_Filename>SDI_SP</Output_Filename>
 		<!--Output_Filename>kin2_geo_SPSD</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
@@ -26,18 +26,32 @@
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		
-		<Q_Number sp_state='307' sp_energy=''/>
-		
+		<!--Q_Number sp_state='307' sp_energy=''/>
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
-		<!--Q_Number sp_state='409' sp_energy=''/>
 		
+		<Q_Number sp_state='409' sp_energy=''/>
 		<Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
 		<Q_Number sp_state='20001' sp_energy=''/>
 		<Q_Number sp_state='10203' sp_energy=''/>
-		<Q_Number sp_state='511' sp_energy=''/-->
+		
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
+		
+		<Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/>
+		< valence space-->
 	</Valence_Space>
 	<Core>
 		<innert_core protons='0' neutrons ='0' name=''/>
@@ -56,7 +70,7 @@
 			<Bartlett 	part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 			<Heisenberg part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 		</Brink_Boeker>
-		<Brink_Boeker active='True'>
+		<Brink_Boeker active='False'>
 			<!-- Brink-Boeker force: D1S, Wls=120 t0=1390.6 -->
 			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
 			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
@@ -73,7 +87,7 @@
 			<constant	value='-70.0' 	units='MeV'/>
 			<mu_length	value='1.4' 	units='fm'/>
 		</Central>
-		<Central active='False'>
+		<Central active='True'>
 			<!-- Central force potential,
 				Shaped as exponential, gaussian, power term, yukawa or coulomb 
 				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
@@ -82,7 +96,7 @@
 			<constant	value='1.44197028' 	units='MeV'/>
 			<mu_length	value='1' 	units='fm'/>
 		</Central>
-		<Coulomb active='True'>
+		<Coulomb active='False'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
 		<GaussianSeries active='False'>
@@ -90,7 +104,7 @@
 				 in fm. TODO: extend to other potentials-->
 			<part potential='gaussian' constant='1000.0' mu_length='0.1'/>
 			<part potential='gaussian' constant='-60.0'	 mu_length='0.3'/>
-			<part potential='gaussian' constant='200.0'  mu_length='0.5'/>
+			<part potential='yukawa' constant='200.0'  mu_length='0.5'/>
 			<part potential='gaussian' constant='-120.0' mu_length='0.7'/>
 			<part potential='gaussian' constant='500.0'  mu_length='0.9'/>
 			<part potential='gaussian' constant='-10.0'  mu_length='1.25'/>
@@ -149,14 +163,23 @@
 		</Density_Dependent>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
-			<file name='results/.sho'/>
+			<file name='results/SDI_SP.sho'/>
 			<options ignorelines='4' constant='1.0' l_ge_10='True'/>
+			<!--scheme name='J'/-->
+		</Force_From_File>
+		<Force_From_File active='True'>
+			<!-- Import an interaction already saved -->
+			<file name='results/dd_alpha1_16O_SPSD.2b'/>
+			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
 		<Multipole_Expansion active='False'>
 			<!-- Multipolar expansion of a predefined potential -->
 		</Multipole_Expansion>
-		<SDI active='False'>
+		<SDI active='True'>
+			<!-- Surface Delta Interaction and Modified SDI, zero range forces
+				parametrized form Brussaard_ & Glaudemans_ book (1977) -->
+			<constants AT0='1' AT1='1' B='1.0'  C='1.0' units='Mev'/>
 		</SDI>
 	</Force_Parameters>
 </input>

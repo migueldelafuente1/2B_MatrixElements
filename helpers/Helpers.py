@@ -208,6 +208,30 @@ def _B_coeff_memo_accessor(n, l, n_q, l_q, p):
 #===============================================================================
 #     
 #===============================================================================
+# Print iterations progress
+def printProgressBar (iteration, total, prefix='Progress:'):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+    
+    decimals    - Optional  : positive number of decimals in percent complete (Int)
+    length      - Optional  : character length of bar (Int)
+    """
+    # decimals = 1
+    length = 50
+    fill = '*'
+    
+    # percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    percent = "{:5.2f}".format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '_' * (length - filledLength)
+    print("\r{0} |{1}| {2}% complete\r".format(prefix, bar, percent), end='')#, end = '\r')
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+
 def prettyPrintDictionary(dictionary, level=0, delimiter=' . '):
     
     header = ''.join([delimiter]*level)
