@@ -55,7 +55,7 @@ Currently implemented two body interactions (All computed in JT scheme):
 * **Series of gaussians**, an extension of the Brink-Boeker sum of gaussians to as many you want (To expand another potentials).
 * Get them **from a file**, reuse previous computations to save time (also valid to multiply the results by a global factor).
 * **Kinetic two-body** matrix element, necessary to evaluate the *center of mass* correction. Be careful with the internal setting of nucleon mass and *HbarC* constants in the code.
-
+* **SDI / MSDI** (Surface Delta Interaction / Modified SDI) interaction is *Zero-range* and isospin-dependant. The modified version append a repulsive constant for the diagonal matrix elements in order to correct the binding energy misbehaviour of the SDI (Brussaard_ & Glaudemans_ book (1977)).
 ### Evaluating matrix elements individually
 
 For educational, testing and other purposes, the elements are instanciable to be evaluated. The progress or steps can be printed or debbuged with suitable tools (See for example the ``XLog`` class for debugging the matrix element in tree format).
@@ -97,6 +97,18 @@ me.saveXLog('me_test')
 
 
 ### Efficient computing of valence Spaces. TBME_SpeedRunner.
-Currently developing ...
 
 **TBME_Runner** was a first approach to evaluate the matrix elements, but evaluates the interactions one by one. That is: set an interaction, run the whole valence space for it and then repeat with the next. Nevertheless, most of the matrix elements, besides being in *J* or *JT scheme*, they internally are evaluated in the *LS scheme*. The new runner (**TBME_SpeedRunne**) invert the process: first it set each interaction (cannot be of the same type) and then evaluates the valence space, doing all the LS/LST evaluations in an intermediate step.
+
+The conditions to run this class are:
+* Can only evaluate one time each of matrix element. i.e If you want to evaluate two central gaussian potentials consider use the class **Series of gaussians** or evaluate them previously with  **TBME_Runner** and import them with **from a file**.
+* There is no limit in the files to import.
+* Forces with no inner LS recoupling must be antisymmetrized and normalized. To be executed, implement a dummy method for L and S recoupling to skip them: ``_validKetTotalSpins _validKetTotalAngularMomentums``:
+
+```
+def _validKetTotalSpins(self):
+	return tuple()
+```
+* main method to run must be ``_run()`` and must perform only the normalization and the explicit antisymmetrization (if necessary, remeber that due 9j symmetry this is performed after the LS recoupling). **SpeedRunner** goes directly to evaluate method ``_LSCoupledME()`` defined for the interaction.
+
+In most of the tests **SpeedRunner** saves nearly a 50% of the total computation time for more than 3 forces, not (1/N\_forces)% since the only part of the process skipped is the LS recoupling. For most of the matrix elements, this part less expensive computationally than the inner LS matrix element operations.
