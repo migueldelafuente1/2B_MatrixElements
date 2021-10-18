@@ -72,10 +72,10 @@ class TBME_SpeedRunner(TBME_Runner):
                     raise TBME_SpdRunnerException("Cannot compute two times "
                         "the same interaction: [{}] len={}".format(force, 
                                                                    len(force_list)))
-            ## define interactions
-            self._allForcesAreLS *= force.RECOUPLES_LS
             
             self.forces.append(switchMatrixElementType(force))
+            ## define interactions
+            self._allForcesAreLS *= self.forces[-1].RECOUPLES_LS
             self.forcesDict[force] = len(self.forces) - 1
             self.forces[-1].setInteractionParameters(**force_list[0], **sho_params)
             
