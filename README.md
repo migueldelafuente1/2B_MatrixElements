@@ -47,12 +47,22 @@ computation.run()
 ```
 
 Currently implemented two body interactions (All computed in JT scheme):
-* **Central** interactions in the form of gaussians, r powers, 1/r or yukawa.
+* **Central** interactions in the form of:
+
+1. Gaussians (keyword `potential='gaussian'`): A * exp(-(r/a)^2)
+2. r powers (`potential='power'`): A * (r/a)^N
+3. 1/r form (`potential='coulomb'`): A * (a/r)
+4. Exponential (`potential='exponential'`): A * exp(-(r/a))
+5. Yukawa (`potential='yukawa'`): A * exp(-(r/a)) / (r/a)
+6. Gaussian over power of r (`potential='gaussian_power'`): A * exp(-(r/a)^2) / (r/a)^N
+
+where A, a and N are mandatory parameters to give when setting up. A=`constant` (in MeV), a=`mu_length` (in fm) and N=`n_power`.
+
 * **Coulomb** interaction (J scheme)
 * **Brink-Boeker** like interactions or gaussian potential series.
 * **Short range Spin-Orbit** approximation potential
 * Fixed **Density dependent** (Nuclear Fermi shell filling approximation).
-* **Series of gaussians**, an extension of the Brink-Boeker sum of gaussians to as many you want (To expand another potentials).
+* **Series of potentials**, an extension of the Brink-Boeker sum of radial potential forms (previous Central enumeration) to as many you want (I.e, to expand other potentials in terms of gaussians).
 * Get them **from a file**, reuse previous computations to save time (also valid to multiply the results by a global factor).
 * **Kinetic two-body** matrix element, necessary to evaluate the *center of mass* correction. Be careful with the internal setting of nucleon mass and *HbarC* constants in the code.
 * **SDI / MSDI** (Surface Delta Interaction / Modified SDI) interaction is *Zero-range* and isospin-dependant. The modified version append a repulsive constant for the diagonal matrix elements in order to correct the binding energy misbehaviour of the SDI (Brussaard_ & Glaudemans_ book (1977)).

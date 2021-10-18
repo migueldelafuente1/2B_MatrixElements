@@ -8,7 +8,7 @@ from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled
 from matrix_elements.transformations import TalmiTransformation
 
 from helpers.Enums import BrinkBoekerParameters as bb_p, CentralMEParameters,\
-    PotentialForms, GaussianSeriesParameters
+    PotentialForms, PotentialSeriesParameters
 from helpers.Enums import AttributeArgs
 from helpers.Enums import SHO_Parameters
 from helpers.integrals import talmiIntegral
@@ -171,7 +171,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
             
 
 
-class GaussianSeries_JTScheme(BrinkBoeker):
+class PotentialSeries_JTScheme(BrinkBoeker):
     
     """
     The gaussian_ series are useful to mimic non analytically integrable
@@ -182,7 +182,7 @@ class GaussianSeries_JTScheme(BrinkBoeker):
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """ 
-        Implement the parameters for the Brink-Boeker interaction calculation. 
+        Implement the parameters for the Talmi Integrals. 
         
         """
         # Refresh the Force parameters
@@ -192,26 +192,30 @@ class GaussianSeries_JTScheme(BrinkBoeker):
         _b = SHO_Parameters.b_length
         cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
         
-        part      = GaussianSeriesParameters.part
-        potential = CentralMEParameters.potential
+        part    = PotentialSeriesParameters.part
+        pot_key = CentralMEParameters.potential
         
         cls.numberGaussians = 0
         for param, values in kwargs.items():
-            if not param.startswith(part): 
+            if not param.startswith(part):
                 continue
             i = int(param.split(part)[1])
             cls.PARAMS_FORCE[i] = {}
-            
-            cls.PARAMS_FORCE[i][potential] = values.get(potential)
+            potential = values.get(pot_key)
+            cls.PARAMS_FORCE[i][pot_key] = potential
             for attr in (CentralMEParameters.mu_length, 
                          CentralMEParameters.constant):
-                cls.PARAMS_FORCE[i][attr]  = float(values.get(attr))
+                ## set default geometric shape mu = Constant = 1 if not given.
+                cls.PARAMS_FORCE[i][attr]  = float(values.get(attr, 1))
             
+            if potential in (PotentialForms.Power, PotentialForms.Gaussian_power):
+                cls.PARAMS_FORCE[i][CentralMEParameters.n_power] = \
+                    int(values.get(CentralMEParameters.n_power, 0))
             cls.numberGaussians += 1
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = tuple(([] for _ in range(cls.numberGaussians)))
-    
+        
     
     @classmethod
     def _calculateIntegrals(cls, n_integrals=1):
@@ -220,7 +224,6 @@ class GaussianSeries_JTScheme(BrinkBoeker):
         """
         for p in range(cls._integrals_p_max + 1, 
                        cls._integrals_p_max + n_integrals +1):
-            
             
             for part in range(cls.numberGaussians): 
                 args = [

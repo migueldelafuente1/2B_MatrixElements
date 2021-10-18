@@ -28,8 +28,6 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     :mu_param   force proportional coefficient (by interaction definition)
     :n_power    auxiliary parameter for power dependent potentials
     """
-    # TODO: Might implement potential args by Enum and select them in the switch
-    #potential = potential.lower()
     
     if potential == PotentialForms.Gaussian:
         return (b_param**3) / (1 + 2*(b_param/mu_param)**2)**(p+1.5)

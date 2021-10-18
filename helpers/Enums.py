@@ -57,7 +57,7 @@ class ForceEnum(Enum):
     SpinOrbit = 'SpinOrbit'
     SpinOrbitShortRange = 'SpinOrbitShortRange'
     Brink_Boeker  = 'Brink_Boeker'
-    GaussianSeries = 'GaussianSeries'
+    PotentialSeries = 'PotentialSeries'
     Density_Dependent = 'Density_Dependent'
     Kinetic_2Body = 'Kinetic_2Body'
     Multipole_Expansion = 'Multipole_Expansion'
@@ -88,7 +88,7 @@ class BrinkBoekerParameters(Enum):
     Bartlett    = 'Bartlett'
     Heisenberg  = 'Heisenberg'
 
-class GaussianSeriesParameters(Enum):
+class PotentialSeriesParameters(Enum):
     part    = 'part'
 
 class DensityDependentParameters(Enum):
@@ -108,14 +108,14 @@ class ForceFromFileParameters(Enum):
 ## Use Enum if the interaction has no parameters
 
 ForceVariablesDict = {
-    ForceEnum.Brink_Boeker : BrinkBoekerParameters,
-    ForceEnum.GaussianSeries : GaussianSeriesParameters,
+    ForceEnum.Brink_Boeker    : BrinkBoekerParameters,
+    ForceEnum.PotentialSeries : PotentialSeriesParameters,
     ForceEnum.Central : CentralMEParameters,
     ForceEnum.Coulomb : Enum,
     ForceEnum.Tensor  : CentralMEParameters,
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
-    ForceEnum.Density_Dependent : DensityDependentParameters,
+    ForceEnum.Density_Dependent   : DensityDependentParameters,
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,
     ForceEnum.Multipole_Expansion: None,
@@ -123,7 +123,7 @@ ForceVariablesDict = {
 }
 
 ForcesWithRepeatedParametersList = [
-    ForceEnum.GaussianSeries,
+    ForceEnum.PotentialSeries,
 ]
 class AttributeArgs(Enum):
     name    = 'name'

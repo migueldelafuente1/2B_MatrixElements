@@ -16,7 +16,7 @@ try:
     import scipy
 except ImportError as err:
     SCIPY_INSTALLED = False
-    print("WARNING :: "+str(err)+". (i.e) cannot evaluate Central for Yukawa")
+    print("WARNING :: "+str(err)+".\n It cannot be evaluated Central for Yukawa/Exponential")
 try:
     import pandas
 except ImportError as err:
@@ -27,3 +27,8 @@ try:
 except ImportError as err:
     MATPLOTLIB_INSTALLED = False
     print("WARNING :: "+str(err)+" (i.e) Do not evaluate test modules.")
+
+## Exception Message
+# Traceback (most recent call last):
+#   File "<stdin>", line 1, in <module>
+# ImportError: No module named 'pandas'

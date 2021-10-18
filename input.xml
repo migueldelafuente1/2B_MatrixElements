@@ -87,33 +87,23 @@
 			<constant	value='-70.0' 	units='MeV'/>
 			<mu_length	value='1.4' 	units='fm'/>
 		</Central>
-		<Central active='True'>
-			<!-- Central force potential,
-				Shaped as exponential, gaussian, power term, yukawa or coulomb 
-				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
-				-->
-			<potential 	name='coulomb'/>
-			<constant	value='1.44197028' 	units='MeV'/>
-			<mu_length	value='1' 	units='fm'/>
-		</Central>
 		<Coulomb active='False'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
-		<GaussianSeries active='False'>
-			<!-- Series of Gaussians (optimized) constants in MeV, mu lenghts 
-				 in fm. TODO: extend to other potentials-->
+		<PotentialSeries active='True'>
+			<!-- Series of central potentials. Constants in MeV, mu lenghts in fm. -->
 			<part potential='gaussian' constant='1000.0' mu_length='0.1'/>
-			<part potential='gaussian' constant='-60.0'	 mu_length='0.3'/>
+			<part potential='power' constant='-60.0'	 mu_length='0.3'/>
 			<part potential='yukawa' constant='200.0'  mu_length='0.5'/>
-			<part potential='gaussian' constant='-120.0' mu_length='0.7'/>
-			<part potential='gaussian' constant='500.0'  mu_length='0.9'/>
-			<part potential='gaussian' constant='-10.0'  mu_length='1.25'/>
-			<part potential='gaussian' constant='240.0'  mu_length='1.5'/>
-			<part potential='gaussian' constant='-200.0' mu_length='1.75'/>
+			<part potential='gaussian_power' constant='-120.0' mu_length='0.7' n_power='2'/>
+			<part potential='coulomb' constant='5.0'  mu_length='0.9'/>
+			<part potential='exponential' constant='-10.0'  mu_length='1.25'/>
+			<part potential='power' constant='-3.1'  mu_length='1.5' n_power='1'/>
+			<!--part potential='gaussian' constant='-200.0' mu_length='1.75'/>
 			<part potential='gaussian' constant='50.0'   mu_length='2.0'/>
 			<part potential='gaussian' constant='-10.0'  mu_length='3.5'/>
-			<part potential='gaussian' constant='2000.0' mu_length='6.5'/>
-		</GaussianSeries>
+			<part potential='gaussian' constant='2000.0' mu_length='6.5'/-->
+		</PotentialSeries>
 		<Kinetic_2Body active='False'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
 		</Kinetic_2Body>
@@ -139,7 +129,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbit>
-		<SpinOrbitShortRange active='True'>
+		<SpinOrbitShortRange active='False'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
@@ -167,7 +157,7 @@
 			<options ignorelines='4' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
-		<Force_From_File active='True'>
+		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
 			<file name='results/dd_alpha1_16O_SPSD.2b'/>
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
@@ -176,7 +166,7 @@
 		<Multipole_Expansion active='False'>
 			<!-- Multipolar expansion of a predefined potential -->
 		</Multipole_Expansion>
-		<SDI active='True'>
+		<SDI active='False'>
 			<!-- Surface Delta Interaction and Modified SDI, zero range forces
 				parametrized form Brussaard_ & Glaudemans_ book (1977) -->
 			<constants AT0='1' AT1='1' B='1.0'  C='1.0' units='Mev'/>
