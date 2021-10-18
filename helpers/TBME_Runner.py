@@ -576,7 +576,6 @@ The program will exclude it from the interaction file and will produce the .com 
         
         core = getattr(self.input_obj, ip.Core) 
         
-        # TODO: Define it in input file, how it works?
         _apply_density_correction = '0'
         
         core_args = [

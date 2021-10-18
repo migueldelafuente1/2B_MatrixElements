@@ -46,6 +46,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
             cls.PARAMS_FORCE[1][param] = float(kwargs[param].get(part_2))
         
         cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
+        #cls.plotRadialPotential()
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = ([], [])
@@ -183,7 +184,6 @@ class PotentialSeries_JTScheme(BrinkBoeker):
     def setInteractionParameters(cls, *args, **kwargs):
         """ 
         Implement the parameters for the Talmi Integrals. 
-        
         """
         # Refresh the Force parameters
         if cls.PARAMS_FORCE:
@@ -213,6 +213,7 @@ class PotentialSeries_JTScheme(BrinkBoeker):
                     int(values.get(CentralMEParameters.n_power, 0))
             cls.numberGaussians += 1
         
+        #cls.plotRadialPotential()
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = tuple(([] for _ in range(cls.numberGaussians)))
         

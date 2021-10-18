@@ -21,6 +21,7 @@ from helpers.Log import XLog
 #===============================================================================
 # moved there due circular import (after angular_condition method)
 from helpers.Helpers import _B_coeff_memo_accessor
+from helpers import MATPLOTLIB_INSTALLED
 
 # B coefficients stored in Memory are not b_length normalized (divide by b**3)
 _B_Coefficient_Memo = {}
@@ -649,5 +650,89 @@ class TalmiTransformation(_TalmiTransformation_SecureIter):
     force types, and the Talmi integral of the radial potential in the relative 
     mass coordinates
     """
-    pass
+    @staticmethod
+    def _potentialShapes(r, potential, mu, n_pow=0):
+        """
+        functions V(r) for the central potentials
+        """
+        x = r/mu
+        if potential == PotentialForms.Gaussian:
+            return np.exp(- np.power(x, 2))
+        elif potential == PotentialForms.Gaussian_power:
+            return np.exp(- np.power(x, 2)) / np.power(x, n_pow)
+        elif potential == PotentialForms.Power:
+            return np.power(x, n_pow)
+        elif potential == PotentialForms.Coulomb:
+            return 1 / x
+        elif potential == PotentialForms.Exponential:
+            return np.exp(- x)
+        elif potential == PotentialForms.Yukawa:
+            return np.exp(- x) / (x)
+        else:
+            raise MatrixElementException(
+                "Not implemented Potential option ::" + potential)
+    
+    @classmethod
+    def plotRadialPotential(cls, save_pdf=False):
+        """ 
+        Auxiliary function to plot the central parameters given.
+        """
+        if not MATPLOTLIB_INSTALLED:
+            return
+        import matplotlib.pyplot as plt
+        dr = 0.001
+        r = np.arange(dr, 5 + dr, 0.001) 
+        
+        fig = plt.figure(figsize=(7, 7))
+        ax  = fig.add_subplot(1,1,1)
+        
+        plt.subplots_adjust(bottom=0.1, left=0.1)
+        ax.set_title("Central Potential Shape V(r)")
+        ax.set_ylabel("V(r) [MeV]")
+        ax.set_xlabel("r    [fm]")
+        
+        y_total = np.zeros(len(r))
+        c_min, c_max, r_max, r_max_aux = 0, 1, max(r), 0
+        if isinstance(list(cls.PARAMS_FORCE.values())[0], dict):
+            y = []
+            for consts in cls.PARAMS_FORCE.values():
+                args = [
+                    consts.get(CentralMEParameters.potential),
+                    consts.get(CentralMEParameters.mu_length),
+                    consts.get(CentralMEParameters.n_power, '_')
+                    ]
+                V_0 = consts.get(CentralMEParameters.constant, 1)
+                c_max, c_min = max(c_max, V_0), min(c_min, V_0)
+                r_max_aux = max(r_max_aux, args[1])
+                str_lab = '{0} (C:{3:.1f}, mu:{1:.2f}, N:{2})'.format(*args,V_0)
+                
+                y.append(TalmiTransformation._potentialShapes(r, *args))
+                y[-1] *= V_0
+                plt.plot(r, y[-1], '--', label=str_lab)
+                
+                y_total += y[-1]
+            r_max = min(r_max, r_max_aux)
+        else:
+            args = [
+                    cls.PARAMS_FORCE.get(CentralMEParameters.potential),
+                    cls.PARAMS_FORCE.get(CentralMEParameters.mu_length),
+                    cls.PARAMS_FORCE.get(CentralMEParameters.n_power, '_')
+                    ]
+            V_0 = cls.PARAMS_FORCE.get(CentralMEParameters.constant, 1)
+            c_max, c_min = max(c_max, V_0), min(c_min, V_0)
+            r_max = min(r_max, 2.5*args[1])
+            str_lab = '{0}(C:{3}, mu:{2}, N:{1})'.format(*args, V_0)
+            
+            y_total  = TalmiTransformation._potentialShapes(r, *args)
+            y_total *= V_0
+            plt.plot(r, y_total, 'r-', label=str_lab)
+        
+        plt.plot(r, y_total, 'k-', label='Total V(r)')
+        ax.axis([0, r_max, min(1.5*c_min, -0.5*c_max), 1.5*c_max])
+        plt.legend()
+        plt.grid()
+        
+        if  save_pdf:
+            plt.savefig("central_potential.pdf")
+        plt.show()
     

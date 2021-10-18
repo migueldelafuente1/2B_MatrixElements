@@ -56,6 +56,7 @@ class CentralForce(TalmiTransformation):
             kwargs = CentralForce._automaticParseInteractionParameters(_map, kwargs)
             
         super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
+        #cls.plotRadialPotential()
     
     def _validKet_relativeAngularMomentums(self):
         """ Central interaction only allows l'==l"""
