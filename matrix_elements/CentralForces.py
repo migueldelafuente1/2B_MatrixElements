@@ -9,7 +9,8 @@ from helpers.Helpers import safe_racah, Constants, safe_wigner_6j,\
     safe_3j_symbols
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled
+    _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled,\
+    MatrixElementException
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
     PotentialForms, SHO_Parameters, DensityDependentParameters
@@ -169,17 +170,17 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
             
     
-    # def _run(self):
-    #
-    #     if self.isNullMatrixElement:
-    #         return
-    #     if self.bra.isospin_3rdComponent != 1: 
-    #         ## same number of p or n for bra and ket_ already verified.
-    #         self._value = 0
-    #         self._isNullMatrixElement = True
-    #         return False
-    #     else:
-    #         _TwoBodyMatrixElement_JCoupled._run(self)
+    def _run(self):
+    
+        if self.isNullMatrixElement:
+            return
+        # if self.bra.isospin_3rdComponent != 1: 
+        #     ## same number of p or n for bra and ket_ already verified.
+        #     self._value = 0
+        #     self._isNullMatrixElement = True
+        #     return False
+        else:
+            _TwoBodyMatrixElement_JCoupled._run(self)
     
     def _nullConditionsOnParticleLabelStates(self):
         

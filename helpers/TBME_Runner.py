@@ -18,11 +18,11 @@ from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
     QN_2body_jj_J_Coupling
 from copy import deepcopy
 from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
-    Constants, almostEqual, printProgressBar
+    Constants, almostEqual, printProgressBar, _LINE_1, _LINE_2
 
 import os
 import numpy as np
-
+import traceback 
 
 class TBME_Runner(object):
     '''
@@ -63,6 +63,8 @@ class TBME_Runner(object):
         self.resultsSummedUp    = {}
         self.com_2bme           = {}
         self.interactionSchemes = {}
+        self._brokeInteractions = {}
+        self._forceNameFromForceEnum = {}
         
         self.filename_output = 'out'
         
@@ -465,6 +467,9 @@ The program will exclude it from the interaction file and will produce the .com 
         final_J  = {}
         final_JT = {}
         for force, results in self.resultsByInteraction.items():
+            if self.__class__ == TBME_Runner:
+                force = self._forceNameFromForceEnum[force]
+            
             if self.interactionSchemes[force] == self._Scheme.J:
                 # Kin 2Body is a JT scheme interaction
                 recursiveSumOnDictionaries(results, final_J)
@@ -502,41 +507,64 @@ The program will exclude it from the interaction file and will produce the .com 
         self._sortQQNNFromTheValenceSpace()      
         self._checkHamilTypeAndForces()
         
-        
         _forcesAttr = ip.Force_Parameters
         times_ = {}
         for force, force_list in getattr(self.input_obj, _forcesAttr).items():
             i = 0
             for params in force_list:
                 force_str = force+str(i) if len(force_list) > 1 else force
+                # update arrays and variables
+                i += 1
+                self.results = {}
+                self._forceNameFromForceEnum[force_str] = force
                 tic_ = time.time()
                 if force == ForceEnum.Force_From_File:
                     ## read from file case
                     self._readMatrixElementsFromFile(force_str, **params)
-                else:
-                    ## computable interaction
+                    times_[force_str] = round(time.time() - tic_, 4)
+                    continue
+                ## computable interaction
+                try:
                     sho_params = getattr(self.input_obj, ip.SHO_Parameters)
                     
                     self.tbme_class = switchMatrixElementType(force)
                     self.tbme_class.resetInteractionParameters(also_SHO=True)
-                    self.tbme_class.setInteractionParameters(**params, **sho_params)
-                    
+                    self.tbme_class.setInteractionParameters(**params, 
+                                                             **sho_params)
                     self._computeForValenceSpace(force)
                     
                     self.resultsByInteraction[force_str] = deepcopy(self.results)
-                
-                times_[force_str] = round(time.time() - tic_, 4)
-                print(" Force [{}] m.e. calculated: [{}]s"
-                      .format(force, times_[force_str]))
-                i += 1
+                    times_[force_str] = round(time.time() - tic_, 4)
+                    print(" Force [{}] m.e. calculated: [{}]s"
+                                .format(force, times_[force_str]))
+                except BaseException:
+                    trace = traceback.format_exc()
+                    self._procedureToSkipBrokenInteraction(force_str, trace)
         
         print("Finished computation, Total time (s): [", sum(times_.values()),"]=")
         print("\n".join(["\t"+str(t)+"s" for t in times_.items()]))
+        if len(self._brokeInteractions) > 0:
+            print(_LINE_1, "ERROR !! Interactions have errors"
+                  " and where skipped with these exceptions")
+            for f, excep in self._brokeInteractions.items():
+                print("Interaction [{}], Exception ::\n{}\n{}" .format(f, excep, _LINE_2))
         
         self.combineAllResults()
-        
         self.printMatrixElementsFile()
         self.printComMatrixElements()
+    
+    def _procedureToSkipBrokenInteraction(self, force_str, exception_trace):
+        """
+        Remove matrix elements from results and append Warning at the end.
+        File name is changed to _RECOVERY_[filename].2b
+        """
+        if force_str != ForceEnum.Kinetic_2Body:
+            fn = self.input_obj.Output_Parameters.get(Output_Parameters.Output_Filename)
+            self.filename_output = self.RESULT_FOLDER + '/' + '_RECOVERY_' + fn
+        else:
+            self._com_correction = False
+        
+        self._brokeInteractions[force_str] = str(exception_trace)
     
     def _valenceSpaceLine(self):
         
@@ -558,6 +586,30 @@ The program will exclude it from the interaction file and will produce the .com 
                 
         return valen, energ
     
+    def _interactionStringInHeader(self):
+        """ 
+        Auxiliary method to warning in the title that M.E  has been skipped.
+        """
+        str_ok = '. ME evaluated: ' + ' + '.join(
+                            getattr(self.input_obj, ip.Force_Parameters).keys())
+        ## ! Append warning if broken interactions.
+        if len(self._brokeInteractions) > 0:
+            if len(self._brokeInteractions) == 1:
+                if ForceEnum.Kinetic_2Body in self._brokeInteractions:
+                    return str_ok
+            fcs = getattr(self.input_obj, ip.Force_Parameters).keys()
+            str_fails = []
+            for f in fcs:
+                is_f_ko = [f in key_ for key_ in self._brokeInteractions.keys()]
+                if True in is_f_ko:
+                    f = "({} ({}/{}) SKIPPED)".format(f, is_f_ko.count(True), 
+                                        len(self.input_obj.Force_Parameters[f]))
+                str_fails.append(f)
+            str_fails = '. ME PARTIALLY! evaluated: ' + ' + '.join(str_fails)
+            return str_fails
+        
+        return str_ok
+    
     def _headerFileWriting(self):
         """ 
         Writing Header of the Antoine file: title / valence space / Energies 
@@ -568,8 +620,8 @@ The program will exclude it from the interaction file and will produce the .com 
         title += title_args.get(AttributeArgs.name)
         if title_args.get(AttributeArgs.details):
             title += ' :({})'.title_args.get(AttributeArgs.details)
-        title += '. ME evaluated: ' + ' + '.join(
-            getattr(self.input_obj, ip.Force_Parameters).keys())
+        title += self._interactionStringInHeader()
+          
         title += '. Shell({})'.format('+'.join(self.valence_space))
         
         valen, energ = self._valenceSpaceLine()
@@ -614,14 +666,9 @@ The program will exclude it from the interaction file and will produce the .com 
                     values.append("{: 12.10e}".format(mat_elem))
                 else:
                     values.append("{: 12.10f}".format(mat_elem))
-                # if abs(mat_elem) < 1.e-6:
-                #     values.append("{: .3e}".format(mat_elem))
-                # else:
-                #     values.append("{: .6f}".format(mat_elem))
             else:
                 try:
                     values.append("{: .10f}".format(mat_elem))
-                    # values.append("{: .6f}".format(mat_elem))
                 except TypeError as tp:
                     # TODO: 
                     pass
@@ -687,9 +734,7 @@ The program will exclude it from the interaction file and will produce the .com 
         elif self._hamil_type == '3':
             # J scheme 3 file output  (0, 1 & 2 body Hamiltonian_)
             print("WARNING :: hamil_type=3 not jet implemented, running hamil_type=4")
-            self._printHamilType_34_Files()
-            # TODO: Implement
-            
+            self._printHamilType_34_Files()            
             # raise TBME_RunnerException("hamil_type=3 not jet implemented")
         else:
             # J scheme "bare" hamiltonian, return .sho header and .2b files
