@@ -37,43 +37,70 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
-        # _runner = TBME_Runner(filename='input_D1S.xml')
+        _runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
         # _runner.run()
         
-        _runner = TBME_SpeedRunner(filename='input_D1S.xml')
-        # _runner = TBME_SpeedRunner(filename='input.xml')
+        # _runner = TBME_SpeedRunner(filename='input_D1S.xml')
+        #_runner = TBME_SpeedRunner(filename='input.xml')
         _runner.run()
         print(" The program has ended without incidences.")
         
         
+    # kwargs = {
+    #     SHO_Parameters.A_Mass       : 4,
+    #     SHO_Parameters.Z            : 2,
+    #     SHO_Parameters.b_length     : 1.5,
+    #     SHO_Parameters.hbar_omega   : 18.4586,
+    #
+    #
+    #     'part0':{
+    #         'potential': 'gaussian', 'constant': '-1476.4145', 'mu_length': '0.0035'
+    #     },'part1':{
+    #         'potential': 'gaussian', 'constant': ' -13.6704', 'mu_length': '0.0080'
+    #     },'part2':{
+    #         'potential': 'gaussian', 'constant': '-141.0067', 'mu_length': '0.0181'
+    #     },'part3':{
+    #         'potential': 'gaussian', 'constant': ' -82.3763', 'mu_length': '0.0412'
+    #     },'part4':{
+    #         'potential': 'gaussian', 'constant': '  -4.3830', 'mu_length': '0.0936'
+    #     },'part5':{
+    #         'potential': 'gaussian', 'constant': ' -16.8006', 'mu_length': '0.2126'
+    #     },'part6':{
+    #         'potential': 'gaussian', 'constant': '  -3.7970', 'mu_length': '0.4828'
+    #     },'part7':{
+    #         'potential': 'gaussian', 'constant': '  -1.3423', 'mu_length': '1.0965'
+    #     },'part8':{
+    #         'potential': 'gaussian', 'constant': '  -1.1175', 'mu_length': '2.4906'
+    #     },'part9':{
+    #         'potential': 'gaussian', 'constant': '   0.0464', 'mu_length': '5.6569'}, 
+    # }
+    
     kwargs = {
-        SHO_Parameters.A_Mass       : 4,
-        SHO_Parameters.Z            : 2,
+        SHO_Parameters.A_Mass       : 16,
+        SHO_Parameters.Z            : 8,
         SHO_Parameters.b_length     : 1.5, #1.4989,
         SHO_Parameters.hbar_omega   : 18.4586,
         
-        CentralMEParameters.potential : PotentialForms.Exponential,
-        CentralMEParameters.mu_length : 1.5,
+        #CentralMEParameters.potential : PotentialForms.Yukawa,
+        #CentralMEParameters.mu_length : 2, 
         CentralMEParameters.constant  : 1,
-        CentralMEParameters.n_power   : 0,
-        
-        # DensityDependentParameters.alpha : 1/3,
-        # DensityDependentParameters.x0 : 1,
-        # DensityDependentParameters.constant : 1390.6
+        DensityDependentParameters.alpha : 1,
+        DensityDependentParameters.x0 : 1
     }
-    J = 0
+    
+    J = 1
     T = 0
     bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
                                    QN_1body_jj(0,0,1), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                   QN_1body_jj(0,1,1), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
+                                   QN_1body_jj(0,0,1), J, T)
     
-    CentralForce_JTScheme.turnDebugMode(True)
-    CentralForce_JTScheme.setInteractionParameters(**kwargs)
-    me = CentralForce_JTScheme(bra_, ket_)
+    DensityDependentForce_JTScheme.turnDebugMode(True)
+    DensityDependentForce_JTScheme.setInteractionParameters(**kwargs)
+    me = DensityDependentForce_JTScheme(bra_, ket_)
     print("me: ", me.value)
-    me.saveXLog('me_kin')
+    me.saveXLog('me_dens')
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
     XLog.resetLog()
     
@@ -106,13 +133,6 @@ if __name__ == "__main__":
     # result_ = me.value
     # print("me short: ", me.value)
     # me.saveXLog('me_shortLS')
-    
-    KineticTwoBody_JTScheme.turnDebugMode(True)
-    KineticTwoBody_JTScheme.setInteractionParameters(**kwargs)
-    me = KineticTwoBody_JTScheme(bra_, ket_)
-    me.saveXLog("kin2B")
-    
-    
     
     # kwargs = {
     #     SHO_Parameters.A_Mass       : 4,

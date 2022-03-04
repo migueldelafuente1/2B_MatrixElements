@@ -628,14 +628,17 @@ The program will exclude it from the interaction file and will produce the .com 
         
         core = getattr(self.input_obj, ip.Core) 
         
-        _apply_density_correction = '0'
-        
-        core_args = [
-            _apply_density_correction,
-            core.get(AttributeArgs.CoreArgs.protons, '0'),
-            core.get(AttributeArgs.CoreArgs.neutrons, '0'), 
-            '0.300000', '0.000000']
-        title += ' (Core: {})'.format(getCoreNucleus(*core_args[1:3]))
+        if self._hamil_type in '34':
+            core_args = [core.get(AttributeArgs.CoreArgs.protons, '0'),
+                         core.get(AttributeArgs.CoreArgs.neutrons, '0')]
+        else:
+            _apply_density_correction = '0'
+            core_args = [
+                _apply_density_correction,
+                core.get(AttributeArgs.CoreArgs.protons, '0'),
+                core.get(AttributeArgs.CoreArgs.neutrons, '0'), 
+                '0.300000', '0.000000']
+        #title += ' (Core: {})'.format(getCoreNucleus(*core_args[1:3]))
         core_args = '\t' + ' '.join(core_args) 
         self.title = title
         
@@ -861,10 +864,10 @@ The program will exclude it from the interaction file and will produce the .com 
         strings_sho_ = self._headerFileWriting()
         
         # write .sho file
-        strings_sho_ = strings_sho_[:2] #dismiss core and sp energies
+        del strings_sho_[2] # dismiss the sp energies
         strings_sho_.insert(1, self._hamil_type)
         _hw = self.input_obj.SHO_Parameters.get(SHO_Parameters.hbar_omega)
-        strings_sho_.append(str(_hw))
+        strings_sho_.append('2 '+str(_hw))
         
         with open(self.filename_output + OutputFileTypes.sho, 'w+') as f:
             f.write('\n'.join(strings_sho_))

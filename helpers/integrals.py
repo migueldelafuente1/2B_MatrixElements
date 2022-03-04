@@ -12,9 +12,10 @@ from helpers.Helpers import gamma_half_int, fact, angular_condition,\
     getStatesAndOccupationOfFullNucleus
 from helpers.Log import XLog
 from . import SCIPY_INSTALLED
-
+# SCIPY_INSTALLED = 1
 if SCIPY_INSTALLED:
-    from scipy.special import gammaincc
+    from scipy.special import gammaincc, gamma
+    from scipy.special import roots_laguerre, roots_genlaguerre, roots_legendre
 
 
 class IntegralException(BaseException):
@@ -54,7 +55,7 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         cte_k = b_param / ((2**0.5) * mu_param)
         cte_k_log = np.log(cte_k)
         
-        for k in range(2*p + 1 +1):
+        for k in range(0, 2*p + 1 +1):
             aux  = fact(2*p + 1) - fact(k) - fact(2*p + 1 - k)            
             aux += (2*p + 1 - k) * cte_k_log
             aux += gamma_half_int(k + 1) ## normalization of gammaincc_
@@ -62,7 +63,8 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
             
             sum_ += (-1)**(2*p + 1 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
             
-        sum_ *= mu_param * (b_param**2) / np.exp(0.5 * (b_param/(mu_param))**2) 
+        #sum_ *= mu_param * (b_param**2) / np.exp(0.5 * ((b_param/mu_param)**2)) 
+        sum_ *= mu_param * (b_param**2) / np.exp(cte_k**2) 
         sum_ /= np.exp(gamma_half_int(2*p + 3)) * (2**0.5)
         
         return sum_
@@ -80,7 +82,7 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
             
             sum_ += (-1)**(2*p + 2 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
             
-        sum_ *= (b_param**3) / np.exp(0.5 * (b_param/(mu_param))**2) 
+        sum_ *= (b_param**3) / np.exp(0.5 * ((b_param/mu_param)**2)) 
         sum_ /= np.exp(gamma_half_int(2*p + 3))
         
         return sum_
@@ -91,7 +93,7 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
 
 
 #if not 'roots_legendre' in globals():
-from scipy.special import roots_legendre, roots_laguerre
+#from scipy.special import roots_legendre, roots_laguerre
 
 class GaussianQuadrature:
     
@@ -145,12 +147,17 @@ class GaussianQuadrature:
             Args:
         :function  <function> f(x, *args, **kwargs)
         :order     <int>   order of the quadrature
+                or <tuple> (order, alpha) where alpha is float for the associated 
+                              Laguerre integration (dx x^alpha exp(-x) *f(x))
         
         *args and **kwargs will be passed to the function (check argument introduction
             in case of several function management)
         """
         if not order in GaussianQuadrature._roots_weights_Laguerre:
-            x_i, w_i = roots_laguerre(order, mu=0)
+            if isinstance(order, tuple):
+                x_i, w_i = roots_genlaguerre(order[0], alpha=order[1])
+            else:
+                x_i, w_i = roots_laguerre(order, mu=False)
             GaussianQuadrature._roots_weights_Laguerre[order] = (x_i, w_i)
         else:
             x_i, w_i = GaussianQuadrature._roots_weights_Laguerre.get(order)
@@ -857,6 +864,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         :alpha: coefficient over the density (1/3 only valid)
     """
     
+    _ASSOCIATED_LAGUERRE = True # True for associated Laguerre radial integral
     _DENSITY_APROX = True
     _instance = None
     
@@ -954,15 +962,18 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
     
     def _auxFunction(self, x, No2, A, Z, alpha):
         """ Function to be inserted in the Laguerre_ integral. """
+        u = np.sqrt(x / (alpha + 2))
         if self._DENSITY_APROX:
             # Fermi profile integral
-            density = self._DensityProfile(A, self.b_length * np.sqrt(x / (2 + alpha)), Z)
+            density = self._DensityProfile(A, self.b_length * u, Z)
         else:
             # Fermi SHO density (density matrix = delta(i <= A))
-            density = self._FermiDensity(A, np.sqrt(x / (alpha + 2)), Z) # 
+            density = self._FermiDensity(A, u , Z)
         
-        return (x**(No2 - 0.5)) * (density ** alpha)
-    
+        if self._ASSOCIATED_LAGUERRE:
+            return (x**(No2 - 1)) * (density ** alpha)
+        else:
+            return (x**(No2 - 0.5)) * (density ** alpha)
     @staticmethod
     def _auxFunction_static(x, No2, A, Z, alpha):
     
@@ -977,12 +988,12 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         if self._DENSITY_APROX:
             cte = 2**(No2 + 1.5)
         else:
-            ## TODO: pon la constante del llenado aqui tras la prueba
+            ## TODO (MOVED): pon la constante del llenado aqui tras la prueba
             pass
         cte = 2 * ((alpha + 2)**(No2 + 0.5))
         
         aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
-                                          100, No2, A, Z, alpha)
+                                          (100, 0.5), No2, A, Z, alpha)
         if self.DEBUG_MODE: XLog.write("Ip_q", Lag_int=aux)
         return aux / cte
     
@@ -1051,8 +1062,8 @@ if __name__ == "__main__":
     dr = 0.001
     b_length = 1.2
     
-    N_min = 8
-    N_max = 8
+    N_min = 6
+    N_max = 7
     NZ_states = getStatesAndOccupationUpToLastOccupied(N_max, N_min)
     NZ_states = getStatesAndOccupationOfFullNucleus(N_min + 2, N_max, N_min)
     
@@ -1076,6 +1087,8 @@ if __name__ == "__main__":
             # den /= np.exp((7/3) * rOb**2)
             print(a_,'(', spss, ') integral=', 
                   b_length**(-3) * sum(den* np.power(r, 2))*dr)
+                ## 4pi factor cancels with the normalization of the density
+                ## but _FermiDensity dont have factor 1/(4pi * b^3)
             
             if a_ == A:
                 plt.plot(rOb, den, label=f"A[{A}]={spss}")

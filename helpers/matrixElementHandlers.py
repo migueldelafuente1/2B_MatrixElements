@@ -637,10 +637,11 @@ if __name__ == "__main__":
     
     test = MatrixElementFilesComparator(
         # '../results/dd_a1_b15_A16.2b', 
-        # '../results/dd_alpha1_16O_SPSD.sho',
-        # '../results/dd_alpha1_16O_SPSD_rob.sho', verbose=False)
-        '../results/kin2_bench.com', 
-        '../results/kin2.com', verbose=False)
+        '../results/Yukawa_analitic_3.sho',
+        '../results/Yukawa_approx13g.sho', verbose=False)
+        #'../results/kin2_bench.com', 
+        #'../results/kin2.com', 
+        # verbose=False)
     
     test.compareDictionaries()
     print(" === TEST RESULTS:    =================================\n")

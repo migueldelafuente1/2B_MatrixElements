@@ -133,4 +133,4 @@ def _validKetTotalSpins(self):
 ```
 * main method to run must be ``_run()`` and must perform only the normalization and the explicit antisymmetrization (if necessary, remeber that due 9j symmetry this is performed after the LS recoupling). **SpeedRunner** goes directly to evaluate method ``_LSCoupledME()`` defined for the interaction.
 
-In most of the tests **SpeedRunner** saves nearly a 50% of the total computation time for more than 3 forces, not (1/N\_forces)% since the only part of the process skipped is the LS recoupling. For most of the matrix elements, this part less expensive computationally than the inner LS matrix element operations.
+In most of the tests **SpeedRunner** saves nearly a 40% of the total computation time for more than 3 forces, not (1/N\_forces)% since the only part of the process skipped is the LS recoupling. For most of the matrix elements, this part less expensive computationally than the inner LS matrix element operations.
