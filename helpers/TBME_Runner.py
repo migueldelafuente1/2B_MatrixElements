@@ -457,7 +457,7 @@ The program will exclude it from the interaction file and will produce the .com 
         elif data_.scheme == self._Scheme.JT:
             self.interactionSchemes[force_str] = self._Scheme.JT
         
-        self.results = data_.getMatrixElemnts()
+        self.results = data_.getMatrixElemnts(self._twoBodyQuantumNumbersSorted)
         self.resultsByInteraction[force_str] = deepcopy(self.results)
     
     
@@ -580,7 +580,16 @@ The program will exclude it from the interaction file and will produce the .com 
                 valence[i] = (stt, _en)
         else:
             aux = [self._hamil_type, str(len(valence))]
-            
+            if self.l_ge_10:
+                # translate l > 10 to l < 10 in case states given in l > 10
+                len_ = len(valence)
+                aux_valence = []
+                for i in range(len_):
+                    stt, _en = valence[i]
+                    stt = castAntoineFormat2Str(readAntoine(stt, True), False)
+                    aux_valence.append((stt, _en))
+                valence = aux_valence
+        
         valen = '\t' + ' '.join(aux + [x[0] for x in valence])
         energ = '\t' + ' '.join([str(x[1]) for x in valence])
                 
@@ -623,8 +632,12 @@ The program will exclude it from the interaction file and will produce the .com 
         title += self._interactionStringInHeader()
           
         title += '. Shell({})'.format('+'.join(self.valence_space))
+        b_len = self.input_obj.SHO_Parameters.get(SHO_Parameters.b_length, None)
+        if b_len and b_len > self.NULL_TOLERANCE:
+            title += "(B={:06.4f}fm)".format(b_len)
         
         valen, energ = self._valenceSpaceLine()
+        
         
         core = getattr(self.input_obj, ip.Core) 
         
@@ -637,7 +650,7 @@ The program will exclude it from the interaction file and will produce the .com 
                 _apply_density_correction,
                 core.get(AttributeArgs.CoreArgs.protons, '0'),
                 core.get(AttributeArgs.CoreArgs.neutrons, '0'), 
-                '0.300000', '0.000000']
+                '0.300000']#, '0.000000'
         #title += ' (Core: {})'.format(getCoreNucleus(*core_args[1:3]))
         core_args = '\t' + ' '.join(core_args) 
         self.title = title
@@ -796,15 +809,15 @@ The program will exclude it from the interaction file and will produce the .com 
             bra1 = readAntoine(bra[0], l_ge_10=self.l_ge_10)
             bra2 = readAntoine(bra[1], self.l_ge_10)
             ## The first step converts to the real n, l; then cast as l < 10
-            bra1 = castAntoineFormat2Str(bra1, l_ge_10 = True)
-            bra2 = castAntoineFormat2Str(bra2, True)
+            bra1 = castAntoineFormat2Str(bra1, l_ge_10 = False)
+            bra2 = castAntoineFormat2Str(bra2, False)
             
             for ket, T_vals in kets.items():
                 ket1 = readAntoine(ket[0], self.l_ge_10)
                 ket2 = readAntoine(ket[1], self.l_ge_10)
                 
-                ket1 = castAntoineFormat2Str(ket1, True)
-                ket2 = castAntoineFormat2Str(ket2, True)
+                ket1 = castAntoineFormat2Str(ket1, False)
+                ket2 = castAntoineFormat2Str(ket2, False)
                 
                 spss = (bra1, bra2, ket1, ket2)
                 

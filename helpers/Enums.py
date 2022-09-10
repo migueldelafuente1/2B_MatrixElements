@@ -102,6 +102,7 @@ class SDIParameters(Enum):
 class ForceFromFileParameters(Enum):
     file  = 'file'
     options = 'options'
+    #scheme  = 'scheme' # optional, not implemented
 
 # TODO: Update when adding forces, Enum implementations must be given
 # TODO: Implement also the attribute names in AttributeArgs.ForceArgs

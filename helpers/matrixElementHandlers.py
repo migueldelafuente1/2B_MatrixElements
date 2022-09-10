@@ -64,8 +64,11 @@ class MatrixElementFilesComparator:
             }
         }
     
-    def __init__(self, file_bench, file_test, 
-                 ignorelines=(4,4), l_ge_10=True, verbose=False):
+    TOL_ME_PRECISSION = 1.e-10
+    
+    
+    def __init__(self, file_bench, file_test, l_ge_10,
+                 ignorelines=(4,4), verbose=False):
         """
         file paths to the files for bench and to test
         :ignorelines = <tuple> (<int> starting line in bench, in 2test)
@@ -88,11 +91,12 @@ class MatrixElementFilesComparator:
         self.b_2test_diag = None
         self.b_2test_off  = None
         
-        self._getJTSchemeMatrixElements(self.File.bench, file_bench, ignorelines[0])
-        self._getJTSchemeMatrixElements(self.File.test, file_test, ignorelines[1])
+        self._getInSchemeMatrixElements(self.File.bench, file_bench, ignorelines[0])
+        self._getInSchemeMatrixElements(self.File.test, file_test, ignorelines[1])
     
-    def _getBlockQN_HamilType1(self, header):
+    def _getBlockQN(self, header):
         """ 
+        is the same for Hamil Type = 1 and 4
         :header <str>  with the sp states and JT values:
                0       1       1     103     103     205       1       2
                Tmin    Tmax    st1   st2     st3     st4       Jmin    Jmax
@@ -107,7 +111,7 @@ class MatrixElementFilesComparator:
             return True
         return False
     
-    def _getJTSchemeMatrixElements(self, file_, filename, ignorelines=0):
+    def _getInSchemeMatrixElements(self, file_, filename, ignorelines=0):
         
         with open(filename, 'r') as f:
             data = f.readlines()
@@ -121,7 +125,7 @@ class MatrixElementFilesComparator:
         for line in data:
             line = line.strip()
             if index == 0:
-                me_states, j_min, j_max = self._getBlockQN_HamilType1(line)
+                me_states, j_min, j_max = self._getBlockQN(line)
                 if self._isDiagonalMe(me_states):
                     JT_block_diag[me_states] = {0: {}, 1: {}}
                     # JT_block_diag[me_states] = {}
@@ -153,7 +157,7 @@ class MatrixElementFilesComparator:
     def _countStatusFail(self, fail, value=None, missing=False):
             
         self._results['TOTAL'] += 1
-        valueIsNonZero = value and abs(value) > 1.e-6
+        valueIsNonZero = value and abs(value) > self.TOL_ME_PRECISSION
         
         if self._TESTING_DIAG:
             if valueIsNonZero:
@@ -209,7 +213,8 @@ class MatrixElementFilesComparator:
         
         fail = {'abs': diff_abs_str, 'rel': rel_str, 'diff_rel': diff_rel_str}
         fail_num = {'abs': diff_abs, 'rel': rel, 'diff_rel': diff_rel}
-        if jt in self._failed_me[spss]:
+
+        if len(self._failed_me[spss]) > 0: # being jt already in or not
             self._failed_me[spss][jt] = fail
             self._failed_me_num[spss][jt] = fail_num
         else:
@@ -253,6 +258,7 @@ class MatrixElementFilesComparator:
                 i += 1
         
         
+        print(" Failures and relative difference: ")
         prettyPrintDictionary(index)
         
         fig, ax = plt.subplots(figsize=(6, 4), tight_layout=True)
@@ -305,7 +311,8 @@ class MatrixElementFilesComparator:
                 else:
                     p = (readAntoine(b[0],lge10)[2]+readAntoine(b[1],lge10)[2]) // 2
                     p+= (readAntoine(k[0],lge10)[2]+readAntoine(k[1],lge10)[2]) // 2
-                    return True, keys[i], -p
+                    return True, keys[i], -p 
+                    # the minus is to note double exchange in the next step
         return False, spss, 0
             
     
@@ -319,7 +326,7 @@ class MatrixElementFilesComparator:
     def _compareDictionaries(self, d_bench, d_test):
         
         for spss_0, jt_block in d_bench.items():
-            if spss_0 == (1,1,1,1):
+            if spss_0 == (1, 103, 1, 103):
                 _=0
             in_dict, spss, phs_pow = self._meIndexInDict(spss_0, d_test)
             
@@ -341,8 +348,8 @@ class MatrixElementFilesComparator:
                     val = d_test[spss][T][J]
                     if phs != 0:
                         val *= phs
-                    # if the difference is 0.1% greater than the bench value
-                    if abs(val_bench - val) > abs(0.00000001 * val_bench):
+                    
+                    if self._fail_criteria(val_bench, val):
                         str_jt = "JT:{},{}".format(J,T)
                                                 
                         self._appendFailureDetails(spss, str_jt, val, val_bench)
@@ -357,7 +364,130 @@ class MatrixElementFilesComparator:
             if spss_t not in d_bench:
                 self._appendMissingDetails(self.File.bench, spss_t)
                 self._countStatusFail(True, 1, missing=True)
+    
+    def _fail_criteria(self, val_bench, val):
+        # if the difference is 1% greater than the bench value
+        if abs(val_bench - val) > abs(0.01 * val_bench):
+            return True
+        if abs(val_bench - val) > 2*self.TOL_ME_PRECISSION:
+            return True
+        return False
+    
+class MatrixElementFilesComparator_Jscheme(MatrixElementFilesComparator):
+    
+    """ 
+    Tested with the same file with changed elements:
+      * Phase exchanged when permutation required (Fail and Pass expected )
+      * Phase maintained when required (Fail and Pass cases)
+      * Double exchange (-)^sum(j_i) (both cases)
+      * 1% and last digit change to promt difference (bench=0.0 dont crash)
+      * Checked individual particle labels.
+      * Missing elements in Test file and viceversa.
+      TODO: automated check missing in bench from test show exchanges of the
+          elements that are in fact in the file, to exclude these exchanges 
+          (but it can be done properly by changing the order of the files)
+    """
+    
+    _particleLabel = {
+        0: 'pppp', 1: 'pnpn', 2:'pnnp', 3:'nppn', 4:'npnp', 5:'nnnn'
+    }
+    def _compareDictionaries(self, d_bench, d_test):
         
+        for spss_0, jt_block in d_bench.items():
+            if spss_0 == (1, 203, 203, 205):
+                _=0
+            in_dict, spss, phs_pow = self._meIndexInDict(spss_0, d_test)
+            
+            head = spss_0 if spss_0==spss else str(spss_0)+" ->> "+str(spss)
+            if self._verbose: print("\n", head)
+            
+            if not in_dict:
+                if self._verbose: print("\n[Missing]", spss, "in m.e. to test:")
+                self._appendMissingDetails(self.File.test, spss)
+                self._countStatusFail(True, 1, missing=True)
+                continue
+            
+            for J, t_block in jt_block.items():
+                if self._verbose: print(". T=", J)
+                for T, val_bench in t_block.items():
+                    if self._verbose: print(".. J=", J)
+                    double_perm = 1 if phs_pow < 0 else 0
+                    phs = (-1)**((double_perm + 1)*(1 + J) + phs_pow) if phs_pow else 0
+                    val = d_test[spss][J][T]
+                    if phs != 0:
+                        val *= phs
+                    
+                    if self._fail_criteria(val_bench, val) and (T!=0):
+                        str_jt = "J:{},{}".format(J,self._particleLabel[T])
+                                                
+                        self._appendFailureDetails(spss, str_jt, val, val_bench)
+                        self._countStatusFail(True, val)
+                    else:
+                        if self._verbose: 
+                            print("... Equal [OK]",  val, "=", val_bench, "(bench)")
+                        self._countStatusFail(False, val)
+                        self._passed_me.append(spss)
+        
+        for spss_j in d_test.keys():
+            if spss_j not in d_bench:
+                self._appendMissingDetails(self.File.bench, spss_j)
+                self._countStatusFail(True, 1, missing=True)
+    
+    def _newJSchemeDict(self, j_min, j_max):
+        # count the particle states from 0=pppp to 5=nnnn
+        t_dict = dict([(t, None) for t in range(6)])
+        dict_= dict([(J, deepcopy(t_dict)) for J in range(j_min, j_max + 1)])
+        
+        return dict_
+    
+    def _getInSchemeMatrixElements(self, file_, filename, ignorelines=0):
+        
+        with open(filename, 'r') as f:
+            data = f.readlines()
+        
+        data = data[ignorelines:]
+        
+        J_block_diag, J_block_off_diag = {}, {}
+        me_states = None
+        index = 0
+        j_min, j_max, T = 0, 0, 0
+        # now index list the J
+        for line_index, line in enumerate(data):
+            line = line.strip()
+            if index == 0:
+                me_states, j_min, j_max = self._getBlockQN(line)
+                index_range = j_max - j_min + 1
+                if me_states == (1, 203, 203, 205):
+                    _=0
+                
+                if self._isDiagonalMe(me_states):
+                    J_block_diag[me_states] = self._newJSchemeDict(j_min, j_max)
+                    # JT_block_diag[me_states] = {}
+                    diagonal = True
+                else:
+                    J_block_off_diag[me_states] = self._newJSchemeDict(j_min, j_max)
+                    # JT_block_off_diag[me_states] = {}
+                    diagonal = False
+            else:
+                J = j_min + index - 1
+                
+                line = line.split() 
+                for t in range(6):
+                    if diagonal: 
+                        J_block_diag[me_states][J][t] = float(line[t])
+                    else:
+                        J_block_off_diag[me_states][J][t] = float(line[t])
+
+            index = index + 1 if index < index_range else 0
+        
+        if file_ == self.File.bench:
+            self.b_bench_diag = J_block_diag
+            self.b_bench_off  = J_block_off_diag
+        if file_ == self.File.test:
+            self.b_2test_diag = J_block_diag
+            self.b_2test_off  = J_block_off_diag
+    
+    
 #===============================================================================
 # PLOTING M.E (T channel) to be compared
 #===============================================================================~
@@ -635,13 +765,33 @@ class MatrixElements_PlotComparator():
             
 if __name__ == "__main__":
     
-    test = MatrixElementFilesComparator(
-        # '../results/dd_a1_b15_A16.2b', 
-        '../results/Yukawa_analitic_3.sho',
-        '../results/Yukawa_approx13g.sho', verbose=False)
-        #'../results/kin2_bench.com', 
-        #'../results/kin2.com', 
+    # test = MatrixElementFilesComparator(
+    #     # '../tests/bench_me/TBME_JT_BLC_bench.sho',
+    #     '../results/1gaussian70_14_SPSD(ht1).sho',
+    #     '../results/1gaussian70_14_SPSD(ht1)_wrong.sho',
+    #     # '../results/dd_a1_b15_A16.2b', 
+    #     #'../results/Yukawa_analitic_3.sho',
+    #     #'../results/Yukawa_approx13g.sho', verbose=False)
+    #     #'../results/kin2_bench.com', 
+    #     #'../results/kin2.com',
+    #     False, # l_gt_10
+    #     ignorelines=(4,4)
+    #     # verbose=False)
+    #     )
+    MatrixElementFilesComparator.TOL_ME_PRECISSION = 1.0e-1
+    
+    test = MatrixElementFilesComparator_Jscheme(
+        # '../tests/bench_me/TBME_JT_BLC_bench.sho',
+        '../results/0s0p1s0d.2b',
+        '../results/D1S_t0_SPSD.2b',
+        # '../results/1gaussian70_14_SPSD(Nathalie).2b',
+        # '../results/1gaussian70_14_SPSD(ht4).2b',
+        # '../results/1gaussian70_14_SPSD(ht4).2b',
+        # '../results/1gaussian70_14_SPSD(ht4)_wrong.2b',
+        True, # l_gt_10
+        ignorelines=(1,1)
         # verbose=False)
+        )
     
     test.compareDictionaries()
     print(" === TEST RESULTS:    =================================\n")

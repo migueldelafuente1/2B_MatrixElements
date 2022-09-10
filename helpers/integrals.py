@@ -865,7 +865,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
     """
     
     _ASSOCIATED_LAGUERRE = True # True for associated Laguerre radial integral
-    _DENSITY_APROX = True
+    _DENSITY_APROX = False # True for profile, False for Fermi occupation filling
     _instance = None
     
     @staticmethod
@@ -948,8 +948,11 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         profile = lambda rr: rr**2 / (1 + np.exp((rr - R)/a))
         
         aux  = GaussianQuadrature.legendre(profile, 0, 15, 50)
-        rho0 = self.A / aux
+        rho0 = self.A / aux   
+        # For most nuclei rho0 = 0.17 fm-3
         
+        ## This shape is required because we are integrated with Laguerre
+        ## so we extract the exponential.
         aux = rho0 * np.exp((r / self.b_length)**2) / (1 + np.exp((r - R) / a))
         
         # aux2 = 4*np.pi * (self.b_length**(-3)) * np.exp(rOb/2)

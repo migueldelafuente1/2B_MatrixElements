@@ -518,8 +518,36 @@ class TBME_Reader():
         
         self._importMatrixElements(data)
     
-    def getMatrixElemnts(self):
-        """ Get the import matrix elements """
+    def getMatrixElemnts(self, sorting_order=None):
+        """ Get the imported matrix elements,
+        : sorting order: <list> of tuples with the qqnn in """
+        
+        if sorting_order:
+            dict_2 = {}
+            q_numbs = sorting_order
+            for i in range(len(q_numbs)):
+                bra = q_numbs[i]
+                if bra == (205, 205):
+                    _=0
+                if not bra in self._elements: 
+                    continue
+                else:
+                    if not bra in dict_2:
+                        dict_2[q_numbs[i]] = {}
+            
+                for j in range(0, len(q_numbs)): # start i = 0
+                    ket = q_numbs[j]            
+                    if not ket in self._elements[bra]:
+                        continue
+                    else:
+                        if not ket in dict_2[bra]:
+                            dict_2[bra][ket] = {}
+                    
+                    block = self._elements[q_numbs[i]][q_numbs[j]]
+                    dict_2[q_numbs[i]][q_numbs[j]] = block
+            
+            self._elements = deepcopy(dict_2)
+                
         return deepcopy(self._elements)
     
     def _importMatrixElements(self, data):
@@ -540,11 +568,12 @@ class TBME_Reader():
             line = line.strip()
             if index == 0:
                 bra, ket, j_min, j_max, skip = self._getBlockQN_HamilType(line)
+
                 if skip:
                     index += 1
                     continue
                 # JT_block[bra] = {0: {}, 1: {}}
-                phs_bra, phs_ket, bra, ket = self._getPermutatioPhase(bra, ket)
+                phs_bra, phs_ket, bra, ket = self._getPermutationPhase(bra, ket)
                 if bra in JT_block:
                     if ket in JT_block[bra]:
                         print("WARNING, while reading the file found repeated "
@@ -590,7 +619,7 @@ class TBME_Reader():
                 
                 j_dict = dict([(j, {}) for j in range(j_min, j_max+1)])
                 
-                phs_bra, phs_ket, bra, ket = self._getPermutatioPhase(bra, ket)
+                phs_bra, phs_ket, bra, ket = self._getPermutationPhase(bra, ket)
                 if bra in J_block:
                     if ket in J_block[bra]:
                         print("WARNING, while reading the file found repeated "
@@ -598,6 +627,8 @@ class TBME_Reader():
                     J_block[bra][ket] = deepcopy(j_dict)
                 else:
                     J_block[bra] = {ket : deepcopy(j_dict)}
+                
+                t_indexing = self._getParticleLabelIndexingAfterPermutation()
                 
             elif index > 0 and (not skip):
                 J = j_min + index - 1
@@ -609,12 +640,30 @@ class TBME_Reader():
                 if self.ket_exch:
                     phs *= (-1)**(phs_ket + J + 1)
                 
-                for T in self._JSchemeIndexing.keys():
+                for T in t_indexing:
                     J_block[bra][ket][J][T] = self.const * phs * float(line[T])
             
             index = index + 1 if index < j_length else 0
         
         self._elements = J_block
+    
+    def _getParticleLabelIndexingAfterPermutation(self):
+        """ When bra or ket are exchanged, the index  of the particle
+         lables have to be reorganized """
+        t_indexing = [0, 1, 2, 3, 4, 5]
+        #         pppp pnpn pnnp nppn npnp nnnn
+        if self.bra_exch:
+            if self.ket_exch:
+                # pppp npnp nppn pnnp pnpn nnnn
+                t_indexing = [0, 4, 3, 2, 1, 5]
+            else:
+                # pppp nppn npnp pnpn pnnp nnnn
+                t_indexing = [0, 3, 4, 1, 2, 5]
+        if self.ket_exch:
+            #     pppp pnnp pnpn npnp nppn nnnn
+            t_indexing = [0, 2, 1, 4, 3, 5]
+        
+        return t_indexing
     
     def _getBlockQN_HamilType(self, header):
         """ 
@@ -623,7 +672,10 @@ class TBME_Reader():
                Tmin    Tmax    st1   st2     st3     st4       Jmin    Jmax
         """ 
         header = header.strip().split()
-        spss = [int(sp) for sp in header[2:6]]
+        # spss = [int(sp) for sp in header[2:6]]
+        spss = [int(castAntoineFormat2Str(readAntoine(sp, self.l_ge_10), 
+                                          True)) for sp in header[2:6]]
+        # The valence space internally is always l_gt_10=True (convert)
         
         skip = False
         for st in spss:
@@ -633,13 +685,12 @@ class TBME_Reader():
                 else:
                     self._valence_space.append(st)
         
-        
         bra = min(tuple(spss[0:2]), tuple(spss[2:4]))
         ket = max(tuple(spss[0:2]), tuple(spss[2:4]))
         
         return bra, ket, int(header[-2]), int(header[-1]), skip
     
-    def _getPermutatioPhase(self, bra, ket):
+    def _getPermutationPhase(self, bra, ket):
         """ 
         return the bra and the ket in increasing order (avoids repetition).
         
@@ -663,4 +714,5 @@ class TBME_Reader():
                        readAntoine(ket[1], self.l_ge_10)[2]) // 2
             
         return phs_bra, phs_ket, bra, ket
-            
+
+

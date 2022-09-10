@@ -1,20 +1,20 @@
 <input>
-	<Interaction_Title name="TBME_Runner" details=""/>
+	<Interaction_Title name="D1S no density " details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_t0_MZMax5</Output_Filename>
-		<!--Output_Filename>D1S_SPSDPF</Output_Filename-->
+		<Output_Filename>D1S_t0_SPSD</Output_Filename>
+		<!--Output_Filename>D1S_t0_b20_SPSD</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
-		<COM_correction>1</COM_correction>
+		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
 			   are not required parameters, define values only for explicit 
-			   setting.<Z>2</Z>1.4989  18.4586
+			   setting.<Z>2</Z>18.431586884467016 1.5
 			-->
 		<A_mass>4</A_mass>
 		<Z>2</Z>
-		<hbar_omega units='MeV'>18.431586884467016</hbar_omega>
-		<b_length units='fm'>1.5</b_length>
+		<!--hbar_omega units='MeV'>12.617</hbar_omega1.8000-->
+		<b_length units='fm'>1.7185258</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
@@ -26,7 +26,7 @@
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		
-		<Q_Number sp_state='307' sp_energy=''/>
+		<!--Q_Number sp_state='307' sp_energy=''/>
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
@@ -51,22 +51,21 @@
 		<Q_Number sp_state='10407' sp_energy=''/>
 		<Q_Number sp_state='30001' sp_energy=''/>
 		<Q_Number sp_state='20203' sp_energy=''/>
-		<!-- valence space-->
+		< valence space -->
 	</Valence_Space>
 	<Core/>
 	<Force_Parameters>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved >
 			<file name='results/D1S_t0_SPSDPF.2b'/-->
-			<file name='results/dd_a1_b15_A16.sho'/>
-			<options ignorelines='4' constant='1390.6' l_ge_10='True'/>
+			<file name='results/D1S_t0_SPSD.2b'/>
+			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
-			<file name='results/D1S_t0_SPSDPF.2b'/>
+			
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
-			<!--scheme name='J'/-->
 		</Force_From_File>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
@@ -75,7 +74,12 @@
 			<!--scheme name='J'/-->
 		</Force_From_File>
 		<Brink_Boeker active='True'>
-			<!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 -->
+		    <!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 >
+			<mu_length 	part_1='0.7' 		part_2='1.4' 	units='fm'/>
+			<Wigner		part_1='595.55' 	part_2='-72.21' units='MeV'/>
+			<Bartlett 	part_1='0.0' 		part_2='0.0' 	units='MeV'/>
+			<Heisenberg part_1='0.0' 		part_2='0.0' 	units='MeV'/>
+			<Majorana	part_1='-206.05'	part_2='-68.39'	units='MeV'/-->
 			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
 			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
 			<Bartlett 	part_1='1300' 		part_2='-163.483' 	units='MeV'/>
@@ -85,7 +89,7 @@
 		<Coulomb active='True'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
-		<Kinetic_2Body active='False'>
+		<Kinetic_2Body active='True'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
 		</Kinetic_2Body>
 		<SpinOrbitShortRange active='True'>
@@ -108,7 +112,7 @@
 				<constant value='1390.6'  	units='MeV*fm^-4'/>
 				-->
 			<constant value='1390.6'  	units='MeV*fm^-4'/>
-			<alpha    value='0.333333333'/>
+			<alpha    value='0.333333'/>
 			<x0		  value='1'/>
 		</Density_Dependent>
 	</Force_Parameters>

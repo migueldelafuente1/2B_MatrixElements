@@ -25,6 +25,7 @@ from helpers.Log import XLog
 from matrix_elements.CentralForces import CoulombForce, KineticTwoBody_JTScheme,\
     DensityDependentForce_JTScheme, CentralForce_JTScheme
 from helpers.TBME_SpeedRunner import TBME_SpeedRunner
+from helpers.matrixElementHandlers import MatrixElementFilesComparator
 
 
 if __name__ == "__main__":
@@ -37,12 +38,14 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
-        _runner = TBME_SpeedRunner(filename='input_B1.xml')
+        #_runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_Runner(filename='input_D1S.xml')
         # _runner.run()
         
-        # _runner = TBME_SpeedRunner(filename='input_D1S.xml')
-        #_runner = TBME_SpeedRunner(filename='input.xml')
+        _runner = TBME_SpeedRunner(filename='input_D1S.xml')
+        # _runner = TBME_SpeedRunner(filename='input.xml')
         _runner.run()
         print(" The program has ended without incidences.")
         
@@ -84,21 +87,24 @@ if __name__ == "__main__":
         
         #CentralMEParameters.potential : PotentialForms.Yukawa,
         #CentralMEParameters.mu_length : 2, 
-        CentralMEParameters.constant  : 1,
-        DensityDependentParameters.alpha : 1,
-        DensityDependentParameters.x0 : 1
+        # CentralMEParameters.constant  : 1,
+        # DensityDependentParameters.alpha : 1,
+        # DensityDependentParameters.x0 : 1
+        CentralMEParameters.potential : PotentialForms.Gaussian,
+        CentralMEParameters.mu_length : 1.4,
+        CentralMEParameters.constant  : -70.0
     }
     
     J = 1
     T = 0
     bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
                                    QN_1body_jj(0,0,1), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,0,1), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
+                                   QN_1body_jj(0,1,3), J, T)
     
-    DensityDependentForce_JTScheme.turnDebugMode(True)
-    DensityDependentForce_JTScheme.setInteractionParameters(**kwargs)
-    me = DensityDependentForce_JTScheme(bra_, ket_)
+    CentralForce_JTScheme.turnDebugMode(True)
+    CentralForce_JTScheme.setInteractionParameters(**kwargs)
+    me = CentralForce_JTScheme(bra_, ket_)
     print("me: ", me.value)
     me.saveXLog('me_dens')
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))

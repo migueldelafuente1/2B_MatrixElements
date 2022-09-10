@@ -8,13 +8,15 @@ from copy import deepcopy
 import numpy as np
 
 from helpers.TBME_Runner import TBME_Runner, TBME_RunnerException
-from helpers.Enums import InputParts as ip, ForceEnum, CouplingSchemeEnum
-from helpers.Helpers import safe_wigner_9j, readAntoine, printProgressBar
+from helpers.Enums import InputParts as ip, ForceEnum, CouplingSchemeEnum,\
+    ForceFromFileParameters, AttributeArgs
+from helpers.Helpers import safe_wigner_9j, readAntoine, printProgressBar,\
+    prettyPrintDictionary, _LINE_2
 from matrix_elements import switchMatrixElementType
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_J_Coupling,\
     QN_2body_jj_JT_Coupling
 from itertools import combinations_with_replacement
-from helpers.io_manager import valenceSpaceShellNames
+from helpers.io_manager import valenceSpaceShellNames, TBME_Reader
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement
 
 class TBME_SpdRunnerException(TBME_RunnerException):
@@ -63,7 +65,7 @@ class TBME_SpeedRunner(TBME_Runner):
             if len(force_list) > 1:
                 ## Verify forces do not repeat
                 if force == ForceEnum.Force_From_File:
-                    for i, params in enumerate(force_list):
+                    for i, params in enumerate(force_list):       
                         force_str = force + str(i)
                         ## read from file case 
                         self._readMatrixElementsFromFile(force_str, **params)
@@ -72,6 +74,8 @@ class TBME_SpeedRunner(TBME_Runner):
                     raise TBME_SpdRunnerException("Cannot compute two times "
                         "the same interaction: [{}] len={}".format(force, 
                                                                    len(force_list)))
+            if force == ForceEnum.Kinetic_2Body:
+                continue # jump the 2BodyCOM (otherwise it's appended to the 2b) 
             
             self.forces.append(switchMatrixElementType(force))
             ## define interactions
@@ -120,8 +124,14 @@ class TBME_SpeedRunner(TBME_Runner):
         
         self.combineAllResults()
         
+        print(("\nForces and their parameters calculated:   "+_LINE_2[1:])[:80])
+        for force in self.forces:
+            prettyPrintDictionary({force.__name__: force.PARAMS_FORCE})
+        print(_LINE_2[1:])
+        
         self.printMatrixElementsFile()
         self.printComMatrixElements()
+        
     
     def _calculateCommonPhaseKet9j(self):
         """ Common phase for the direct antisymmetrized m.e. """

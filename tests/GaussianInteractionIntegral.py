@@ -500,9 +500,9 @@ if __name__ == '__main__':
 #     _testNormalizationRadialFunctionsRange(40, b_length=1.5)
 #     print(_testNormalizationSingleRadialFunction(20, 0, b_length=1.5))
     
-    b_length = 1.0
-    mu_param = 1.0
-    V_0      = 1
+    b_length = 1.5
+    mu_param = 1.4
+    V_0      = -70.0
     
     a, b = QN_1body_radial(1, 3, mt=1), QN_1body_radial(1, 1, mt=1)
     c, d = QN_1body_radial(1, 3, mt=1), QN_1body_radial(1, 1, mt=1)
@@ -530,8 +530,8 @@ if __name__ == '__main__':
     
     la = 0
     lb = 0
-    lc = 0
-    ld = 0
+    lc = 1
+    ld = 1
     L  = 0
     
     # for quad_ord in (i for i in range(80, 141, 10)):
