@@ -1,0 +1,101 @@
+<input>
+	<Interaction_Title name="B1 interaction" details=""/>
+	<Output_Parameters>
+		<Output_Filename>D1S_noC_SPSD</Output_Filename>
+		<!--Output_Filename>D1S_SPSDPF</Output_Filename-->
+		<Hamil_Type>4</Hamil_Type>
+		<COM_correction>1</COM_correction>
+	</Output_Parameters>
+	<SHO_Parameters>
+		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
+			   are not required parameters, define values only for explicit 
+			   setting.<Z>2</Z>1.4989  18.4586
+			-->
+		<A_mass>16</A_mass>
+		<Z>8</Z>
+		<hbar_omega units='MeV'>18.431586884467016</hbar_omega>
+		<b_length units='fm'>1.5</b_length>
+	</SHO_Parameters>
+	<Valence_Space l_great_than_10='True'>
+		<Q_Number sp_state='001' sp_energy=''/>
+		
+		<Q_Number sp_state='101' sp_energy=''/>
+		<Q_Number sp_state='103' sp_energy=''/>
+		
+		<Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='10001' sp_energy=''/>
+		<Q_Number sp_state='203' sp_energy=''/>
+		
+		<!--Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='10103' sp_energy=''/>
+		<Q_Number sp_state='305' sp_energy=''/>
+		<Q_Number sp_state='10101' sp_energy=''/>
+		
+		<Q_Number sp_state='409' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='407' sp_energy=''/>
+		<Q_Number sp_state='20001' sp_energy=''/>
+		<Q_Number sp_state='10203' sp_energy=''/>
+		
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
+		
+		<Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/>
+		< valence space-->
+	</Valence_Space>
+	<Core/>
+	<Force_Parameters>
+		<Brink_Boeker active='True'>
+			<!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 -->
+			<!--mu_length 	part_1='0.7' 		part_2='1.4' 	units='fm'/>
+			<Wigner		part_1='595.55' 	part_2='-72.21' units='MeV'/>
+			<Bartlett 	part_1='0.0' 		part_2='0.0' 	units='MeV'/>
+			<Heisenberg part_1='0.0' 		part_2='0.0' 	units='MeV'/>
+			<Majorana	part_1='-206.05'	part_2='-68.39'	units='MeV'/ -->
+			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
+			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
+			<Bartlett 	part_1='1300' 		part_2='-163.483' 	units='MeV'/>
+			<Heisenberg part_1='-1813.53' 	part_2='162.812' 	units='MeV'/>
+			<Majorana	part_1='1397.6'		part_2='-223.934'	units='MeV'/>
+		</Brink_Boeker>
+		<Coulomb active='False'>
+			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
+		</Coulomb>
+		<Kinetic_2Body active='False'>
+			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
+		</Kinetic_2Body>
+		<SpinOrbitShortRange active='True'>
+			<!-- Spin Orbit from the Short Range approximation Force.
+				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
+				constant interaction potential functions 
+				f(r; mu, n), modulated by constant: V(r3)=C*f(r; mu, n)
+				-->
+			<potential 	name='power'/>
+			<constant	value='115.0' 	units='MeV*fm^-5'/>
+			<mu_length	value='1.0' 	units='fm'/>
+			<n_power  	value='0'/>
+		</SpinOrbitShortRange>
+		<Density_Dependent active='False'>
+			<!-- Density dependent Force based on Fermi density for the nucleus,
+				parametrization from Gogny D1S:
+					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)
+				alpha fixed (=1/3), x0 fixed (=1)
+				<alpha    value='0.33333333' />
+				<constant value='1390.6'  	units='MeV*fm^-4'/>
+				-->
+			<constant value='1350.0'  	units='MeV*fm^-4'/>
+			<alpha    value='0.333333'/>
+			<x0		  value='1'/>
+		</Density_Dependent>
+	</Force_Parameters>
+</input>

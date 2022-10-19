@@ -527,8 +527,7 @@ class TBME_Reader():
             q_numbs = sorting_order
             for i in range(len(q_numbs)):
                 bra = q_numbs[i]
-                if bra == (205, 205):
-                    _=0
+                
                 if not bra in self._elements: 
                     continue
                 else:

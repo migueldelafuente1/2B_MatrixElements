@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_SPSD(Nathalie)</Output_Filename>
+		<Output_Filename>ls_mosh</Output_Filename>
 		<!--Output_Filename>kin2_geo_SPSD</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
@@ -14,7 +14,7 @@
 		<A_mass>4</A_mass>
 		<Z>2</Z>
 		<hbar_omega units='MeV'>18.431586884467016</hbar_omega >
-		<b_length units='fm'>1.5</b_length>
+		<b_length units='fm'>1.8</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
@@ -152,7 +152,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</Tensor>
-		<SpinOrbit active='False'>
+		<SpinOrbit active='True'>
 			<!-- Spin Orbit Force.
 				Standard non central force V(r)L*S parameterized with exponential, 
 				gaussian, power term, yukawa or coulomb potential functions 
@@ -170,7 +170,7 @@
 				f(r; mu, n), modulated by constant: V(r3)=C*f(r; mu, n)
 				-->
 			<potential 	name='power'/>
-			<constant	value='130.0' 	units='MeV*fm^-5'/>
+			<constant	value='1.0' 	units='MeV*fm^-5'/>
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
@@ -185,7 +185,7 @@
 			<alpha    value='0.3333'/>
 			<x0		  value='1'/>
 		</Density_Dependent>
-		<Force_From_File active='True'>
+		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
 			<!--file name='tests/bench_me/TBME_J.2b'/--> 
 			<file name='results/0s0p1s0d.2b'/>

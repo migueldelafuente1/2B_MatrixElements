@@ -44,8 +44,8 @@ if __name__ == "__main__":
         # _runner = TBME_Runner(filename='input_D1S.xml')
         # _runner.run()
         
-        _runner = TBME_SpeedRunner(filename='input_D1S.xml')
         # _runner = TBME_SpeedRunner(filename='input.xml')
+        _runner = TBME_SpeedRunner(filename='input_D1S.xml')
         _runner.run()
         print(" The program has ended without incidences.")
         

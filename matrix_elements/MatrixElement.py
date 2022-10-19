@@ -542,3 +542,4 @@ class _MatrixElementReader(_TwoBodyMatrixElement):
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     _BREAK_ISOSPIN = False
+    

@@ -1,20 +1,21 @@
 <input>
 	<Interaction_Title name="D1S no density " details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_t0_SPSD</Output_Filename>
-		<!--Output_Filename>D1S_t0_b20_SPSD</Output_Filename-->
+		<!--Output_Filename>D1S_t0_Pu240MZ4to6</Output_Filename-->
+		<Output_Filename>D1S_MZ5</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
-		<COM_correction>0</COM_correction>
+		<COM_correction>1</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
 			   are not required parameters, define values only for explicit 
-			   setting.<Z>2</Z>18.431586884467016 1.5
+			   setting.
 			-->
-		<A_mass>4</A_mass>
-		<Z>2</Z>
-		<!--hbar_omega units='MeV'>12.617</hbar_omega1.8000-->
-		<b_length units='fm'>1.7185258</b_length>
+		<A_mass>120</A_mass>
+		<Z>50</Z>
+		<!--hbar_omega units='MeV'>12.617</hbar_omega bA70:2.0402454 2.5 1.689 -->
+		<hbar_omega units='MeV'/>
+		<b_length units='fm'>1.0</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
@@ -25,8 +26,8 @@
 		<Q_Number sp_state='205' sp_energy=''/>
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
-		
-		<!--Q_Number sp_state='307' sp_energy=''/>
+			
+		<Q_Number sp_state='307' sp_energy=''/>
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
@@ -44,27 +45,77 @@
 		<Q_Number sp_state='20103' sp_energy=''/>
 		<Q_Number sp_state='20101' sp_energy=''/>
 		
-		<Q_Number sp_state='613' sp_energy=''/>
+		<!--Q_Number sp_state='613' sp_energy=''/>
 		<Q_Number sp_state='10409' sp_energy=''/>
 		<Q_Number sp_state='20205' sp_energy=''/>
 		<Q_Number sp_state='611' sp_energy=''/>
 		<Q_Number sp_state='10407' sp_energy=''/>
 		<Q_Number sp_state='30001' sp_energy=''/>
 		<Q_Number sp_state='20203' sp_energy=''/>
-		< valence space -->
+		
+		<Q_Number sp_state='715'   sp_energy=''/>
+		<Q_Number sp_state='713'   sp_energy=''/>
+		<Q_Number sp_state='10511' sp_energy=''/>
+		<Q_Number sp_state='10509' sp_energy=''/>
+		<Q_Number sp_state='20307' sp_energy=''/>
+		<Q_Number sp_state='20305' sp_energy=''/>
+		<Q_Number sp_state='30103' sp_energy=''/>
+		<Q_Number sp_state='30101' sp_energy=''/>
+		
+		<Q_Number sp_state='817'   sp_energy=''/>
+		<Q_Number sp_state='815'   sp_energy=''/>
+		<Q_Number sp_state='10613' sp_energy=''/>
+		<Q_Number sp_state='10611' sp_energy=''/>
+		<Q_Number sp_state='20409' sp_energy=''/>
+		<Q_Number sp_state='30205' sp_energy=''/>
+		<Q_Number sp_state='20407' sp_energy=''/>
+		<Q_Number sp_state='40001' sp_energy=''/>
+		<Q_Number sp_state='30203' sp_energy=''/>
+		
+		<Q_Number sp_state='919'   sp_energy=''/>
+		<Q_Number sp_state='917'   sp_energy=''/>
+		<Q_Number sp_state='10715'   sp_energy=''/>
+		<Q_Number sp_state='10713'   sp_energy=''/>
+		<Q_Number sp_state='20511'   sp_energy=''/>
+		<Q_Number sp_state='20509'   sp_energy=''/>
+		<Q_Number sp_state='30307'   sp_energy=''/>
+		<Q_Number sp_state='30305'   sp_energy=''/>
+		<Q_Number sp_state='40103'   sp_energy=''/>
+		<Q_Number sp_state='40101'   sp_energy=''/>
+		
+		<Q_Number sp_state='1021'   sp_energy=''/>
+		<Q_Number sp_state='1019'   sp_energy=''/>
+		<Q_Number sp_state='10817'   sp_energy=''/>
+		<Q_Number sp_state='10815'   sp_energy=''/>
+		<Q_Number sp_state='20613'   sp_energy=''/>
+		<Q_Number sp_state='20611'   sp_energy=''/>
+		<Q_Number sp_state='30409'   sp_energy=''/>
+		<Q_Number sp_state='30407'   sp_energy=''/>
+		<Q_Number sp_state='40205'   sp_energy=''/>
+		<Q_Number sp_state='40203'   sp_energy=''/>
+		<Q_Number sp_state='50001'   sp_energy=''/-->
+		
+		<!-- valence space -->
 	</Valence_Space>
 	<Core/>
 	<Force_Parameters>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved >
 			<file name='results/D1S_t0_SPSDPF.2b'/-->
-			<file name='results/D1S_t0_SPSD.2b'/>
-			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
+			<file name='savedBeq1Hamils/Coul_MZ7_beq1.2b'/>
+			<options ignorelines='1' constant='0.59206631142' l_ge_10='True'/>
+			<!--scheme name='J'/-->
+		</Force_From_File>
+		<Force_From_File active='False'>
+			<!-- Import an interaction already saved >
+			<file name='results/D1S_t0_SPSDPF.2b'/-->
+			<file name='savedBeq1Hamils/LSSR_MZ7_beq1.2b'/>
+			<options ignorelines='1' constant='0.07275314168' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
-			
+			<file name='savedBeq1Hamils/void.2b'/>
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 		</Force_From_File>
 		<Force_From_File active='False'>
@@ -73,7 +124,7 @@
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
-		<Brink_Boeker active='True'>
+		<Brink_Boeker active='False'>
 		    <!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 >
 			<mu_length 	part_1='0.7' 		part_2='1.4' 	units='fm'/>
 			<Wigner		part_1='595.55' 	part_2='-72.21' units='MeV'/>
@@ -86,18 +137,18 @@
 			<Heisenberg part_1='-1813.53' 	part_2='162.812' 	units='MeV'/>
 			<Majorana	part_1='1397.6'		part_2='-223.934'	units='MeV'/>
 		</Brink_Boeker>
-		<Coulomb active='True'>
+		<Coulomb active='False'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
-		<Kinetic_2Body active='True'>
+		<Kinetic_2Body active='False'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
 		</Kinetic_2Body>
-		<SpinOrbitShortRange active='True'>
+		<SpinOrbitShortRange active='False'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
 				f(r; mu, n), modulated by constant: V(r3)=C*f(r; mu, n)
-				-->
+				130-->
 			<potential 	name='power'/>
 			<constant	value='130.0' 	units='MeV*fm^-5'/>
 			<mu_length	value='1.0' 	units='fm'/>

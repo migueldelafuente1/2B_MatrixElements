@@ -60,11 +60,26 @@ class TBME_SpeedRunner(TBME_Runner):
         """
         _forcesAttr = ip.Force_Parameters
         sho_params = getattr(self.input_obj, ip.SHO_Parameters)
+        kin_key = ForceEnum.Kinetic_2Body
         
+        sortedForces = []
         for force, force_list in getattr(self.input_obj, _forcesAttr).items():
-            if len(force_list) > 1:
+            if force == kin_key:
+                sortedForces.append((force, force_list))
+            else:
+                if sortedForces and sortedForces[-1][0] == kin_key:
+                    sortedForces = [*sortedForces[:-1], (force, force_list), 
+                                     sortedForces[-1]]
+                else:
+                    sortedForces = [*sortedForces, (force, force_list)]
+                
+        for force, force_list in sortedForces:
+            if (len(force_list) > 1) or (force == ForceEnum.Force_From_File):
                 ## Verify forces do not repeat
                 if force == ForceEnum.Force_From_File:
+                    if not hasattr(self, '_twoBodyQuantumNumbersSorted'): 
+                        # required to append the m.e. after reading TBMEReader
+                        self._sortQQNNFromTheValenceSpace() 
                     for i, params in enumerate(force_list):       
                         force_str = force + str(i)
                         ## read from file case 
@@ -74,8 +89,8 @@ class TBME_SpeedRunner(TBME_Runner):
                     raise TBME_SpdRunnerException("Cannot compute two times "
                         "the same interaction: [{}] len={}".format(force, 
                                                                    len(force_list)))
-            if force == ForceEnum.Kinetic_2Body:
-                continue # jump the 2BodyCOM (otherwise it's appended to the 2b) 
+            # if force == ForceEnum.Kinetic_2Body:
+            #     continue # jump the 2BodyCOM (otherwise it's appended to the 2b) 
             
             self.forces.append(switchMatrixElementType(force))
             ## define interactions
@@ -103,7 +118,7 @@ class TBME_SpeedRunner(TBME_Runner):
         Calculate all the matrix elements for all the interactions, and 
         print its combination in a file.
         """
-        self._defineValenceSpaceEnergies()        
+        self._defineValenceSpaceEnergies()
         self._checkHamilTypeAndForces()
         c_time = time()
         
@@ -382,7 +397,8 @@ class TBME_SpeedRunner(TBME_Runner):
         and exchange matrix elements in the LS scheme.
         """
         bra, ket = self._qqnn_curr
-        
+        if bra==(1, 101) and ket==(1, 101):
+            _=0
         all_null = True
         _last = len(self.me_instances) - 1
         for f in range(len(self.me_instances)):
