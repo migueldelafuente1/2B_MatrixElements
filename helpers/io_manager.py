@@ -284,7 +284,7 @@ class _XMLParser(_Parser):
     def getCore(self):
         elem = self._data.find(InputParts.Core)
         vals_dict = {}
-        
+        pro_neu_defined = False
         for param in CoreParameters.members():
             val_ = elem.find(param)
                     
@@ -296,24 +296,49 @@ class _XMLParser(_Parser):
                     # raise ParserException("missing parameter [{}] in {}"
                     #                       .format(param, InputParts.Core))
             if param == CoreParameters.innert_core:
-                val_ = {}
+                val_ = val_.attrib
                 for attr_ in AttributeArgs.CoreArgs.members():
                     value = val_.get(attr_)
                     val_[attr_] = value if value else 0
                     if attr_ == AttributeArgs.name and not value:
                         val_[attr_] = getCoreNucleus(0, 0)
             else:
-                val_ = '0' if val_ == None  else val_.text
+                if val_ == None:
+                    if pro_neu_defined:
+                        print("[Error] Protons/neutrons set but not the",
+                            "other in <Core>, both discarded and use",
+                            "<inner_core> args:", vals_dict, "(current) bye.")
+                    val_ = '0'
+                else: 
+                    val_.text
+                    pro_neu_defined = True
             
             vals_dict[param] = val_
-                
+        
+        if CoreParameters.innert_core in vals_dict:
+            inn_core = vals_dict[CoreParameters.innert_core]
+            zic = inn_core.get(AttributeArgs.CoreArgs.protons)
+            nic = inn_core.get(AttributeArgs.CoreArgs.neutrons)
+            if not pro_neu_defined:
+                # case prot. and neut. not defined in <core> but yes in <inn_core>
+                vals_dict[CoreParameters.protons]  = zic
+                vals_dict[CoreParameters.neutrons] = nic
+            elif ((zic != vals_dict[CoreParameters.protons]) 
+                  or (nic != vals_dict[CoreParameters.neutrons])):
+                #case defined but:
+                ## case 1: inner_core not defined (IMPOSIBLE due the first if)
+                ## case 2: inn_core defined, then check if match and get prot. neutr.
+                print("[Warning] you are defining the core using <inner_core>",
+                    " and <protons>,<neutrons> but do not match:", vals_dict,
+                    ",the program will stay with the <prot>/<neutr.> arguments")
+        
         return vals_dict
     
     def getForceEnum(self):
         force_elems = self._data.find(InputParts.Force_Parameters)
         force_dict = {}
         
-        for force_elem in force_elems.getchildren():
+        for force_elem in list(force_elems):
             active_ = force_elem.attrib.get(AttributeArgs.ForceArgs.active)
             force = force_elem.tag
             

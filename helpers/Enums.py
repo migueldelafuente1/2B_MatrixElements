@@ -95,6 +95,7 @@ class DensityDependentParameters(Enum):
     constant    = 'constant' # t_0
     x0    = 'x0'
     alpha = 'alpha'
+    core  = 'core'
 
 class SDIParameters(Enum):
     constants = 'constants'
@@ -157,6 +158,11 @@ class AttributeArgs(Enum):
             B = 'B' # when activated, MSDI interaction
             C = 'C'
             # Brussaard_ & Glaudemans_ book (1977)
+        
+        class DensDep(Enum):
+            protons  = 'protons'
+            neutrons = 'neutrons'
+            core_b_len = 'core_b_len'
         
     class FileReader(Enum):
         ignorelines = 'ignorelines'

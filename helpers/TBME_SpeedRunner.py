@@ -126,7 +126,8 @@ class TBME_SpeedRunner(TBME_Runner):
         self._setForces()
         
         ## compute the valence space.   
-            # the computation in J is common, separate between      
+            # the computation in J is common, separate between
+              
         self._computeForValenceSpaceJCoupled()
         print("Finished computation, Total time (s): [{}]".format(time() - c_time))
         
@@ -167,6 +168,7 @@ class TBME_SpeedRunner(TBME_Runner):
         q_numbs = list(combinations_with_replacement(q_numbs, 2))
         
         self._count = 0
+        self._progress_stp = 0  ## to print only up to the 1st decimal in progress bar
         self._total_me = len(q_numbs)*(len(q_numbs)+1)//2
         for i in range(len(q_numbs)):
             self.bra_1 = QN_1body_jj(*readAntoine(q_numbs[i][0], l_ge_10=True))
@@ -397,8 +399,7 @@ class TBME_SpeedRunner(TBME_Runner):
         and exchange matrix elements in the LS scheme.
         """
         bra, ket = self._qqnn_curr
-        if bra==(1, 101) and ket==(1, 101):
-            _=0
+        
         all_null = True
         _last = len(self.me_instances) - 1
         for f in range(len(self.me_instances)):
@@ -447,5 +448,10 @@ class TBME_SpeedRunner(TBME_Runner):
                 print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})>'
                       .format(self._count, self._total_me, time() - self._tic, 
                               bra, ket, self.J))
-            else: 
-                printProgressBar(self._count, self._total_me)
+            else:
+                ## print progress bar only for delta_steps % > 0.1%
+                if (self._count-self._progress_stp)/self._total_me > 0.001:
+                    printProgressBar(self._count, self._total_me)
+                    self._progress_stp = self._count
+
+## E.O.F

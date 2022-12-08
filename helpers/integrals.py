@@ -903,6 +903,11 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             if self.Z > A: 
                 raise IntegralException("Fermi density for A < Z !!")
         
+        ## factor for the r = (r/b) of the density to be (r/b_core)=(r/b)(b/b_c)
+        xBoBcore = 1 
+        if abs(self.b_length_core - self.b_length) > 0.01:
+            xBoBcore = self.b_length / self.b_length_core
+        
         aux = 0.0 * r
         occupied_states = getStatesAndOccupationOfFullNucleus(self.Z, self.N)
         for i in range(len(occupied_states)):
@@ -914,12 +919,17 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             if occ > 0:
                 aux_i = 0.0 * r
                 for p in range(2*ni +1):
-                    aux_r  = ((r)**(2*(p + li)))   #
+                    aux_r  = ((r * xBoBcore)**(2*(p + li)))   #
                     aux_i += self._B_coeff(ni,li,ni,li, p) * aux_r
                 aux += occ * aux_i
         
+        ## we consider the internal integral to be exp(- (r/ b')^2) if b /= b_c
+        if abs(self.b_length_core - self.b_length) > 0.01:
+            aux *= np.exp(r  * (1 - (xBoBcore**2)))
+            
         # import matplotlib.pyplot as plt
-        # plt.plot(rOb, aux )
+        # plt.plot(r/((2+0.3333)**0.5), (1 / (4*np.pi*(self.b_length_core**3))) 
+        #             * aux  / np.exp(np.power(r/((2+0.3333)**0.5),2)))
         # plt.show()
         
         self._nuclear_density = aux
@@ -943,19 +953,26 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         # r0, a = 1.1,  0.5  # Greiner 
         r0, a = 1.25, 0.524  # Kranne
         # r0, a = 
+        b = 0.05  ## parameter for the bump
         
         R  = r0 * (self.A**(1/3))
-        profile = lambda rr: rr**2 / (1 + np.exp((rr - R)/a))
+        profile = lambda rr: (rr**2)*(1 + b*(rr**2)) / (1 + np.exp((rr - R)/a))
         
-        aux  = GaussianQuadrature.legendre(profile, 0, 15, 50)
+        ## 4*np.pi * is not done here, radial profile require the factor for the
+        ## global integral = A, but the def. has no angular part, so the 1/4pi
+        ## is extracted to the constant of the global radial integration. 
+        aux  =  GaussianQuadrature.legendre(profile, 0, 15, 50)
         rho0 = self.A / aux   
         # For most nuclei rho0 = 0.17 fm-3
         
         ## This shape is required because we are integrated with Laguerre
         ## so we extract the exponential.
-        aux = rho0 * np.exp((r / self.b_length)**2) / (1 + np.exp((r - R) / a))
+        ## delafuen: the core length has no place here.
+        aux = (1 + b*(r**2)) / (1 + np.exp((r - R) / a))
+        aux = rho0 * np.exp((r / self.b_length)**2) * aux 
         
-        # aux2 = 4*np.pi * (self.b_length**(-3)) * np.exp(rOb/2)
+        # rOb = r / self.b_length
+        # aux2 = 4*np.pi * np.exp(rOb/2)
         # import matplotlib.pyplot as plt
         # plt.plot(rOb, aux)
         # plt.show()
@@ -988,32 +1005,33 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             exp(-(alpha + 2)r**2) * r^2*No2 * fermi_density
         :No2 stands for N over 2, being N = 2*(p+p') + sum{l} + 2 
         """
-        if self._DENSITY_APROX:
-            cte = 2**(No2 + 1.5)
-        else:
-            ## TODO (MOVED): pon la constante del llenado aqui tras la prueba
-            pass
         cte = 2 * ((alpha + 2)**(No2 + 0.5))
-        
+        ## cte is the same for both methods
+        N_integr = 100
+        if abs(self.b_length_core - self.b_length) > 0.01:
+            N_integr = 180
         aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
-                                          (100, 0.5), No2, A, Z, alpha)
+                                          (N_integr, 0.5), No2, A, Z, alpha)
         if self.DEBUG_MODE: XLog.write("Ip_q", Lag_int=aux)
         return aux / cte
     
     @staticmethod
-    def integral(wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha): 
+    def integral(wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha, 
+                 b_length_core): 
         """
         :wfs: wave fucntions bra 1, 2 ket 1, 2
         :b_length: oscillator parameter 
         :A: <int>  mass number
         :Z: <int or None>
         :alpha: coefficient over the density
+        :b_length_core: (opt) oscillator length of the core might be different
         """
         self = _RadialDensityDependentFermi._getInstance()
         args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha)        
-        return self._integral(*args)
+        return self._integral(*args, b_length_core=b_length_core)
     
-    def _integral(self, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha):
+    def _integral(self, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length, A, Z, alpha,
+                  b_length_core=None):
                 
         n1_q, l1_q = wf1_bra.n, wf1_bra.l
         n2_q, l2_q = wf2_bra.n, wf2_bra.l
@@ -1021,6 +1039,9 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         n2, l2 = wf2_ket.n, wf2_ket.l
         
         self.b_length = b_length    ## keep for _DensityProfile
+        self.b_length_core = b_length
+        if b_length_core:           ## set another b lenght for the core
+            self.b_length_core = b_length_core
         if (l1 + l2 + l1_q + l2_q) % 2 == 1:
             raise IntegralException("(l1 + l2 + l1_q + l2_q) not even")
         
@@ -1051,7 +1072,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         
         norm_fact = 1 / ((4*np.pi)**alpha * b_length**(3)) # b_length**(3*(1 - 2))
         if not self._DENSITY_APROX:
-            norm_fact /=  b_length**(3*alpha)
+            norm_fact /=  self.b_length_core**(3*alpha)
         
         if self.DEBUG_MODE:
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)

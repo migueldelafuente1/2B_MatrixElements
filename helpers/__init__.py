@@ -11,6 +11,12 @@ SCIPY_INSTALLED  = True
 PANDAS_INSTALLED = True
 MATPLOTLIB_INSTALLED   = True
 ## SYMPY is required to evaluate Angular coeffs_, NUMPY is fundamental (raise error)
+try:
+    import sympy
+    import numpy
+except ImportError as err:
+    print("FATAL ERROR :: numpy and sympy are required to run the program. STOP.")
+    raise err
 
 try:
     import scipy

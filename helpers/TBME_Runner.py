@@ -79,6 +79,23 @@ class TBME_Runner(object):
         self.filename_output  = self.RESULT_FOLDER +'/'+ self.input_obj.getFilename()
         self._setHamilTypeAndCOMCorrection()
     
+    @classmethod
+    def setFolderToSaveResults(cls, new_folder=None):
+        """ 
+        Fix a new folder for the hamiltonian results. 
+        :new_folder <str> Sets the new folder (creates if does not exists)
+            if =None, default folder is reseted
+            if ='' or '.'    does not save into a folder (saved into main location)
+        """
+        if new_folder == None:
+            cls.RESULT_FOLDER = OUTPUT_FOLDER
+        else:
+            new_folder = '.' if new_folder=='' else new_folder
+            cls.RESULT_FOLDER = new_folder
+        
+        if not os.path.exists(cls.RESULT_FOLDER):
+            os.mkdir(cls.RESULT_FOLDER)
+    
     def _setHamilTypeAndCOMCorrection(self, hamil_type=None, com_correct=None):
         """
         Method to define the global output, hamil_types for TAURUS include options
@@ -364,7 +381,7 @@ The program will exclude it from the interaction file and will produce the .com 
             {0: pppp, 1:pnpn, 2:pnnp, 3:nppn, 4:npnp, 5:nnnn}
         """
         q_numbs = self._twoBodyQuantumNumbersSorted
-        
+        self._progress_stp = 0  ## to print only up to the 1st decimal in progress bar
         for i in range(len(q_numbs)):
             n1_bra = QN_1body_jj(*readAntoine(q_numbs[i][0], l_ge_10=True))
             n2_bra = QN_1body_jj(*readAntoine(q_numbs[i][1], True))
@@ -407,8 +424,11 @@ The program will exclude it from the interaction file and will produce the .com 
                                           bra, ket, J, force))
                             print('\t= {:.8} '.format(me.value))
                 if not self.PRINT_LOG:
+                    if (self._count-self._progress_stp)/self._total_me < 0.001:
+                        continue
                     printProgressBar(self._count, self._total_me, 
                                      prefix='Progress '+force+':')
+                    self._progress_stp = self._count
     
     def _computeForValenceSpace(self, force):
         len_q_numbs = len(self._twoBodyQuantumNumbersSorted)
@@ -639,9 +659,7 @@ The program will exclude it from the interaction file and will produce the .com 
         
         valen, energ = self._valenceSpaceLine()
         
-        
         core = getattr(self.input_obj, ip.Core) 
-        
         if self._hamil_type in '34':
             core_args = [core.get(AttributeArgs.CoreArgs.protons, '0'),
                          core.get(AttributeArgs.CoreArgs.neutrons, '0')]

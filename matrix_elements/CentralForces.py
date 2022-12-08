@@ -214,7 +214,8 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         return self.centerOfMassMatrixElementEvaluation()
     
 
-
+from helpers.Enums import DensityDependentParameters as dd_p
+from helpers.Enums import AttributeArgs as atrE
 # class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
 class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
 
@@ -241,8 +242,6 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         
         method bypasses calling from main or io_manager
         """
-        from helpers.Enums import DensityDependentParameters as dd_p
-        
         # Refresh the Force parameters
         if cls.PARAMS_FORCE:
             cls.PARAMS_FORCE = {}
@@ -257,12 +256,38 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         cls.PARAMS_SHO[_z] = int(z) if z else None
         
         cls.PARAMS_FORCE = {}
-        
+        cls.PARAMS_CORE  = {}
+        cls._has_core_b_lenght = False
+        fa = atrE.ForceArgs
         for param in dd_p.members():
             aux = kwargs[param]
-            if isinstance(aux, dict):
-                aux = float(aux[AttributeArgs.value])
-            cls.PARAMS_FORCE[param] = aux
+            if param == dd_p.core:
+                b = aux.get(fa.DensDep.core_b_len, None)
+                if (b != None) and (b != ''):
+                    cls.PARAMS_CORE[fa.DensDep.core_b_len] = float(b)
+                    cls._has_core_b_lenght = True
+                _z = aux.get(fa.DensDep.protons, '0')
+                _n = aux.get(fa.DensDep.neutrons,'0')
+                if '.' in _z or '.' in _n: 
+                    print("[Error] Set up d.d force core Z or N number is float["
+                          ,_z,_n,"] use only integers")
+                    if '.' in _z or '.' in _z: 
+                        raise MatrixElementException("Invalid N/Z core. Stop")
+                
+                _z, _n = abs(int(_z)), abs(int(_n)) 
+                # in case somebody set them <0
+                if _z == 0 and _n == 0:
+                    print("[Warning] Cannot set A=0 core, Z=N=0, so PARAMS_CORE",
+                          "ignores arguments given, A,Z come form SHO_params:",
+                          cls.PARAMS_SHO)
+                    continue
+                cls.PARAMS_CORE[fa.DensDep.protons ] = int(_z)
+                cls.PARAMS_CORE[fa.DensDep.neutrons] = int(_n)
+                
+            else:
+                if isinstance(aux, dict):
+                    aux = float(aux[AttributeArgs.value])
+                cls.PARAMS_FORCE[param] = aux
                 
         #cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
     
@@ -292,20 +317,30 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         
         if self.isNullValue(fact):
             return 0.0
+        
+        _A = self.PARAMS_SHO.get(SHO_Parameters.A_Mass)
+        _Z = self.PARAMS_SHO.get(SHO_Parameters.Z)
+        fa = atrE.ForceArgs
+        if ((fa.DensDep.protons in self.PARAMS_CORE)
+             and (fa.DensDep.neutrons in self.PARAMS_CORE)):
+            ## it only reset the DD core if there both parameters are defined
+            _Z = self.PARAMS_CORE[fa.DensDep.protons]
+            _A =  _Z + self.PARAMS_CORE[fa.DensDep.neutrons]
+        
         args = (
             QN_1body_radial(self.bra.n1, self.bra.l1), 
             QN_1body_radial(self.bra.n2, self.bra.l2),
             QN_1body_radial(self.ket.n1, self.ket.l1),
             QN_1body_radial(self.ket.n2, self.ket.l2),
-            self.PARAMS_SHO.get(SHO_Parameters.b_length),
-            self.PARAMS_SHO.get(SHO_Parameters.A_Mass),
-            self.PARAMS_SHO.get(SHO_Parameters.Z),
-            self.PARAMS_FORCE.get(DensityDependentParameters.alpha)
+            self.PARAMS_SHO.get(SHO_Parameters.b_length), _A, _Z,
+            self.PARAMS_FORCE.get(DensityDependentParameters.alpha),
+            self.PARAMS_CORE .get(AttributeArgs.ForceArgs.DensDep.core_b_len)
         )
         if self.DEBUG_MODE:
             _RadialDensityDependentFermi.DEBUG_MODE = True
             
         _RadialDensityDependentFermi._DENSITY_APROX = False
+            
         radial = _RadialDensityDependentFermi.integral(*args)
         
         return fact * radial
