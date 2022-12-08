@@ -48,6 +48,7 @@ class CoreParameters(Enum):
     protons     = 'protons'
     neutrons    = 'neutrons'
     innert_core = 'innert_core'
+    energy      = 'energy' 
         
 class ForceEnum(Enum):
     SDI = 'SDI'

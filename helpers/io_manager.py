@@ -302,6 +302,11 @@ class _XMLParser(_Parser):
                     val_[attr_] = value if value else 0
                     if attr_ == AttributeArgs.name and not value:
                         val_[attr_] = getCoreNucleus(0, 0)
+            elif param == CoreParameters.energy:
+                if val_ != None:
+                    val_ = val_.attrib.get(AttributeArgs.value, '0.0')
+                else:
+                    val_ = '0.0' 
             else:
                 if val_ == None:
                     if pro_neu_defined:

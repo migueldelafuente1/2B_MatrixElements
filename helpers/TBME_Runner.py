@@ -10,7 +10,7 @@ import time
 
 from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
     SHO_Parameters, Output_Parameters, OutputFileTypes,\
-    CouplingSchemeEnum, ForceEnum, ForceFromFileParameters
+    CouplingSchemeEnum, ForceEnum, ForceFromFileParameters, CoreParameters
 from matrix_elements import switchMatrixElementType
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement
 from itertools import combinations_with_replacement
@@ -886,12 +886,47 @@ The program will exclude it from the interaction file and will produce the .com 
         if all_null:
             return []
         return str_me_space 
+    
+    def _print_10b_file(self, title=''):
+        """
+        Writes the 1 body and 0-body file: 
+            [Title] [zero-body energy] [(a,a): E_aa, (a,b): E_ab, ...]
+        """
+        # write .1b file
+        strings_ = [title, ] # title
+        core = getattr(self.input_obj, ip.Core) 
+        core_energy = getattr(core, CoreParameters.energy, '0.0') 
         
+        strings_ = [title, core_energy,] # title
+        for a, b in self._twoBodyQuantumNumbersSorted:
+            a = castAntoineFormat2Str(a, l_ge_10=True)
+            b = castAntoineFormat2Str(b, l_ge_10=True)
+            val_ab = 0.0
+            ## TODO: define here how to get the 1B matrix elements
+            
+            if a == b:
+                ## append s.p energy of the element
+                sp_e = self.input_obj.Valence_Space.get(a, 0.0)
+                sp_e = float(sp_e)
+                val_ab += sp_e
+            if abs(val_ab) < 1.e-6:
+                continue
+            aux = "{:>5} {:>5}  {:13.6f}".format(a, b, val_ab)
+            strings_.append(aux)
+                
+        strings_ = '\n'.join(strings_)
+        
+        with open(self.filename_output + OutputFileTypes.oneBody, 'w+') as f:
+            f.write(strings_)
+            print (">> 2body m.e. saved in [{}]"
+                   .format(self.filename_output + OutputFileTypes.oneBody))
     
     def _printHamilType_34_Files(self):
         ## create directory for the output
         if not os.path.exists(self.RESULT_FOLDER):
             os.mkdir(self.RESULT_FOLDER)
+        
+        self._sortQQNNFromTheValenceSpace()  
         
         strings_sho_ = self._headerFileWriting()
         
@@ -908,7 +943,8 @@ The program will exclude it from the interaction file and will produce the .com 
         
         # write .01 file
         if self._hamil_type == '3':
-            raise TBME_RunnerException("Not implemented for hamil_type=3")
+            # raise TBME_RunnerException("Not implemented for hamil_type=3")
+            self._print_10b_file(strings_sho_[0])
         
         # write .2b file
         strings_ = [strings_sho_[0]] # title
