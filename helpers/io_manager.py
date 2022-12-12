@@ -287,15 +287,10 @@ class _XMLParser(_Parser):
         pro_neu_defined = False
         for param in CoreParameters.members():
             val_ = elem.find(param)
-                    
-            if val_ in (None, ''):
-                # if param == AttributeArgs.CoreArgs.innert_core:
-                #     val_ = 0
-                # else:
-                pass#val_ = 0
-                    # raise ParserException("missing parameter [{}] in {}"
-                    #                       .format(param, InputParts.Core))
+            
             if param == CoreParameters.innert_core:
+                if val_ == None: 
+                    continue
                 val_ = val_.attrib
                 for attr_ in AttributeArgs.CoreArgs.members():
                     value = val_.get(attr_)
