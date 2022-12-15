@@ -660,16 +660,20 @@ The program will exclude it from the interaction file and will produce the .com 
         valen, energ = self._valenceSpaceLine()
         
         core = getattr(self.input_obj, ip.Core) 
-        if self._hamil_type in '34':
+        if self._hamil_type == '4':
             core_args = [core.get(AttributeArgs.CoreArgs.protons, '0'),
                          core.get(AttributeArgs.CoreArgs.neutrons, '0')]
         else:
             _apply_density_correction = '0'
-            core_args = [
-                _apply_density_correction,
-                core.get(AttributeArgs.CoreArgs.protons, '0'),
-                core.get(AttributeArgs.CoreArgs.neutrons, '0'), 
-                '0.300000']#, '0.000000'
+            protns_c, neutrs_c = '0', '0'
+            try:
+                protns_c = core.get(AttributeArgs.CoreArgs.protons ).text
+                neutrs_c = core.get(AttributeArgs.CoreArgs.neutrons).text
+            except Exception as e:
+                pass
+            core_args = [_apply_density_correction,protns_c, neutrs_c, '0.300000']
+            #, '0.000000'
+            
         #title += ' (Core: {})'.format(getCoreNucleus(*core_args[1:3]))
         core_args = '\t' + ' '.join(core_args) 
         self.title = title
