@@ -304,21 +304,24 @@ elementNameByZ = {
     96 : "Cm",    97 : "Bk",    98 : "Cf",    99 : "Es",    100 : "Fm",
     101 : "Md",   102 : "No",   103 : "Lr",   104 : "Rf",   105 : "Db",
     106 : "Sg",   107 : "Bh",   108 : "Hs",   109 : "Mt",   110 : "Ds ",
-    111 : "Rg ",  112 : "Cn ",  113 : "Nh",   114 : "Fl",   115 : "Mc"
+    111 : "Rg ",  112 : "Cn ",  113 : "Nh",   114 : "Fl",   115 : "Mc",
+    116 : "Lv",   117 : "Ts",   118 : "Og"
 }
 
-def getCoreNucleus(Z, N):
+def getCoreNucleus(Z, N, MzHO=None):
     
+    if MzHO != None and MzHO > 3:
+        raise Exception("getCoreNucleus using shells that no longer lead a HO core. MzHO <= 3!")
     Z = Z if isinstance(Z, int) else int(Z)
     N = N if isinstance(N, int) else int(N)
     
-    if (Z, N) == (0, 0):
+    if (Z, N) == (0, 0)   or (MzHO == 0):
         return 'NO'
-    elif (Z, N) == (2, 2):
+    elif (Z, N) == (2, 2) or (MzHO == 1):
         return '4He'
-    elif (Z, N) == (8, 8):
+    elif (Z, N) == (8, 8) or (MzHO == 2):
         return '16O'
-    elif (Z, N) == (20, 20):
+    elif (Z, N) == (20, 20) or (MzHO == 3):
         return '40Ca'
     elif (Z, N) == (28, 28):
         return '56Ni'
