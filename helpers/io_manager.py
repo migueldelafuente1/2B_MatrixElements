@@ -740,3 +740,30 @@ class TBME_Reader():
         return phs_bra, phs_ket, bra, ket
 
 
+
+#===============================================================================
+# AUXIALIRY METHODS FOR EXPORTATION,
+#===============================================================================
+import os
+import subprocess
+
+def zipFilesInFolder(folder2compress, export_folder=None):
+    """ 
+    Export all files in a folder into another one (default 'BU_output')
+    """
+    assert os.path.isdir(folder2compress), f"[ERROR] folder2Compress[{folder2compress}] is NOT a directory."
+    
+    buzip = "BU_output" if export_folder==None else export_folder
+    current_zipfiles = filter(lambda x: x.endswith('.zip'), os.listdir('.'))
+    count_buzips = list(filter(lambda x: x.startswith(buzip), current_zipfiles))
+    
+    buzip += '_{}.zip'.format(len(count_buzips))
+    
+    order = 'zip -r {} {}'.format(buzip, folder2compress)
+    try:
+        _e = subprocess.call(order, shell=True)
+    except BaseException as be:
+        print("[ERROR] zipping of the BUresults cannot be done:: $",order)
+        print(">>>", be.__class__.__name__, ":", be)
+
+

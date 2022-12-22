@@ -245,8 +245,6 @@ def prettyPrintDictionary(dictionary, level=0, delimiter=' . '):
             print(header+'}')
         else:
             print(header+str(k)+':'+str(val))
-        
-
 
 def recursiveSumOnDictionaries(dict2read, dict2write):
     """
@@ -277,6 +275,7 @@ def almostEqual(a, b, tolerance=0):
         return (a == b) and (abs(a - b) < 1e-40)
     
     return abs(a - b) < tolerance
+
 #===============================================================================
 #
 #===============================================================================
@@ -507,10 +506,7 @@ def getStatesAndOccupationOfFullNucleus(Z, N, NZ_min=0):
         i += 1
     return occupation
         
-        
-    
-    
-    
+
 # if __name__ == "__main__":
 #
 #     print('13=\n'+'\n'.join(map(lambda x: str(x), getStatesUpToLastOcupied(13))))
