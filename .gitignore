@@ -1,8 +1,10 @@
 helpers/__pycache__
 matrix_elements/__pycache__
 tests/__pycache__
-!*scripts/*.py
 
+# exclude all files and folders from Windows execution of scripts but the python scripts
+scripts/*
+!scripts/*.py
 _DATA
 .git
 .dbeaver
