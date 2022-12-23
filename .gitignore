@@ -1,6 +1,9 @@
 helpers/__pycache__
 matrix_elements/__pycache__
 tests/__pycache__
+!*scripts/*.py
+
+_DATA
 .git
 .dbeaver
 .settings
@@ -9,6 +12,7 @@ tests/__pycache__
 
 *.txt
 *.csv
+*.xml
 bb_*
 
 
