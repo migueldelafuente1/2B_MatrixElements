@@ -3,6 +3,10 @@ Created on Apr 4, 2022
 
 @author: Miguel
 '''
+## ensures parent folder importing both Windows/Linux
+import os
+import sys
+sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 from helpers.Helpers import valenceSpacesDict_l_ge10, _LINE_2, Constants
 import xml.etree.ElementTree as et
@@ -13,7 +17,7 @@ from helpers.Enums import InputParts, AttributeArgs, ForceEnum,\
 from pathlib import Path
 import os, shutil
 import subprocess
-from computingHOhbaromegaForD1S import generateCOMFileFromFile, \
+from .computingHOhbaromegaForD1S import generateCOMFileFromFile, \
     COM2_TRUNC, BASE_HAMIL_NAME, generateD1SHamil
 
 template_xml = \

@@ -12,6 +12,10 @@ for Coulomb, LS short range and COM
 
 
 '''
+## ensures parent folder importing both Windows/Linux
+import os
+import sys
+sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 from helpers.Helpers import  _LINE_2, Constants,\
     valenceSpacesDict_l_ge10_byM, prettyPrintDictionary,\
@@ -22,9 +26,6 @@ from helpers.Enums import InputParts, AttributeArgs, ForceEnum,\
     CentralMEParameters, PotentialForms, ForceFromFileParameters,\
     BrinkBoekerParameters, CoreParameters, DensityDependentParameters
 from pathlib import Path
-import os
-import json
-import shutil
 import subprocess
 import time
 import numpy as np

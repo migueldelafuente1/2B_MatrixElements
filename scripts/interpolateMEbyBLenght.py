@@ -4,17 +4,17 @@ Created on Oct 26, 2022
 @author: Miguel
 '''
 import numpy as np
-import os
 from copy import deepcopy, copy
+## ensures parent folder importing both Windows/Linux
+import os
+import sys
+sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 import helpers
 from helpers.Helpers import valenceSpacesDict_l_ge10_byM
 if helpers.SCIPY_INSTALLED and helpers.MATPLOTLIB_INSTALLED:
     import matplotlib.pyplot as plt
     from scipy.interpolate import interp1d
-
-
-
 
 HAMIL_FOLDER = 'hamils_MZ5'
 
