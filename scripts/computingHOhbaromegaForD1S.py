@@ -716,7 +716,7 @@ if __name__ == '__main__':
     #% First, iterate over b_lengths for the larger space
     
     # TODO: set parameters for the execution. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    MZmax = 4
+    MZmax = 5
     MZmin = 0
     # b_lengths = [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.4, 2.6]
     b_lengths = [1.5 + (0.05*i) for i in range(21)]
