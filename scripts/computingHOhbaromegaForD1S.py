@@ -107,7 +107,7 @@ _CONSTR_NOCORE = '''
 Tolerance for constraints     1.000E-08
 Constraint multipole Q10      1   0.000
 Constraint multipole Q11      1   0.000
-Constraint multipole Q20      0   0.000
+Constraint multipole Q20      {b20}
 Constraint multipole Q21      1   0.000
 Constraint multipole Q22      1   0.000
 Constraint multipole Q30      0   0.000
@@ -633,7 +633,7 @@ def plot_summaryResults(title_calc = '', export_figs=False):
         ax.figure.savefig(BU_FOLDER+'/pair-couplings'+".pdf")
     plt.show()
 
-
+_DEF_BASE = {(12,10): 0.4, (12,12):0.36, (12,14):0.3, (12,16):0.25}
 def _executeTaurus(zz, nn, outfile_tailtext, seed=3, reduced_vs_calc=True):
     """ 
     This is an extension to run Taurus from the exe_scripts by making the input
@@ -644,9 +644,13 @@ def _executeTaurus(zz, nn, outfile_tailtext, seed=3, reduced_vs_calc=True):
     try:        
         ## ----- execution ----
         if not reduced_vs_calc:
-            text = TEMPLATE_INP_TAU.format(z=zz, n=nn, seed=seed)
+            b20_ = '0   0.000'
+            if seed == 3:
+                b20_ = f'1   {_DEF_BASE[(zz,nn)]:5.3f}'
+            text = TEMPLATE_INP_TAU.format(z=zz, n=nn, seed=seed, b20=b20_)
         else:
             text = TEMPLATE_INP_TAU_CORE.format(z=zz, n=nn, seed=seed)
+        
         
         with open(TAURUS_INPUT, 'w+') as f:
             f.write(text)
@@ -718,13 +722,13 @@ if __name__ == '__main__':
     b_lengths = [1.5 + (0.05*i) for i in range(21)]
     zz, nn = 12, 12
     # nucleus = [(2,nn) for nn in range(0,14,2)] + [(4,nn) for nn in range(0,14,2)]
-    nucleus = [(12,nn) for nn in range(6,29,2)]# 
+    nucleus = [(12,nn) for nn in range(10,17,2)]# 
     seed_base = 3
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
     seed = seed_base # final seed will be reused to speed the minimiztaion
     for zz, nn in nucleus:
-        SUMMARY_FILE =  TAURUS_EXE_FOLD + f'/summary_results_z{zz}n{nn}.txt'
+        SUMMARY_FILE =  TAURUS_EXE_FOLD + f'/summary_results_z{zz}n{nn}_MZ{MZmax}.txt'
         
         calculation_title = f"D1S on Z,N=({zz},{nn})  MZmax={MZmax}  seed_type:{seed}"
         if MZmin == 0:
@@ -752,7 +756,7 @@ if __name__ == '__main__':
         
         ## Verify if there is a taurus_vap.exe
         assert os.path.exists('taurus_vap.exe'), "taurus_vap.exe required to run the script. STOP!"
-        _e = subprocess.call('cp taurus_vap.exe {}'.format(TAURUS_EXE_FOLD), shell=True)
+        _e = subprocess.call(f'cp taurus_vap.exe {TAURUS_EXE_FOLD}', shell=True)
         
         summary = {}
         for b, b_len in enumerate(b_lengths[::-1]): ## start from the larger b
@@ -763,6 +767,7 @@ if __name__ == '__main__':
             
             print(" ... executing taurus %")
             _start =  time.time()
+            seed = 1 if b>0 else seed_base ## start from 
             properties, prop_finished = _executeTaurus(zz, nn, hamil_filename, 
                                                        seed, MZmin==MZmax)
             _end =  time.time()
@@ -794,7 +799,7 @@ if __name__ == '__main__':
             ## 
         print(summary)
         
-        zipFilesInFolder(BU_FOLDER, f"{TAURUS_EXE_FOLD}/BU_z{zz}n{nn}-{MZmax}.zip")
+        zipFilesInFolder(BU_FOLDER, f"{TAURUS_EXE_FOLD}/BU_z{zz}n{nn}-Mz{MZmax}")
         plot_summaryResults(title_calc=calculation_title, export_figs=True)
         print(" FINISHED all B Lengths")
     
