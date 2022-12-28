@@ -6,6 +6,7 @@ Created on Apr 4, 2022
 ## ensures parent folder importing both Windows/Linux
 import os
 import sys
+
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
 from helpers.Helpers import valenceSpacesDict_l_ge10, _LINE_2, Constants
@@ -19,6 +20,7 @@ import os, shutil
 import subprocess
 from computingHOhbaromegaForD1S import generateCOMFileFromFile, \
     COM2_TRUNC, BASE_HAMIL_NAME, generateD1SHamil
+from scripts.computingHOhbaromegaForD1S import TEMPLATE_INP_TAU
 
 template_xml = \
 '''<input>
@@ -207,19 +209,41 @@ def runInteractions(interactions, b_lengths, gaussian_lengths):
         
         ## ===================================================================
 
+def _runTaurusBaseSeedForHamil(zz, nn, seed, Mz, folder2dump):    
+    
+    b20_ = '0   0.000'
+    text = TEMPLATE_INP_TAU.format(z=zz, n=nn, seed=seed, b20=b20_)
+    
+    with open('aux.INP', 'w+') as f:
+        f.write(text)
+    extension = f'z{zz}n{nn}'
+    _e = subprocess.call('./taurus_vap.exe < aux.INP > aux.OUT', 
+                         shell=True, timeout=43200) # 1/2 day timeout
+    shutil.move(f'final_wf.bin', folder2dump+f"/final_{extension}.bin")
+    shutil.move(f'aux.OUT', folder2dump+f"/aux_{extension}.OUT")
+    
+    
 def run_D1S_Interaction():
     """ Function to produce a list of hamiltonians D1S using process from the
     hbar omega """
     # TODO: set parameters for the execution. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    MZmax = 5
+    MZmax = 4
     nucleus = {
-        #(10, 16): 1.82, ( 8, 8) : 1.84, (8, 10) : 1.66, (8, 12) : 1.68, #(12, 12): 1.76, 
-        #(10, 10): 1.68, (10, 12): 1.78, (10, 14): 1.74, 
-        (12, 6): 1.88, (12, 8): 1.74, (12,10): 1.78, (12,14): 1.75, 
-        (12,12): 1.75, (12,16): 1.80, (12,18): 1.87, (12,20): 1.94, 
+        (10, 16): 1.82, ( 8, 8) : 1.84, (8, 10) : 1.66, (8, 12) : 1.68, #(12, 12): 1.76, 
+        (10, 10): 1.68, (10, 12): 1.78, (10, 14): 1.74, 
+        # (12, 6): 1.88, (12, 8): 1.74, (12,10): 1.78, (12,14): 1.75, 
+        # (12,12): 1.75, (12,16): 1.80, (12,18): 1.87, (12,20): 1.94, 
         # (12, 22): 1.94, (12, 24): 1.96, (12, 26): 1.92, (12, 28): 1.98, 
-        #(14, 12): 1.76, (14, 14): 1.68,
+        (14, 12): 1.76, (14, 14): 1.68,
     }
+    # nucleus = {
+    #     (10, 16): 1.82, ( 8, 8) : 1.84, (8, 10) : 1.66, (8, 12) : 1.68, #(12, 12): 1.76, 
+    #     (10, 10): 1.68, (10, 12): 1.78, (10, 14): 1.74, 
+    #     # (12, 6): 1.88, (12, 8): 1.74, (12,10): 1.78, (12,14): 1.75, 
+    #     # (12,12): 1.75, (12,16): 1.80, (12,18): 1.87, (12,20): 1.94, 
+    #     # (12, 22): 1.94, (12, 24): 1.96, (12, 26): 1.92, (12, 28): 1.98, 
+    #     (14, 12): 1.76, (14, 14): 1.68,
+    # }
     
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     iter_ = 0
@@ -253,6 +277,8 @@ def run_D1S_Interaction():
         
         _ = generateD1SHamil(MZmax, b_len, do_coulomb=True, do_LS=True)
         
+        if os.path.exists('taurus_vap.exe') and os.path.exists('input_DD_PARAMS.txt'):
+            _runTaurusBaseSeedForHamil(zz, nn, 5, MZmax, HAMIL_FOLDER)
         ## TODO: move resultant hamiltonians to folder with name identifying nucleus
         shutil.move(f'{BASE_HAMIL_NAME}.2b', HAMIL_FOLDER+f"/{hamil_name}.2b")
         shutil.move(f'{hamil_name}.com', HAMIL_FOLDER+f"/{hamil_name}.com")

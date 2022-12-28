@@ -799,6 +799,8 @@ if __name__ == '__main__':
             ## 
         print(summary)
         
+        _order = f'cp -r {HAMIL_FOLDER} {BU_FOLDER}'
+        _e = subprocess.call(_order, shell=True)
         zipFilesInFolder(BU_FOLDER, f"{TAURUS_EXE_FOLD}/BU_z{zz}n{nn}-Mz{MZmax}")
         plot_summaryResults(title_calc=calculation_title, export_figs=True)
         print(" FINISHED all B Lengths")
