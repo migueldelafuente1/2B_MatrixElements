@@ -716,10 +716,10 @@ if __name__ == '__main__':
     #% First, iterate over b_lengths for the larger space
     
     # TODO: set parameters for the execution. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    MZmax = 5
+    MZmax = 4
     MZmin = 0
     # b_lengths = [1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.4, 2.6]
-    b_lengths = [1.5 + (0.05*i) for i in range(21)]
+    b_lengths = [1.5 + (0.05*i) for i in range(22)]
     zz, nn = 12, 12
     # nucleus = [(2,nn) for nn in range(0,14,2)] + [(4,nn) for nn in range(0,14,2)]
     nucleus = [(12,nn) for nn in range(10,17,2)]# 
