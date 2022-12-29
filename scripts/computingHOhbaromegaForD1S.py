@@ -633,7 +633,10 @@ def plot_summaryResults(title_calc = '', export_figs=False):
         ax.figure.savefig(BU_FOLDER+'/pair-couplings'+".pdf")
     plt.show()
 
-_DEF_BASE = {(12,10): 0.4, (12,12):0.36, (12,14):0.3, (12,16):0.25}
+# _DEF_BASE = {(12,10): 0.4, (12,12):0.36, (12,14):0.3, (12,16):0.25}
+_DEF_BASE = {( 8, 8): 0.0, ( 8,10): 0.0, ( 8,12): 0.0,
+             (10,10): 0.3, (10,12):0.35, (10,14):0.25, (10,16):0.2,
+             (14,12): 0.3, (14,12): 0.3,}
 def _executeTaurus(zz, nn, outfile_tailtext, seed=3, reduced_vs_calc=True):
     """ 
     This is an extension to run Taurus from the exe_scripts by making the input
@@ -722,7 +725,9 @@ if __name__ == '__main__':
     b_lengths = [1.5 + (0.05*i) for i in range(22)]
     zz, nn = 12, 12
     # nucleus = [(2,nn) for nn in range(0,14,2)] + [(4,nn) for nn in range(0,14,2)]
-    nucleus = [(12,nn) for nn in range(10,17,2)]# 
+    # nucleus = [(12,nn) for nn in range(10,17,2)]# 
+    nucleus = [( 8, 8), ( 8,10), ( 8,12), (10,10), (10,12), (10,14), (10,16), 
+               (14,14), (14,16) ]
     seed_base = 3
     # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
