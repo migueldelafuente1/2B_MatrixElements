@@ -120,6 +120,18 @@ class _TwoBodyMatrixElement:
         return self._isNullMatrixElement
     
     @property
+    def parity_bra(self):
+        if not hasattr(self, '_parity_bra'):
+            self._parity_bra = (self.bra.l1 + self.bra.l2) % 2
+        return self._parity_bra
+    
+    @property
+    def parity_ket(self):
+        if not hasattr(self, '_parity_ket'):
+            self._parity_ket = (self.ket.l1 + self.ket.l2) % 2
+        return self._parity_ket
+    
+    @property
     def breakIsospin(self):
         return self._BREAK_ISOSPIN
     

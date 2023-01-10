@@ -142,19 +142,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     def rho_ket(self):
         if not hasattr(self, '_rho_ket'):
             self._rho_ket = 2*(self.ket.n1 + self.ket.n2) + self.ket.l1 + self.ket.l2
-        return self._rho_ket
-    
-    @property
-    def parity_bra(self):
-        if not hasattr(self, '_parity_bra'):
-            self._parity_bra = (self.bra.l1 + self.bra.l2) % 2
-        return self._parity_bra
-    
-    @property
-    def parity_ket(self):
-        if not hasattr(self, '_parity_ket'):
-            self._parity_ket = (self.ket.l1 + self.ket.l2) % 2
-        return self._parity_ket        
+        return self._rho_ket      
         
     #===========================================================================
     # % SHARED METHODS

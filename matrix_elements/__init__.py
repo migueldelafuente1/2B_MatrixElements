@@ -3,11 +3,13 @@ from helpers.Enums import ForceEnum
 from .BrinkBoeker import BrinkBoeker, PotentialSeries_JTScheme
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme
 from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
-    CoulombForce, DensityDependentForce_JTScheme, KineticTwoBody_JTScheme
+    CoulombForce, DensityDependentForce_JTScheme, KineticTwoBody_JTScheme,\
+    MultipoleDelta_JTScheme
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
     ShortRangeSpinOrbit_JTScheme
 from matrix_elements.MatrixElement import _MatrixElementReader
 from matrix_elements.ZeroRangeForces import SDI_JTScheme
+from matrix_elements.SkyrmeForces import SkrymeBulk_JTScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -33,11 +35,15 @@ def switchMatrixElementType(force, J_scheme=False):
         return DensityDependentForce_JTScheme
     elif force == ForceEnum.SDI:
         return SDI_JTScheme
+    elif force == ForceEnum.Multipole_Delta:
+        return MultipoleDelta_JTScheme
     
     elif force == ForceEnum.SpinOrbit:
         return SpinOrbitForce_JTScheme
     elif force == ForceEnum.SpinOrbitShortRange:
         return ShortRangeSpinOrbit_JTScheme
+    elif force == ForceEnum.SkyrmeBulk:
+        return SkrymeBulk_JTScheme
     
     elif force == ForceEnum.Tensor:
         return TensorForce_JTScheme

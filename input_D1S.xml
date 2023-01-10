@@ -1,10 +1,10 @@
 <input>
-	<Interaction_Title name="D1S t0=0 + dd (bc=b)" details=""/>
+	<Interaction_Title name="D1S (no Coul) t0=0 b optimized for 24Mg" details=""/>
 	<Output_Parameters>
 		<!--Output_Filename>D1S_t0_Pu240MZ4to6</Output_Filename-->
-		<Output_Filename>D1S_t0_MZ6</Output_Filename>
-		<Hamil_Type>4</Hamil_Type>
-		<COM_correction>1</COM_correction>
+		<Output_Filename>DD_t0_MZ3</Output_Filename>
+		<Hamil_Type>1</Hamil_Type>
+		<COM_correction>0</COM_correction>
 	</Output_Parameters>
 	<SHO_Parameters>
 		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
@@ -15,7 +15,7 @@
 		<Z>20</Z>
 		<!--hbar_omega units='MeV'>12.617</hbar_omega bA70:1.751 1.689 -->
 		<hbar_omega units='MeV'/>
-		<b_length units='fm'>2.041</b_length>
+		<b_length units='fm'>1.75</b_length>
 	</SHO_Parameters>
 	<Core>
 		<innert_core protons='0' neutrons ='0' name=''/>
@@ -36,7 +36,7 @@
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
 		
-		<Q_Number sp_state='409' sp_energy=''/>
+		<!--Q_Number sp_state='409' sp_energy=''/>
 		<Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
 		<Q_Number sp_state='20001' sp_energy=''/>
@@ -57,7 +57,7 @@
 		<Q_Number sp_state='30001' sp_energy=''/>
 		<Q_Number sp_state='20203' sp_energy=''/>
 		
-		<!--Q_Number sp_state='715'   sp_energy=''/>
+		<Q_Number sp_state='715'   sp_energy=''/>
 		<Q_Number sp_state='713'   sp_energy=''/>
 		<Q_Number sp_state='10511' sp_energy=''/>
 		<Q_Number sp_state='10509' sp_energy=''/>
@@ -111,7 +111,7 @@
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved x130 /-->
 			<file name='savedHamilsBeq1/LSSR_MZ7_beq1.2b'/>
-			<options ignorelines='1' constant='7.8979180277' l_ge_10='True'/>
+			<options ignorelines='1' constant='10.3134249382' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
 		<Force_From_File active='False'>
@@ -125,7 +125,7 @@
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
-		<Brink_Boeker active='True'>
+		<Brink_Boeker active='False'>
 		    <!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 -->
 			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
 			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
@@ -139,7 +139,7 @@
 		<Kinetic_2Body active='False'>
 			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
 		</Kinetic_2Body>
-		<SpinOrbitShortRange active='True'>
+		<SpinOrbitShortRange active='False'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
@@ -149,7 +149,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
-		<Density_Dependent active='False'>
+		<Density_Dependent active='True'>
 			<!-- Density dependent Force based on Fermi density for the nucleus,
 				parametrization from Gogny D1S:
 					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)

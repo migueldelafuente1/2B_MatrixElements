@@ -18,7 +18,8 @@ from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
 from matrix_elements.BrinkBoeker import BrinkBoeker
 from matrix_elements.TensorForces import TensorForce
 from helpers.Enums import PotentialForms, SHO_Parameters, BrinkBoekerParameters, \
-    ForceEnum, CentralMEParameters, DensityDependentParameters
+    ForceEnum, CentralMEParameters, DensityDependentParameters,\
+    SkyrmeBulkParameters
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, ShortRangeSpinOrbit_JTScheme,\
     SpinOrbitForce_JTScheme 
 from helpers.Log import XLog
@@ -26,6 +27,7 @@ from matrix_elements.CentralForces import CoulombForce, KineticTwoBody_JTScheme,
     DensityDependentForce_JTScheme, CentralForce_JTScheme
 from helpers.TBME_SpeedRunner import TBME_SpeedRunner
 from helpers.matrixElementHandlers import MatrixElementFilesComparator
+from matrix_elements.SkyrmeForces import SkrymeBulk_JTScheme
 
 
 if __name__ == "__main__":
@@ -40,15 +42,16 @@ if __name__ == "__main__":
         
         #_runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
-        # _runner = TBME_Runner(filename='input.xml')
+        _runner = TBME_Runner(filename='input.xml')
         # _runner = TBME_Runner(filename='input_D1S.xml')
-        # _runner.run()
+        _runner.run()
         
         # _runner = TBME_SpeedRunner(filename='input.xml')
-        _runner = TBME_SpeedRunner(filename='input_D1S.xml')
-        _runner.run()
+        # _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
+        # _runner.run()
         print(" The program has ended without incidences.")
-        
+    
+    
         
     # kwargs = {
     #     SHO_Parameters.A_Mass       : 4,
@@ -78,6 +81,28 @@ if __name__ == "__main__":
     #     },'part9':{
     #         'potential': 'gaussian', 'constant': '   0.0464', 'mu_length': '5.6569'}, 
     # }
+    
+    kwargs = {
+        SHO_Parameters.b_length  : 1.0, #1.4989,
+        SkyrmeBulkParameters.t0  : 1.0, #
+        SkyrmeBulkParameters.x0  : 0.0, #
+        SkyrmeBulkParameters.t1  : 0.0, #
+        SkyrmeBulkParameters.t2  : 0.0, #
+    }
+    
+    J = 2
+    T = 0
+    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
+                                   QN_1body_jj(1,0,1), J, T)
+    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5), 
+                                   QN_1body_jj(1,0,1), J, T)
+    
+    SkrymeBulk_JTScheme.turnDebugMode(True)
+    SkrymeBulk_JTScheme.setInteractionParameters(**kwargs)
+    me = SkrymeBulk_JTScheme(bra_, ket_)
+    print("me: ", me.value)
+    
+    
     
     kwargs = {
         SHO_Parameters.A_Mass       : 16,
@@ -172,5 +197,3 @@ if __name__ == "__main__":
     # _runner = TBME_Runner(filename='input.xml')
     # _runner.run()
      
-    
-    #io.run_antoine_output('INPUT_P.txt')
