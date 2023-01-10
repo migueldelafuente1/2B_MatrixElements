@@ -4,8 +4,7 @@ Created on Dec 28, 2022
 @author: Miguel
 '''
 import numpy as np
-from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    _TwoBodyMatrixElement_Antisym_JTCoupled
+from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled
 from helpers.Enums import CouplingSchemeEnum, SkyrmeBulkParameters,\
     AttributeArgs, SHO_Parameters
 from helpers.Helpers import safe_3j_symbols, almostEqual
