@@ -70,12 +70,12 @@ where A, a and N are mandatory parameters to give when setting up. A=`constant` 
 * **Coulomb** interaction (J scheme)
 * **Brink-Boeker** like interactions or gaussian potential series.
 * **Short range Spin-Orbit** approximation potential
-* Fixed **Density dependent** (Nuclear Fermi shell filling approximation).
+* Fixed **Density dependent** (Nuclear Fermi shell filling approximation), updated for a fixed core-nucleus with different oscillator b length and Z/N different from SHO arguments.
 * **Series of potentials**, an extension of the Brink-Boeker sum of radial potential forms (any from the previous *Central* enumeration) to as many you want (I.e, to expand other potentials in terms of gaussians).
 * Get them **from a file**, reuse previous computations to save time (also valid to multiply the results by a global factor).
 * **Kinetic two-body** matrix element, necessary to evaluate the *center of mass* correction. Be careful with the internal setting of nucleon mass and *HbarC* constants in the code.
 * **SDI / MSDI** (Surface Delta Interaction / Modified SDI) interaction is *Zero-range* and isospin-dependant. The modified version append a repulsive constant for the diagonal matrix elements in order to correct the binding energy misbehaviour of the SDI (Brussaard_ & Glaudemans_ book (1977)).
-
+* **Multipole-Delta** Multipole expansion of the dirac-delta interaction (explicit computation of the delta and sho-wf radial integral)
 ***
 
 ### Evaluating matrix elements individually<a name="MEindividual"></a>
