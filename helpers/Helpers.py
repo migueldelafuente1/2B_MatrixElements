@@ -4,6 +4,7 @@ Created on Feb 25, 2021
 @author: Miguel
 '''
 
+import os
 #===============================================================================
 #%% Constants
 #===============================================================================
@@ -129,10 +130,15 @@ def gamma_half_int(i):
 #===============================================================================
 from sympy.physics.wigner import wigner_9j, racah, wigner_6j, clebsch_gordan, wigner_3j
 
-def safe_wigner_9j(*args):
+def safe_wigner_9j(a,b,c, d,e,f, g,h,i):
     """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the
-     arguments don't fulfill the triangle relation. """
+     arguments don't fulfill the triangle relation. 
+     { (a,b,c)
+       (d,e,f)
+       (g,h,i) } 
+    """
     try: 
+        args = (a,b,c, d,e,f, g,h,i)
         return float(wigner_9j(*args, prec=None))
     except ValueError or AttributeError:
         return 0
@@ -145,10 +151,14 @@ def safe_racah(a, b, c, d, ee, ff):
     except ValueError or AttributeError:
         return 0
 
-def safe_wigner_6j(*args):
+def safe_wigner_6j(a,b,c, d,e,f):
     """ Wigner 6j symbol, same arguments as in Avoid the ValueError whenever the
-     arguments don't fulfill the triangle relation. """
+     arguments don't fulfill the triangle relation. 
+     { (a,b,c)
+       (d,e,f) } 
+    """
     try: 
+        args = (a,b,c, d,e,f)
         return float(wigner_6j(*args, prec=None))
     except ValueError or AttributeError:
         return 0
@@ -173,6 +183,125 @@ def safe_3j_symbols(j1, j2, j3, m1, m2, m3):
     """
     return float(wigner_3j(j1, j2, j3, m1, m2, m3))
 
+def _triangularRelation(a, b, c):
+    """
+    return True if a,b c are in triangular relation
+    Args: multiplied by 2
+    """
+    if (a+b+c) % 2 != 0:
+        return False
+    return abs(a-b) < c or a+b > c
+
+def expliclit_9j1o2S01(d,e,f, a,b,c, S):
+    """
+    all arguments must be given multiplied by 2 (also S)
+    {(a+lam, b+mu, c+nu)
+     (a    , b   , c   )
+     (1/2  , 1/2 , S   )}
+     2S = 0, 2
+     lam,mu,nu = +- 1/2
+     
+     formulas from Varsalovich
+    TODO: TEST with function from wigner package
+    """
+    raise Exception("This method is broken, fix it!")
+    
+    lam, mu, nu = d - a, e - b, f - c
+    ## TODO: Triangular test
+    if S not in (0, 2):
+        raise Exception(f"This function is only valid for S=0,1 (S must be given as 2S), got [{S}]")
+    if abs(lam) != 1 or abs(mu) != 1 or abs(nu) > 2:
+        return 0.0
+    if not (_triangularRelation(a, b, c) or _triangularRelation(d, a, 1) or
+            _triangularRelation(d, e, f) or _triangularRelation(e, b, 1)):
+        return 0.0
+    # if abs(lam) == 1 or abs(mu) == 1:
+    #     return 0.0
+    key_ = (lam, mu)
+    s    = (a + b + c) / 2
+    den_ = (a+1)*(b+1)*(c+1)
+    val  = 0.0
+    if key_ != (1,1) and ((a==0) or (b==0)):
+        return 0.0
+    
+    if S==0:
+        if nu == 0:
+            den_ *= 2
+            if   key_ == ( 1, 1):
+                val =  (((s+2)*(s+c+1)) / (den_*(a+2)*(b+2)) )**.5
+            elif key_ == ( 1,-1):
+                val =  (((s-b+1)*(s-a)) / (den_*(a+2)*(b)) )**.5
+            elif key_ == (-1, 1):
+                val = -(((s-b)*(s-a+1)) / (den_*(a)*(b+2)) )**.5
+            elif key_ == (-1,-1):
+                val =  (((s+1)*(s-c))   / (den_*(a)*(b)) )**.5
+    elif S==2:
+        if   nu == 2:
+            den_ *= 3*(c+2)*(c+3) 
+            if   key_ == ( 1, 1):
+                val =  (((s+2)*(s+3)*(s-b+1)*(s-a+1)) / (den_*(a+2)*(b+2)) )**.5
+            elif key_ == ( 1,-1):
+                val = -(((s+2)*(s-c)*(s-b+1)*(s-b+2)) / (den_*(a+2)*(b)) )**.5
+            elif key_ == (-1, 1):
+                val =  (((s+2)*(s-c)*(s-a+1)*(s-a+2)) / (den_*(a)*(b+2)) )**.5
+            elif key_ == (-1,-1):
+                val = -(((s-c-1)*(s-c)*(s-b+1)*(s-a+1)) / (den_*(a)*(b)) )**.5
+        elif nu == 0:
+            den_ *= 3*(c+1)*(c)
+            if   key_ == ( 1, 1):
+                val = (((s+2)*(s-c+1)) / (den_*(a+2)*(b+2)) )**.5
+                val *= (a-b)/2
+            elif key_ == ( 1,-1):
+                val = (((s-b+1)*(s-a)) / (den_*(a+2)*(b)) )**.5
+                val *= 0.5 + ((a+b)/2)
+            elif key_ == (-1, 1):
+                val = (((s-b)*(s-a+1)) / (den_*(a)*(b+2)) )**.5
+                val *= 0.5 + ((a+b)/2)
+            elif key_ == (-1,-1):
+                val = (((s+1)*(s-c))   / (den_*(a)*(b)) )**.5
+                val *= (b-a)/2
+        elif nu == -2:
+            den_ *= 3*(c-1)*c
+            if   key_ == ( 1, 1):
+                val = -(((s-c+1)*(s-c+2)*(s-b)*(s-a)) / (den_*(a+2)*(b+2)) )**.5
+            elif key_ == ( 1,-1):
+                val = -(((s+1)*(s-c+1)*(s-a-1)*(s-a)) / (den_*(a+2)*(b)) )**.5
+            elif key_ == (-1, 1):
+                val = (((s+1)*(s-c+1)*(s-b-1)*(s-b)) / (den_*(a)*(b+2)) )**.5
+            elif key_ == (-1,-1):
+                val = (((s)*(s+1)*(s-b)*(s-a))   / (den_*(a)*(b)) )**.5
+    return val
+
+
+
+# args = (1,3,2, 2,2,2, 0)
+# args = (4,1,3, 5,2,3, 0)
+# test_ = expliclit_9j1o2S01(*args)
+#
+# S = 1
+# fail_, tot_ = 0, 0
+# for a in range(6):
+#     for b in range(6):
+#         for c in range(6):
+#
+#             for d in range(a-1, a+2, 1):
+#                 for e in range(b-1, b+2, 1):
+#                     for f in range(c-2, c+3, 2):
+#
+#                         args = (d/2,e/2,f/2, a/2,b/2,c/2, 1/2,1/2, S)
+#                         bench_ = safe_wigner_9j(*args)
+#                         test_ = expliclit_9j1o2S01(d,e,f, a,b,c, 2*S)
+#
+#                         if abs(test_) > 1.0e-5:
+#                             if d==0 or e==0:
+#                                 print(f"D/E= 0 fail:: ({d},{e},{f}) ({a},{b},{c}) S={S} Error: BNH_{bench_:6f} != {test_:6f}") 
+#                             # print(f"({a},{b},{c}) ({d},{e},{f}) S={S} = {test_:6f}")
+#                             pass
+#                         if abs(bench_-test_) > 1.0e-5:
+#                             print(f"({d},{e},{f}) ({a},{b},{c}) S={S} Error: BNH_{bench_:6f} != {test_:6f}")
+#                             fail_ += 1
+#                         tot_ += 1
+# print(f"TEST done! Fail[{fail_}/{tot_}]")
 #===============================================================================
 # 
 #===============================================================================
@@ -230,7 +359,11 @@ def printProgressBar (iteration, total, prefix='Progress:'):
     percent = "{:5.2f}".format(100 * (iteration / float(total)))
     filledLength = int(length * iteration // total)
     bar = fill * filledLength + '_' * (length - filledLength)
-    print("\r{0} |{1}| {2}% complete\r".format(prefix, bar, percent), end='')#, end = '\r')
+    if os.getcwd().startswith('C:'):
+        print("\r{0} |{1}| {2}% complete\r".format(prefix, bar, percent), end='', flush=True)
+    else:
+        print("\r{0} |{1}| {2}% complete\r".format(prefix, bar, percent), end='')#, end = '\r')
+    
     # Print New Line on Complete
     if iteration == total: 
         print()

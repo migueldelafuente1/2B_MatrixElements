@@ -61,7 +61,8 @@ class ForceEnum(Enum):
     PotentialSeries = 'PotentialSeries'
     Density_Dependent = 'Density_Dependent'
     Kinetic_2Body = 'Kinetic_2Body'
-    Multipole_Expansion = 'Multipole_Expansion'
+    Multipole_Delta = 'Multipole_Delta'
+    SkyrmeBulk = 'SkyrmeBulk'
     Force_From_File = 'Force_From_File'
 
 class PotentialForms(Enum):
@@ -97,8 +98,17 @@ class DensityDependentParameters(Enum):
     x0    = 'x0'
     alpha = 'alpha'
     core  = 'core'
+    
+class SkyrmeBulkParameters(Enum):
+    t0 = 't0'
+    t1 = 't1'
+    t2 = 't2'
+    x0 = 'x0'
 
 class SDIParameters(Enum):
+    constants = 'constants'
+
+class MultipoleParameters(Enum):
     constants = 'constants'
 
 class ForceFromFileParameters(Enum):
@@ -119,9 +129,10 @@ ForceVariablesDict = {
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
+    ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,
-    ForceEnum.Multipole_Expansion: None,
+    ForceEnum.Multipole_Delta: MultipoleParameters,
     ForceEnum.Force_From_File: ForceFromFileParameters
 }
 
@@ -159,7 +170,12 @@ class AttributeArgs(Enum):
             B = 'B' # when activated, MSDI interaction
             C = 'C'
             # Brussaard_ & Glaudemans_ book (1977)
-        
+        class Multipole(Enum):
+            A = 'A'  # central
+            B = 'B'  # spin
+            C = 'C'  # isospin
+            D = 'D'  # spin-isospin
+            ## Suhonen expression for spin - isospin multipole interaction
         class DensDep(Enum):
             protons  = 'protons'
             neutrons = 'neutrons'

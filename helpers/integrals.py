@@ -801,6 +801,7 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
         type_integral:
             [1] differential type:  d(bra_1)/d_r * bra_2 * ket_1 *  (ket_2/r) 
             [2] 1/r w.f. type    :   (bra_1/r)   * bra_2 * ket_1 *  (ket_2/r)
+            [3] abs w.f. type    :    bra_1      * bra_2 * ket_1 *   ket_2   
         """
         self = _RadialIntegralsLS()
         args = (wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length)
@@ -808,7 +809,7 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
     
     def _integral(self, type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length):
         
-        assert type_integral in (1, 2), "type_integral can only be 1 or 2"
+        assert type_integral in (1,2,3), "type_integral can only be 1,2 or 3"
         
         n1_q, l1_q = wf1_bra.n, wf1_bra.l
         n2_q, l2_q = wf2_bra.n, wf2_bra.l
@@ -829,9 +830,10 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
                 No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
                 I_1 = self._r_dependentIntegral(No2)
                 if self.DEBUG_MODE:
-                    XLog.write("Ip_q", pq=p_q, bra_B=bra_b, N=No2, I_1=I_1)
+                    XLog.write("Ip_q", pq=p_q, bra_B=bra_b, N=No2, I_1=I_1,
+                               type_int=type_integral)
                 
-                if type_integral == 1:
+                if   type_integral == 1:
                     bra_d = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
                     
                     I_2 = self._r_dependentIntegral(No2 + 1)
@@ -839,10 +841,15 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
                     sum_ += aux
                     if self.DEBUG_MODE:
                         XLog.write("Ip_q", I_2=I_2, bra_D=bra_d, val= aux)
-                else:
+                elif type_integral == 2:
                     aux = ket_coeff * bra_b * I_1
                     sum_ += aux
                     if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
+                else: ## independent w.f. integral.
+                    I_3 = self._r_dependentIntegral(No2+1)
+                    aux = ket_coeff * bra_b * I_3
+                    sum_ += aux
+                    if self.DEBUG_MODE: XLog.write("Ip_q", val= aux, I_3=I_3)
         
         # norm_fact = np.prod([self._norm_coeff(wf) for wf in 
         #                                 (wf1_bra, wf2_bra, wf1_ket, wf2_ket)])
