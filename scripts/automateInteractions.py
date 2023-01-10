@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
-from helpers.Helpers import valenceSpacesDict_l_ge10, _LINE_2, Constants
+from helpers.Helpers import valenceSpacesDict_l_ge10, _LINE_2, Constants, _LINE_1
 import xml.etree.ElementTree as et
 from helpers.TBME_Runner import TBME_Runner
 from helpers.Enums import InputParts, AttributeArgs, ForceEnum,\
@@ -267,7 +267,7 @@ def run_D1S_Interaction():
         
         ## Only set valencespace once in the XML
         ## NOTE: this function and XML tree object must be imported and make global
-        from computingHOhbaromegaForD1S import set_valenceSpace_Subelement, root
+        from scripts.computingHOhbaromegaForD1S import set_valenceSpace_Subelement, root
         global root
         valenSp = root.find(InputParts.Valence_Space)
         valenSp = set_valenceSpace_Subelement(valenSp, MZmax)
@@ -287,7 +287,8 @@ def run_D1S_Interaction():
     
 
 if __name__ == '__main__':
-    print("ITERATING TBME_RUNNER for valence spaces and interactions:"+_LINE_2)
+    print()
+    print(_LINE_1+"ITERATING TBME_RUNNER for valence spaces and interactions:"+_LINE_2)
     #%$ First, iterate over b_lengths for the larger space
     b_lengths = [#0.6, 0.8, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 
                  #2.0, 2.2, 

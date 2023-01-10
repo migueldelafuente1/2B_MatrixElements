@@ -631,12 +631,14 @@ def plot_summaryResults(title_calc = '', export_figs=False):
     plt.tight_layout()
     if export_figs:
         ax.figure.savefig(BU_FOLDER+'/pair-couplings'+".pdf")
-    plt.show()
+    if os.getcwd().startswith("C:"): plt.show()
 
-# _DEF_BASE = {(12,10): 0.4, (12,12):0.36, (12,14):0.3, (12,16):0.25}
-_DEF_BASE = {( 8, 8): 0.0, ( 8,10): 0.0, ( 8,12): 0.0,
-             (10,10): 0.3, (10,12):0.35, (10,14):0.25, (10,16):0.2,
-             (14,12): 0.3, (14,12): 0.3,}
+_DEF_BASE = {(12, 6):-.25,(12, 8):0.36, (12,10): 0.4, (12,12):0.36, 
+             (12,14):0.3, (12,16):0.25, (12,18):-.15, (12,20): 0.0,
+             (12,22):.25, (12,24):0.3,  (12,26):-.25, (12,28):-.25, (12,30):-.2}
+# _DEF_BASE = {( 8, 8): 0.0, ( 8,10): 0.0, ( 8,12): 0.0,
+#              (10,10): 0.3, (10,12):0.35, (10,14):0.25, (10,16):0.2,
+#              (14,12): 0.3, (14,12): 0.3,}
 def _executeTaurus(zz, nn, outfile_tailtext, seed=3, reduced_vs_calc=True):
     """ 
     This is an extension to run Taurus from the exe_scripts by making the input
