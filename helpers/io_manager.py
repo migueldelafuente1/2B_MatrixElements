@@ -522,27 +522,22 @@ class CalculationArgs(object):
         vs_spe = ""
         spe = vs[0][1] not in ('', None)
         for i in range(len(self.Valence_Space)//(9+1)  +1):
-            a  = 9*i
-            aa = min(9*(i+1), len(vs)-1)
             args = vs[9*i: min(9*(i+1), len(vs)-1)]
             vs_txt += "      " + " ".join([f"{x[0]:>5}" for x in args]) + '\n'
             if spe:
-                vs_spe += "      "+" ".join([f"{x[1]:>5.2f}" for x in args])+'\n'
+                vs_spe += "      "+" ".join([f"{float(x[1]):>5.1f}" for x in args])+'\n'
         
         vs = vs_txt[:-1]
         if spe:
-            vs += "\nSingle-particle energies\n"+vs_spe[:-1]
+            vs += "\nSingle-particle energies (MeV)\n"+vs_spe[:-1]
         
         fb = ""
         for f, args in self.Force_Parameters.items():
-            # if f not in (ForceEnum.Brink_Boeker, ForceEnum.PotentialSeries):
-            #     line = "  ".join(list(args[0].values()))+'\n'
-            # else:
-            # continue
-            if len(args)==0:
-                fb += f+" = None\n"
+            if len(args[0])==0:
+                fb += "* {f} = None\n"
                 continue
-            line = [f"   {f:<10}: "+"  ".join(list(p.values())) 
+            
+            line = [f"   {f:<12}: "+"  ".join([f"{x:>10}" for x in p.values()]) 
                         for f, p in args[0].items()]
             line = "\n".join(line)
             fb += f"* {f} = \n{line}\n"

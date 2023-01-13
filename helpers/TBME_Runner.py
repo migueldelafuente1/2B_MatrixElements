@@ -39,7 +39,7 @@ _SUITE_PRESENTATION_TEMPLATE = """
     
 {input_details}
 *    -------------------------------------------------------------  *
-*  Calculation starts at ::             {datetime_start:20} ::     *
+*    Calculation starts at ::           {datetime_start:20} ::     *
 =====================================================================
 """
 
