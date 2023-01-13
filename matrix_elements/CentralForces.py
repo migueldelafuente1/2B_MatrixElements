@@ -628,10 +628,12 @@ class _Multipole_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
     
     ## return void LS valid L S for SpeedRunner to work with this m.e
     def _validKetTotalSpins(self):
-        raise MatrixElementException("You shall not pass here for this m.e!")
+        return ()
+        #raise MatrixElementException("You shall not pass here for this m.e!")
     
     def _validKetTotalAngularMomentums(self):
-        raise MatrixElementException("You shall not pass here for this m.e!")
+        return ()
+        # raise MatrixElementException("You shall not pass here for this m.e!")
 
 
 

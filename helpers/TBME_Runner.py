@@ -27,7 +27,7 @@ import traceback
 from datetime import datetime
 
 _SUITE_PRESENTATION_TEMPLATE = """
- =================================================================== 
+* ================================================================= *
 |    SUITE 2-BODY MATRIX ELEMENTS CALCULATOR  [{suite:>16}]    |
 |                                            Miguel de la Fuente    |
 |                                                                   |
@@ -35,13 +35,13 @@ _SUITE_PRESENTATION_TEMPLATE = """
 |    getting the reduced and antisymmetrized matrix elements for    |
 |    the spherical harmonic oscillator basis.                       |
 |                                                                   |
- =   -- ** Input Details ** -------------------------------------  = 
+|    -- ** Input Details ** -------------------------------------   | 
                                                                      
 {input_details}
                                                                      
- =   ------------------------------------------------------------  = 
+|    ------------------------------------------------------------   | 
 |    Calculation starts at ::              {datetime_start:20} ::  |
- =================================================================== 
+* ================================================================= * 
 """
 
 

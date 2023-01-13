@@ -112,7 +112,7 @@ def _read_dict_iodetails(arg, lev=0):
     prints a dictionary tabulating levels as prettyprint dictionary do, but as str
     Usage: only io_manager.CalculationArgs.getInputDetailsString
     """
-    tab = "  "*lev
+    tab = "  "*lev if lev==1 else " "*lev
     txt = ""
     if isinstance(arg, dict):
         for k, val in arg.items():
