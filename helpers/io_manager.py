@@ -534,7 +534,7 @@ class CalculationArgs(object):
         fb = ""
         for f, args in self.Force_Parameters.items():
             if len(args[0])==0:
-                fb += "* {f} = None\n"
+                fb += f"* {f} = None\n"
                 continue
             
             line = [f"   {f:<12}: "+"  ".join([f"{x:>10}" for x in p.values()]) 
