@@ -24,6 +24,7 @@ from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
 import os
 import numpy as np
 import traceback
+from datetime import datetime
 
 _SUITE_PRESENTATION_TEMPLATE = """
 =====================================================================
@@ -38,8 +39,10 @@ _SUITE_PRESENTATION_TEMPLATE = """
     
 {input_details}
 *    -------------------------------------------------------------  *
+*  Calculation starts at ::             {datetime_start:20} ::     *
 =====================================================================
 """
+
 
 class TBME_Runner(object):
     '''
@@ -100,9 +103,12 @@ class TBME_Runner(object):
     def _printSuiteSetUp4Calculation(self):
         
         input_block = self.input_obj.getInputDetailsString()
-        
+        now = datetime.now()
+        now = now.strftime("%d/%m/%Y %H:%M:%S")
+                
         print(_SUITE_PRESENTATION_TEMPLATE.format(suite=self.__class__.__name__,
-                                                  input_details = input_block))
+                                                  input_details  = input_block,
+                                                  datetime_start = now))
     
     @classmethod
     def setFolderToSaveResults(cls, new_folder=None):
@@ -598,6 +604,11 @@ The program will exclude it from the interaction file and will produce the .com 
         self.combineAllResults()
         self.printMatrixElementsFile()
         self.printComMatrixElements()
+        
+        now = datetime.now()
+        now = now.strftime("%d/%m/%Y %H:%M:%S")
+        print(f" ** Suite Runner [{self.__class__.__name__}] ended without incidences. ")
+        print(f" ** end at: {now}")
     
     def _procedureToSkipBrokenInteraction(self, force_str, exception_trace):
         """

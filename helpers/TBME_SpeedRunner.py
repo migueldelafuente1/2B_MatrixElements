@@ -18,6 +18,7 @@ from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_J_Coupling,\
 from itertools import combinations_with_replacement
 from helpers.io_manager import valenceSpaceShellNames, TBME_Reader
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement
+from datetime import datetime
 
 class TBME_SpdRunnerException(TBME_RunnerException):
     pass
@@ -147,6 +148,11 @@ class TBME_SpeedRunner(TBME_Runner):
         
         self.printMatrixElementsFile()
         self.printComMatrixElements()
+        
+        now = datetime.now()
+        now = now.strftime("%d/%m/%Y %H:%M:%S")
+        print(f" ** Suite Runner [{self.__class__.__name__}] ended without incidences. ")
+        print(f" ** end at: {now}")
         
     
     def _calculateCommonPhaseKet9j(self):

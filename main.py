@@ -52,9 +52,7 @@ if __name__ == "__main__":
         
         # _runner = TBME_SpeedRunner(filename='input.xml')
         _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
-        _runner.run()
-        print(" The program has ended without incidences.")
-    
+        _runner.run()    
     
         
     # kwargs = {
