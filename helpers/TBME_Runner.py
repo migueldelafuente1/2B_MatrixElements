@@ -27,20 +27,21 @@ import traceback
 from datetime import datetime
 
 _SUITE_PRESENTATION_TEMPLATE = """
-=====================================================================
-*    SUITE 2-BODY MATRIX ELEMENTS CALCULATOR  [{suite:>16}]    *
-*                                               Miguel de la Fuente *
-*                                                                   *
-*    The code evaluates a series of two body interactions, getting  *
-*    the reduced and antisymmetrized matrix elements for the        *
-*    spherical harmonic oscillator basis.                           *
-*                                                                   *
-*    -- ** Input Details ** --------------------------------------  *
-    
+ =================================================================== 
+|    SUITE 2-BODY MATRIX ELEMENTS CALCULATOR  [{suite:>16}]    |
+|                                            Miguel de la Fuente    |
+|                                                                   |
+|    The code evaluates a series of two body interactions,          |
+|    getting the reduced and antisymmetrized matrix elements for    |
+|    the spherical harmonic oscillator basis.                       |
+|                                                                   |
+ =   -- ** Input Details ** -------------------------------------  = 
+                                                                     
 {input_details}
-*    -------------------------------------------------------------  *
-*    Calculation starts at ::           {datetime_start:20} ::     *
-=====================================================================
+                                                                     
+ =   ------------------------------------------------------------  = 
+|    Calculation starts at ::              {datetime_start:20} ::  |
+ =================================================================== 
 """
 
 
@@ -103,6 +104,12 @@ class TBME_Runner(object):
     def _printSuiteSetUp4Calculation(self):
         
         input_block = self.input_obj.getInputDetailsString()
+        txt = []
+        for line in input_block.split('\n'):
+            line = f"  {line:<66} "
+            txt.append(line)
+        input_block = "\n".join(txt)
+        
         now = datetime.now()
         now = now.strftime("%d/%m/%Y %H:%M:%S")
                 

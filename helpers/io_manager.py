@@ -107,28 +107,34 @@ class _Parser:
 class ParserException(Exception):
     pass
 
-def _read_dict(arg, lev=0):
+def _read_dict_iodetails(arg, lev=0):
     """
     prints a dictionary tabulating levels as prettyprint dictionary do, but as str
-    Usage: io_manager.CalculationArgs.getInputDetailsString
+    Usage: only io_manager.CalculationArgs.getInputDetailsString
     """
-    tab = " "*lev
+    tab = "  "*lev
     txt = ""
     if isinstance(arg, dict):
         for k, val in arg.items():
             if val in (None, [], {}): continue
             kk = k+": " if lev>0 else f"<{k}>\n"
-            txt += tab + kk+_read_dict(val, lev+1)
+            line = tab + kk+_read_dict_iodetails(val, lev+1)
             if isinstance(val, (dict, list)) or lev==0:
-                txt +='\n'
+                line +='\n'
+            if isinstance(val, (dict, list)) and len(txt)>0 and lev>0:
+                line = '\n'+line
+            txt += line
+        txt = txt[:-1] #remove the last ,
     elif isinstance(arg, list):
         for val in arg:
             if val in (None, [], {}): continue
-            txt += tab +_read_dict(val, lev+1)
+            txt += tab +_read_dict_iodetails(val, lev+1)
             if isinstance(val, (dict, list)) or lev==0:
                 txt +='\n'
     else:
-        return str(arg)
+        if '\n' in arg:
+            return str(arg)
+        return str(arg)+','
     return txt
 
 class _JsonParser(_Parser):
@@ -529,18 +535,19 @@ class CalculationArgs(object):
         
         vs = vs_txt[:-1]
         if spe:
-            vs += "\nSingle-particle energies (MeV)\n"+vs_spe[:-1]
+            vs += "\n    Single-particle energies (MeV)\n"+vs_spe[:-1]
         
         fb = ""
         for f, args in self.Force_Parameters.items():
             if len(args[0])==0:
-                fb += f"* {f} = Non modifiable interaction.\n"
+                fb += f"  {f} = Non modifiable interaction.\n"
                 continue
             
-            line = [f"   {f:<12}: "+"  ".join([f"{x:>10}" for x in p.values()]) 
+            line = [f"    {f:<12}: "+"  ".join([f"{x:>10}" for x in p.values()]) 
                         for f, p in args[0].items()]
             line = "\n".join(line)
-            fb += f"* {f} = \n{line}\n"
+            fb += f"  {f} = \n{line}\n"
+        fb = fb[:-1]
         co = self.Core
         args = {
             InputParts.Interaction_Title : it,
@@ -551,7 +558,7 @@ class CalculationArgs(object):
             InputParts.Core : co,
         }        
         
-        txt = _read_dict(args)
+        txt = _read_dict_iodetails(args)
         return txt
         
 
