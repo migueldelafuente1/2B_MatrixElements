@@ -10,7 +10,8 @@ import time
 
 from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
     SHO_Parameters, Output_Parameters, OutputFileTypes,\
-    CouplingSchemeEnum, ForceEnum, ForceFromFileParameters, CoreParameters
+    CouplingSchemeEnum, ForceEnum, ForceFromFileParameters, CoreParameters,\
+    InputParts
 from matrix_elements import switchMatrixElementType
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement
 from itertools import combinations_with_replacement
@@ -22,7 +23,23 @@ from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
 
 import os
 import numpy as np
-import traceback 
+import traceback
+
+_SUITE_PRESENTATION_TEMPLATE = """
+=====================================================================
+*    SUITE 2-BODY MATRIX ELEMENTS CALCULATOR  [{suite:>16}]    *
+*                                               Miguel de la Fuente *
+*                                                                   *
+*    The code evaluates a series of two body interactions, getting  *
+*    the reduced and antisymmetrized matrix elements for the        *
+*    spherical harmonic oscillator basis.                           *
+*                                                                   *
+*    -- ** Input Details ** --------------------------------------  *
+    
+{input_details}
+*    -------------------------------------------------------------  *
+=====================================================================
+"""
 
 class TBME_Runner(object):
     '''
@@ -78,6 +95,14 @@ class TBME_Runner(object):
         
         self.filename_output  = self.RESULT_FOLDER +'/'+ self.input_obj.getFilename()
         self._setHamilTypeAndCOMCorrection()
+        self._printSuiteSetUp4Calculation()
+    
+    def _printSuiteSetUp4Calculation(self):
+        
+        input_block = self.input_obj.getInputDetailsString()
+        
+        print(_SUITE_PRESENTATION_TEMPLATE.format(suite=self.__class__.__name__,
+                                                  input_details = input_block))
     
     @classmethod
     def setFolderToSaveResults(cls, new_folder=None):

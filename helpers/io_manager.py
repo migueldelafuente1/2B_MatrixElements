@@ -107,6 +107,29 @@ class _Parser:
 class ParserException(Exception):
     pass
 
+def _read_dict(arg, lev=0):
+    """
+    prints a dictionary tabulating levels as prettyprint dictionary do, but as str
+    Usage: io_manager.CalculationArgs.getInputDetailsString
+    """
+    tab = " "*lev
+    txt = ""
+    if isinstance(arg, dict):
+        for k, val in arg.items():
+            if val in (None, [], {}): continue
+            kk = k+": " if lev>0 else f"<{k}>\n"
+            txt += tab + kk+_read_dict(val, lev+1)
+            if isinstance(val, (dict, list)) or lev==0:
+                txt +='\n'
+    elif isinstance(arg, list):
+        for val in arg:
+            if val in (None, [], {}): continue
+            txt += tab +_read_dict(val, lev+1)
+            if isinstance(val, (dict, list)) or lev==0:
+                txt +='\n'
+    else:
+        return str(arg)
+    return txt
 
 class _JsonParser(_Parser):
     
@@ -482,8 +505,60 @@ class CalculationArgs(object):
         outp_fn = spc + ''.join(getattr(self, InputParts.Force_Parameters).keys())
         
         return outp_fn
-
-
+    
+    def getInputDetailsString(self):
+        """
+        Method to print the xml input relevant values 
+        """
+        it = filter(lambda x: x[1] not in ('', None), self.Interaction_Title.items())
+        it = '\n'.join([f'  {x[0]} : {x[1]}' for x in it])
+        op = ', '.join([f'{k}: {self.Output_Parameters[k]}' for k in 
+                        (Output_Parameters.Hamil_Type, 
+                         Output_Parameters.COM_correction,
+                         Output_Parameters.Output_Filename)])
+        vs = list(self.Valence_Space.items())
+        
+        vs_txt = ""
+        vs_spe = ""
+        spe = vs[0][1] not in ('', None)
+        for i in range(len(self.Valence_Space)//(9+1)  +1):
+            a  = 9*i
+            aa = min(9*(i+1), len(vs)-1)
+            args = vs[9*i: min(9*(i+1), len(vs)-1)]
+            vs_txt += "      " + " ".join([f"{x[0]:>5}" for x in args]) + '\n'
+            if spe:
+                vs_spe += "      "+" ".join([f"{x[1]:>5.2f}" for x in args])+'\n'
+        
+        vs = vs_txt[:-1]
+        if spe:
+            vs += "\nSingle-particle energies\n"+vs_spe[:-1]
+        
+        fb = ""
+        for f, args in self.Force_Parameters.items():
+            # if f not in (ForceEnum.Brink_Boeker, ForceEnum.PotentialSeries):
+            #     line = "  ".join(list(args[0].values()))+'\n'
+            # else:
+            # continue
+            if len(args)==0:
+                fb += f+" = None\n"
+                continue
+            line = [f"   {f:<10}: "+"  ".join(list(p.values())) 
+                        for f, p in args[0].items()]
+            line = "\n".join(line)
+            fb += f"* {f} = \n{line}\n"
+        co = self.Core
+        args = {
+            InputParts.Interaction_Title : it,
+            InputParts.Output_Parameters : self.Output_Parameters,
+            InputParts.SHO_Parameters    : self.SHO_Parameters,
+            InputParts.Valence_Space     : vs,
+            InputParts.Force_Parameters  : fb,
+            InputParts.Core : co,
+        }        
+        
+        txt = _read_dict(args)
+        return txt
+        
 
 class TBME_Reader():
     

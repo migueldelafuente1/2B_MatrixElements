@@ -32,23 +32,27 @@ from matrix_elements.SkyrmeForces import SkrymeBulk_JTScheme
 
 if __name__ == "__main__":
     
-    parsed_args = argv
-    if len(parsed_args) > 1:
-        # TODO: Define Parser and input process
-        pass
+    terminal_args_given = argv
+    if len(terminal_args_given) > 1:
+        print(" Running SpeedRunner Suite, argv:", terminal_args_given)
+        assert terminal_args_given[2].endswith('.xml'), \
+            f"Only XML input files accepted. Got [{terminal_args_given[1]}]"
+        _runner = TBME_SpeedRunner(argv[1], verbose=False)
+        _runner.run()
     else:
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
         
         #_runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
-        _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_Runner(filename='input.xml')
+        # _ = 0
         # _runner = TBME_Runner(filename='input_D1S.xml')
-        _runner.run()
+        # _runner.run()
         
         # _runner = TBME_SpeedRunner(filename='input.xml')
-        # _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
-        # _runner.run()
+        _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
+        _runner.run()
         print(" The program has ended without incidences.")
     
     
