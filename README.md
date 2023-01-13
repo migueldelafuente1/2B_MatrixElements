@@ -54,10 +54,10 @@ computation.run()
  
 # >> Computes and save the results (creates a /result folder) 
 ```
-Another way to run it is by terminal, since `TBME_Runner` is already implemented in `main.py` to bring your input xml file as argument.
+Another way to run it is by terminal, since `TBME_Runner` is set in `main.py` to run your input XML file when given as argument.
 
 ```
-$python3 main.py input.xml
+$ python3 main.py input.xml
 ```
 
 Currently implemented two body interactions (All computed in JT scheme):
