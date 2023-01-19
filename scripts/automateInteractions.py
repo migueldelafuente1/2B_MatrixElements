@@ -6,6 +6,7 @@ Created on Apr 4, 2022
 ## ensures parent folder importing both Windows/Linux
 import os
 import sys
+from xml import etree
 
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 
@@ -18,7 +19,7 @@ from helpers.Enums import InputParts, AttributeArgs, ForceEnum,\
 from pathlib import Path
 import os, shutil
 import subprocess
-from computingHOhbaromegaForD1S import generateCOMFileFromFile, \
+from scripts.computingHOhbaromegaForD1S import generateCOMFileFromFile, \
     COM2_TRUNC, BASE_HAMIL_NAME, generateD1SHamil
 from scripts.computingHOhbaromegaForD1S import TEMPLATE_INP_TAU
 
@@ -222,7 +223,7 @@ def _runTaurusBaseSeedForHamil(zz, nn, seed, Mz, folder2dump):
     shutil.move(f'final_wf.bin', folder2dump+f"/final_{extension}.bin")
     shutil.move(f'aux.OUT', folder2dump+f"/aux_{extension}.OUT")
     
-    
+
 def run_D1S_Interaction():
     """ Function to produce a list of hamiltonians D1S using process from the
     hbar omega """
