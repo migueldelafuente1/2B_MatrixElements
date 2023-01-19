@@ -1,6 +1,7 @@
 helpers/__pycache__
 matrix_elements/__pycache__
 tests/__pycache__
+results/
 
 # exclude all files and folders from Windows execution of scripts but the python scripts
 scripts/*

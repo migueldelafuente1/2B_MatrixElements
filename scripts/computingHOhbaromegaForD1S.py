@@ -109,16 +109,16 @@ Constraint multipole Q10      1   0.000
 Constraint multipole Q11      1   0.000
 Constraint multipole Q20      {b20}
 Constraint multipole Q21      1   0.000
-Constraint multipole Q22      1   0.000
+Constraint multipole Q22      0   0.000
 Constraint multipole Q30      0   0.000
 Constraint multipole Q31      1   0.000
-Constraint multipole Q32      1   0.000
-Constraint multipole Q33      1   0.000
+Constraint multipole Q32      0   0.000
+Constraint multipole Q33      0   0.000
 Constraint multipole Q40      0   0.000
 Constraint multipole Q41      1   0.000
-Constraint multipole Q42      1   0.000
-Constraint multipole Q43      1   0.000
-Constraint multipole Q44      1   0.000
+Constraint multipole Q42      0   0.000
+Constraint multipole Q43      0   0.000
+Constraint multipole Q44      0   0.000
 Constraint radius sqrt(r^2)   0   0.000
 Constraint ang. mom. Jx       0   0.000
 Constraint ang. mom. Jy       0   0.000
@@ -757,7 +757,7 @@ if __name__ == '__main__':
         # args = (COM2_TRUNC, TAURUS_EXE_FOLD+'\\'+BASE_HAMIL_NAME) #TODO: windows 
         # _e = subprocess.call('copy {} {}.com'.format(*args), shell=True)
         
-        ## Only set valencespace once in the XML
+        ## Only set valence space once in the XML
         valenSp = root.find(InputParts.Valence_Space)
         valenSp = set_valenceSpace_Subelement(valenSp, MZmax, MZmin)
         
