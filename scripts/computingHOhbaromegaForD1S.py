@@ -297,7 +297,7 @@ def _setForcesOnElement(forces, b_length, do_coulomb=True, do_LS=True,
     _TT = '\n\t\t'
     ## ************************************************************************     
     ls_const = W_ls / (b_length**5)
-    if do_LS: print(f" > doing LS m.e.")
+    if do_LS: print(f" > doing LS m.e.: active=", do_LS, f"Wls/b^5= {ls_const:8.3f}")
     f1  = et.SubElement(forces, ForceEnum.Force_From_File,
                        attrib={AttributeArgs.ForceArgs.active : str(do_LS)})
     f1.text = _TT
@@ -312,7 +312,7 @@ def _setForcesOnElement(forces, b_length, do_coulomb=True, do_LS=True,
     f1.tail = '\n\t'
     
     cou_const = 1 / b_length  # e^2 were in the interaction constant
-    print(f" > doing Coul m.e.")
+    print(f" > doing Coul m.e.", do_coulomb, f"1/b= {cou_const:8.3f}")
     f2  = et.SubElement(forces, ForceEnum.Force_From_File,  
                         attrib={AttributeArgs.ForceArgs.active : str(do_coulomb)})
     f2.text = _TT
@@ -326,7 +326,7 @@ def _setForcesOnElement(forces, b_length, do_coulomb=True, do_LS=True,
     _.tail='\n\t'
     f2.tail = '\n\t'
     
-    print(f" > doing BB m.e.")
+    print(f" > doing BB m.e.: active= True")
     f3  = et.SubElement(forces, ForceEnum.Brink_Boeker, 
                         attrib={AttributeArgs.ForceArgs.active : 'True'})
     f3.text = _TT
@@ -342,7 +342,7 @@ def _setForcesOnElement(forces, b_length, do_coulomb=True, do_LS=True,
     _.tail = '\n\t'
     f3.tail = '\n\t'
     
-    print(f" > doing DD m.e. if core. Core=", inner_core)
+    print(f" > doing DD m.e.: if core. Core=", inner_core)
     do_DD = bool(inner_core!=None)
     f4 = et.SubElement(forces, ForceEnum.Density_Dependent,
             attrib={AttributeArgs.ForceArgs.active : str(do_DD)})

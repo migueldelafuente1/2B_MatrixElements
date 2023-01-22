@@ -528,7 +528,7 @@ class CalculationArgs(object):
         vs_spe = ""
         spe = vs[0][1] not in ('', None)
         for i in range(len(self.Valence_Space)//(9+1)  +1):
-            args = vs[9*i: min(9*(i+1), len(vs)-1)]
+            args = vs[9*i: min(9*(i+1), len(vs))]
             vs_txt += "      " + " ".join([f"{x[0]:>5}" for x in args]) + '\n'
             if spe:
                 vs_spe += "      "+" ".join([f"{float(x[1]):>5.1f}" for x in args])+'\n'
@@ -542,10 +542,10 @@ class CalculationArgs(object):
             if len(args[0])==0:
                 fb += f"  {f} = Non modifiable interaction.\n"
                 continue
-            
-            line = [f"    {f:<12}: "+"  ".join([f"{x:>10}" for x in p.values()]) 
-                        for f, p in args[0].items()]
-            line = "\n".join(line)
+            for i in range(len(args)): ## force from file could have several files
+                line = [f"    {f:<12}: "+"  ".join([f"{x:>10}" for x in p.values()]) 
+                            for f, p in args[i].items()]
+                line = "\n".join(line)
             fb += f"  {f} = \n{line}\n"
         fb = fb[:-1]
         co = self.Core
