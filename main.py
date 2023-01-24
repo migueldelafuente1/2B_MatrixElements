@@ -83,60 +83,60 @@ if __name__ == "__main__":
     #     },'part9':{
     #         'potential': 'gaussian', 'constant': '   0.0464', 'mu_length': '5.6569'}, 
     # }
-    
-    kwargs = {
-        SHO_Parameters.b_length  : 1.0, #1.4989,
-        SkyrmeBulkParameters.t0  : 1.0, #
-        SkyrmeBulkParameters.x0  : 0.0, #
-        SkyrmeBulkParameters.t1  : 0.0, #
-        SkyrmeBulkParameters.t2  : 0.0, #
-    }
-    
-    J = 2
-    T = 0
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
-                                   QN_1body_jj(1,0,1), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5), 
-                                   QN_1body_jj(1,0,1), J, T)
-    
-    SkrymeBulk_JTScheme.turnDebugMode(True)
-    SkrymeBulk_JTScheme.setInteractionParameters(**kwargs)
-    me = SkrymeBulk_JTScheme(bra_, ket_)
-    print("me: ", me.value)
-    
-    
-    
-    kwargs = {
-        SHO_Parameters.A_Mass       : 16,
-        SHO_Parameters.Z            : 8,
-        SHO_Parameters.b_length     : 1.5, #1.4989,
-        SHO_Parameters.hbar_omega   : 18.4586,
-        
-        #CentralMEParameters.potential : PotentialForms.Yukawa,
-        #CentralMEParameters.mu_length : 2, 
-        # CentralMEParameters.constant  : 1,
-        # DensityDependentParameters.alpha : 1,
-        # DensityDependentParameters.x0 : 1
-        CentralMEParameters.potential : PotentialForms.Gaussian,
-        CentralMEParameters.mu_length : 1.4,
-        CentralMEParameters.constant  : -70.0
-    }
-    
-    J = 1
-    T = 0
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
-                                   QN_1body_jj(0,0,1), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
-                                   QN_1body_jj(0,1,3), J, T)
-    
-    CentralForce_JTScheme.turnDebugMode(True)
-    CentralForce_JTScheme.setInteractionParameters(**kwargs)
-    me = CentralForce_JTScheme(bra_, ket_)
-    print("me: ", me.value)
-    me.saveXLog('me_dens')
-    # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
-    XLog.resetLog()
-    
+#--- TESTING INDIVIDUAL MATRIX ELEMENTS --------------------------------------- 
+    # kwargs = {
+    #     SHO_Parameters.b_length  : 1.0, #1.4989,
+    #     SkyrmeBulkParameters.t0  : 1.0, #
+    #     SkyrmeBulkParameters.x0  : 0.0, #
+    #     SkyrmeBulkParameters.t1  : 0.0, #
+    #     SkyrmeBulkParameters.t2  : 0.0, #
+    # }
+    #
+    # J = 2
+    # T = 0
+    # bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3), 
+    #                                QN_1body_jj(1,0,1), J, T)
+    # ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5), 
+    #                                QN_1body_jj(1,0,1), J, T)
+    #
+    # SkrymeBulk_JTScheme.turnDebugMode(True)
+    # SkrymeBulk_JTScheme.setInteractionParameters(**kwargs)
+    # me = SkrymeBulk_JTScheme(bra_, ket_)
+    # print("me: ", me.value)
+    #
+    #
+    #
+    # kwargs = {
+    #     SHO_Parameters.A_Mass       : 16,
+    #     SHO_Parameters.Z            : 8,
+    #     SHO_Parameters.b_length     : 1.5, #1.4989,
+    #     SHO_Parameters.hbar_omega   : 18.4586,
+    #
+    #     #CentralMEParameters.potential : PotentialForms.Yukawa,
+    #     #CentralMEParameters.mu_length : 2, 
+    #     # CentralMEParameters.constant  : 1,
+    #     # DensityDependentParameters.alpha : 1,
+    #     # DensityDependentParameters.x0 : 1
+    #     CentralMEParameters.potential : PotentialForms.Gaussian,
+    #     CentralMEParameters.mu_length : 1.4,
+    #     CentralMEParameters.constant  : -70.0
+    # }
+    #
+    # J = 1
+    # T = 0
+    # bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
+    #                                QN_1body_jj(0,0,1), J, T)
+    # ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1), 
+    #                                QN_1body_jj(0,1,3), J, T)
+    #
+    # CentralForce_JTScheme.turnDebugMode(True)
+    # CentralForce_JTScheme.setInteractionParameters(**kwargs)
+    # me = CentralForce_JTScheme(bra_, ket_)
+    # print("me: ", me.value)
+    # me.saveXLog('me_dens')
+    # # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
+    # XLog.resetLog()
+#------------------------------------------------------------------------------ 
     # with open('results/BB_LS_SPSDPF_1.com', 'r') as f:
     #     data = f.readlines()[1:]
     #
