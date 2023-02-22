@@ -66,7 +66,7 @@ class TBME_Runner(object):
         # 2: (1, -1, -1,  1),  # pnnp 
         # 3: (-1, 1,  1, -1),  # nppn 
         # 4: (-1, 1, -1,  1),  # npnp 
-        # 5: (-1, -1,-1, -1),  # nnnn
+        # 5: (-1,-1, -1, -1),  # nnnn
     
     def __init__(self, filename='', verbose=True, manual_input={}):
         
@@ -745,7 +745,7 @@ The program will exclude it from the interaction file and will produce the .com 
                 all_null = False
                 
                 if abs(mat_elem) < 1.e-10:
-                    values.append("{: 12.10e}".format(mat_elem))
+                    values.append("{: 12.6e}".format(mat_elem))
                 else:
                     values.append("{: 12.10f}".format(mat_elem))
             else:

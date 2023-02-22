@@ -13,7 +13,7 @@ from helpers.Enums import AttributeArgs
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException
 from matrix_elements.transformations import TalmiTransformation
-from helpers.Helpers import safe_racah
+from helpers.Helpers import safe_racah, safe_wigner_6j
 from helpers.WaveFunctions import QN_2body_LS_Coupling
 from helpers.Log import XLog
 
@@ -58,13 +58,6 @@ class TensorForce(TalmiTransformation):#):
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
-            # for arg, value in kwargs.items():
-            #     if arg in _map:
-            #         attr_parser = _map[arg]
-            #         attr_, parser_ = attr_parser
-            #         kwargs[arg] = parser_(kwargs[arg].get(attr_))
-            #     elif isinstance(value, str):
-            #         kwargs[arg] = float(value) if '.' in value else int(value)
             kwargs = TensorForce._automaticParseInteractionParameters(_map, kwargs)
         
         super(TensorForce, cls).setInteractionParameters(*args, **kwargs)
@@ -129,7 +122,9 @@ class TensorForce(TalmiTransformation):#):
     
     def _globalInteractionCoefficient(self):
         # no special interaction constant for the Central ME
-        phase = (-1)**(1 + self.rho_bra - self.J)
+        # phase = (-1)**(1 + self.rho_bra - self.J)
+        phase = (-1)**(self.S_bra + self.L_bra - self.J)
+        ## TODO: last phase must be the one (commented is fine/ 1st version))
         factor = np.sqrt(8*(2*self.L_bra + 1)*(2*self.L_ket + 1))
         
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
@@ -144,8 +139,11 @@ class TensorForce(TalmiTransformation):#):
             return 0
         
         factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
+        phase = (-1)**(self._L - self.L_bra - self._l_q)
+        ## TODO: phase must be uncommented (commented is fine, 1st version)
         
-        return factor * np.sqrt(2*self._l + 1)
+        return factor * np.sqrt(2*self._l + 1) * phase 
+
 
 
 
@@ -155,13 +153,7 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     
     def __init__(self, bra, ket, run_it=True):
-        
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
-
-    # def _run(self):
-    #     ## First method that runs antisymmetrization by exchange the quantum
-    #     ## numbers (X2 time), change 2* _series_coefficient
-    #     return _TwoBodyMatrixElement_JTCoupled._run(self)
     
     
     def _validKetTotalSpins(self):
@@ -196,5 +188,67 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
-        
         return self.centerOfMassMatrixElementEvaluation()
+    
+    def _run(self):
+        ## First method that runs antisymmetrization_ by exchange the quantum
+        ## numbers (X2 time), change 2* _series_coefficient
+        return _TwoBodyMatrixElement_JTCoupled._run(self)
+
+
+
+class TensorS12_JTScheme(TensorForce_JTScheme):
+    
+    """ 
+        Recalculated using the evaluation of [sigma(1) x sigma(2)]_2 
+        (obtained by me (delafuen), differnces in the spin parts.
+        test if match with Moshinsky's values)
+    """
+    
+    def _totalSpinTensorMatrixElement(self):
+        """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 """
+        if (self.S_bra == 0) or (self.S_ket == 0):
+            return True, 0.0
+        return False, 4.47213595499958 ## = np.sqrt(20)
+    
+    def centerOfMassMatrixElementEvaluation(self):
+        """ 
+        Radial Brody-Moshinsky transformation, implementation for a
+        non central tensor force.
+        """
+        skip, spin_me = self._totalSpinTensorMatrixElement()
+        if skip:
+            return 0
+        
+        factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
+                                self.S_ket, self.L_ket, 2)
+        if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
+            return 0
+        phase   = (-1)**(self.S_bra + self.J + self.L_ket)
+        ## NOTE: the last L_bra should be from the ket since the W
+        factor *= phase * 3.8832518251113983 #* np.sqrt(2*self.J + 1) 
+        ## 3.8832 = _sqrt(24*pi / 5)
+        
+        return factor * spin_me * self._BrodyMoshinskyTransformation()
+    
+    def _globalInteractionCoefficient(self):
+        # no special interaction constant for the Tensor
+        return self.PARAMS_FORCE.get(CentralMEParameters.constant)
+    
+    def _interactionConstantsForCOM_Iteration(self):
+        # factors from transforming the <Y_2* V(r)> m.e.
+        factor = safe_racah(self.L_bra, self.L_ket, 
+                            self._l, self._l_q,
+                            2, self._L)
+        if self.isNullValue(factor):
+            return 0
+        
+        phase   = (-1)**(self._L + self.L_ket - self._l)
+        factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
+        factor *= np.sqrt((2*self._l + 1)*(2*self.L_bra + 1)*(2*self.L_ket + 1))
+        
+        return phase * factor * 0.6307831305050401  # _sqrt(5 / 4*pi)
+    
+
+
+

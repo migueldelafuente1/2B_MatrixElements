@@ -383,7 +383,11 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                         if null:
                             continue
                         
-                        sum_ += coupling * self._antisymmetrized_LS_element()
+                        val = self._antisymmetrized_LS_element()
+                        if self.DEBUG_MODE:
+                            XLog.write('recoup', antsym_val=val)
+                        
+                        sum_ += coupling * val
                 
         return sum_
     

@@ -63,6 +63,7 @@ class ForceEnum(Enum):
     Kinetic_2Body = 'Kinetic_2Body'
     Multipole_Delta = 'Multipole_Delta'
     SkyrmeBulk = 'SkyrmeBulk'
+    TensorS12  = 'TensorS12'
     Force_From_File = 'Force_From_File'
 
 class PotentialForms(Enum):
@@ -126,6 +127,7 @@ ForceVariablesDict = {
     ForceEnum.Central : CentralMEParameters,
     ForceEnum.Coulomb : Enum,
     ForceEnum.Tensor  : CentralMEParameters,
+    ForceEnum.TensorS12     : CentralMEParameters,
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
