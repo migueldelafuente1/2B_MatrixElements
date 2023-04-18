@@ -45,7 +45,7 @@ class TBME_SpeedRunner(TBME_Runner):
         self.me_instances = []
         self.forces = []
         self.forcesDict = {}
-        self.forcesIsAntisym = []
+        self.forcesIsNotExplAntisym = []    ## True if the _run() perform explicitly the exchange (cls.EXPLICIT_ANTISYM=False)
         self.forcesScheme    = []
         self.forcesNorms     = []
         self.valid_L_forKets = []
@@ -99,7 +99,7 @@ class TBME_SpeedRunner(TBME_Runner):
             self.forcesDict[force] = len(self.forces) - 1
             self.forces[-1].setInteractionParameters(**force_list[0], **sho_params)
             
-            self.forcesIsAntisym.append(self.forces[-1].EXPLICIT_ANTISYMM)
+            self.forcesIsNotExplAntisym.append(self.forces[-1].EXPLICIT_ANTISYMM)
             
             if self.forces[-1].COUPLING == CouplingSchemeEnum.JJ:
                 self.forcesScheme.append(self._Scheme.J)
@@ -246,7 +246,10 @@ class TBME_SpeedRunner(TBME_Runner):
             braJ = QN_2body_jj_J_Coupling(self.bra_1, self.bra_2, self.J)
             ketJ = QN_2body_jj_J_Coupling(self.ket_1, self.ket_2, self.J)
             
-            self.me_instances[f][m] = self.forces[f](braJ, ketJ, run_it=False)
+            ## NOTE: using the deepcopy_ because the different instances seems to 
+            ##       be overwritten in this loop (probably an internal array in the me)
+            self.me_instances[f][m] = self.forces[f](deepcopy(braJ), deepcopy(ketJ), 
+                                                     run_it=False)
             self.forcesNorms[f][m]  = braJ.norm() * ketJ.norm() 
         
         phs, _ = ketJ.exchange()
@@ -421,7 +424,7 @@ class TBME_SpeedRunner(TBME_Runner):
                 direct = self.me_instances[f][t]._LScoupled_MatrixElement()                               
                 exch_val = 0
                 # explicit antysimmetric_ m.e. has exch_2bme set by constructor
-                if self.forcesIsAntisym[f]:
+                if self.forcesIsNotExplAntisym[f]:
                     ## perform exchange of the qqnn 
                     exch_2bme = self.me_instances[f][t].getExchangedME()
                         

@@ -93,7 +93,7 @@ class TensorForce(TalmiTransformation):#):
         """ For the antisymmetrization_ of the wave functions. """
         if (((self.S_bra + self.T + self._l) % 2 == 1) and 
             ((self.S_ket + self.T + self._l_q) % 2 == 1)):
-                return True
+            return True
         return False
     
     def _totalSpinTensorMatrixElement(self):
@@ -123,7 +123,7 @@ class TensorForce(TalmiTransformation):#):
     def _globalInteractionCoefficient(self):
         # no special interaction constant for the Central ME
         # phase = (-1)**(1 + self.rho_bra - self.J)
-        phase = (-1)**(self.S_bra + self.L_bra - self.J)
+        phase = (-1)**(self.S_bra + self.L_ket  - self.L_bra - self.J)
         ## TODO: last phase must be the one (commented is fine/ 1st version))
         factor = np.sqrt(8*(2*self.L_bra + 1)*(2*self.L_ket + 1))
         
@@ -139,7 +139,7 @@ class TensorForce(TalmiTransformation):#):
             return 0
         
         factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
-        phase = (-1)**(self._L - self.L_bra - self._l_q)
+        phase = (-1)**(self._L - self._l_q)
         ## TODO: phase must be uncommented (commented is fine, 1st version)
         
         return factor * np.sqrt(2*self._l + 1) * phase 
@@ -177,11 +177,12 @@ class TensorForce_JTScheme(TensorForce, _TwoBodyMatrixElement_JTCoupled):
         Return ket states <tuple> of the total angular momentum, depending of 
         the Force.
         
-        OJO: Moshinski, lambda' = lambda, lambda +-1, lambda +-2!!! as condition
+        OJO: Moshinsky, lambda' = lambda, lambda +-1, lambda +-2!!! as condition
         in the C_Tensor, due rank 2 tensor coupling
         """
-        _L_min = max(0, self.L_bra - self.S_bra - 1)
-        gen_ = (l_q for l_q in range(_L_min, self.L_bra + self.S_bra + 2))
+        _L_min = max(0, self.L_bra - 2)
+        _L_max =        self.L_bra + 2
+        gen_ = (l_q for l_q in range(_L_min, _L_max +1))
         return tuple(gen_)
     
     def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
@@ -224,10 +225,11 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
                                 self.S_ket, self.L_ket, 2)
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
-        phase   = (-1)**(self.S_bra + self.J + self.L_ket)
+        phase   = (-1)**(self.S_bra + self.J + self.L_ket + self.L_bra)
         ## NOTE: the last L_bra should be from the ket since the W
         factor *= phase * 3.8832518251113983 #* np.sqrt(2*self.J + 1) 
         ## 3.8832 = _sqrt(24*pi / 5)
+        factor *= ((2*self.L_bra + 1)*(2*self.L_ket + 1))**0.5
         
         return factor * spin_me * self._BrodyMoshinskyTransformation()
     
@@ -236,19 +238,26 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
         return self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     def _interactionConstantsForCOM_Iteration(self):
-        # factors from transforming the <Y_2* V(r)> m.e.
-        factor = safe_racah(self.L_bra, self.L_ket, 
-                            self._l, self._l_q,
-                            2, self._L)
+        # # factors from transforming the <Y_2* V(r)> m.e.
+        # factor = safe_racah(self._l, self._l_q, self.L_bra, self.L_ket, 
+        #                     2, self._L)
+        # if self.isNullValue(factor):
+        #     return 0
+        #
+        # phase   = (-1)**(self._L + self.L_ket - self._l)
+        # factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
+        # factor *= np.sqrt((2*self._l + 1)*(2*self.L_bra + 1)*(2*self.L_ket + 1))
+        #
+        # return phase * factor * 0.6307831305050401  # _sqrt(5 / 4*pi)
+        
+        factor = safe_wigner_6j(self._L, self._l,    self.L_bra,
+                                2,       self.L_ket, self._l_q)
         if self.isNullValue(factor):
             return 0
-        
-        phase   = (-1)**(self._L + self.L_ket - self._l)
+        phase   = (-1)**(self._L + self._l)
         factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
-        factor *= np.sqrt((2*self._l + 1)*(2*self.L_bra + 1)*(2*self.L_ket + 1))
+        factor *= np.sqrt((2*self._l + 1))
         
         return phase * factor * 0.6307831305050401  # _sqrt(5 / 4*pi)
-    
-
 
 

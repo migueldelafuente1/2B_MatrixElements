@@ -247,7 +247,7 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     
     def _nullConditionForSameOrbit(self):
         """ When the  two nucleons of the bra or the ket are in the same orbit,
-        total J and T must obey angular momentum coupling restriction. 
+        total J must obey angular momentum coupling restriction. 
         """
         if (self.bra.nucleonsAreInThesameOrbit() or 
             self.ket.nucleonsAreInThesameOrbit()):
@@ -438,6 +438,9 @@ class _TwoBodyMatrixElement_Antisym_JCoupled(_TwoBodyMatrixElement_JCoupled):
             XLog.write('na_me', phs=phase)
             XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
     
+    def _nullConditionForSameOrbit(self):
+        _TwoBodyMatrixElement_JCoupled._nullConditionForSameOrbit(self)
+        
 
 
 class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):

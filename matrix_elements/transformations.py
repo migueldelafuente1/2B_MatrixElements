@@ -479,6 +479,8 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                                  self.L_bra)
             if self.isNullValue(bmb_bra):
                 continue
+            if self.DEBUG_MODE:
+                XLog.write('intSer', nlNL=qqnn_bra)
             
             for l_q in self._validKet_relativeAngularMomentums():
                 self._l_q = l_q
@@ -503,8 +505,9 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 
                 # TODO: comment when not debugging
                 if self.DEBUG_MODE:
-                    XLog.write('intSer', bmbs=bmb_bra * bmb_ket, B=_b_coeff,
-                               comCoeff=_com_coeff, aux=aux)
+                    XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q, 
+                               bmbs=bmb_bra * bmb_ket, 
+                               B=_b_coeff, comCoeff=_com_coeff, aux=aux)
                 #     self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
         if self.DEBUG_MODE:
             XLog.write('intSer', value=sum_)
