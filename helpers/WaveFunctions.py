@@ -17,9 +17,9 @@ class _1Body_WaveFunction:
     attribute [m_e]"""
     
     _particleLabels = {
-        1   : 'p',
-        0   : '',
-        -1  : 'n'}
+        -1   : 'p',
+        0    : '',
+        1    : 'n'}
     
     def __init__(self, *args):
         raise WaveFunctionException("Abstract method, implement me!")
