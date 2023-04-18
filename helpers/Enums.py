@@ -60,6 +60,7 @@ class ForceEnum(Enum):
     Brink_Boeker  = 'Brink_Boeker'
     PotentialSeries = 'PotentialSeries'
     Density_Dependent = 'Density_Dependent'
+    Density_Dependent_From_File = 'Density_From_File'
     Kinetic_2Body = 'Kinetic_2Body'
     Multipole_Delta = 'Multipole_Delta'
     SkyrmeBulk = 'SkyrmeBulk'
@@ -99,6 +100,7 @@ class DensityDependentParameters(Enum):
     x0    = 'x0'
     alpha = 'alpha'
     core  = 'core'
+    file  = 'file'
     
 class SkyrmeBulkParameters(Enum):
     t0 = 't0'
@@ -131,6 +133,7 @@ ForceVariablesDict = {
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
+    ForceEnum.Density_Dependent_From_File   : DensityDependentParameters, 
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,
