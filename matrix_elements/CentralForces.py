@@ -269,6 +269,10 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         cls.PARAMS_CORE  = {}
         cls._has_core_b_lenght = False
         fa = atrE.ForceArgs
+        ## To avoid exception in DD sho aproximation
+        if not dd_p.file in kwargs:
+            kwargs[dd_p.file] = None
+        
         for param in dd_p.members():
             aux = kwargs[param]
             if param == dd_p.core:
@@ -446,8 +450,10 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
             if cls._OMEGA % 2 == 1:
                 cls._OMEGA += 1
             if cls._OMEGA < 14: 
+                print(" WARNING: Minimum Omega for Lebedev is 14, fixing to that.")
                 cls._OMEGA = 14
             elif cls._OMEGA > 22:
+                print(" WARNING: Maximum Omega for Lebedev is 22, fixing to that.")
                 cls._OMEGA = 22
             ## read the file and convert the numbers
             with open(f'docs/LebedevPointsWeightsOmg{cls._OMEGA}.gut', 'r') as f:
