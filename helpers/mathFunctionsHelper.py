@@ -45,12 +45,12 @@ def angular_Y_KM_index(K, M, is_half_integer):
 
 def _angular_Y_KM_memo_accessor(indx_a, indx_b, indx_K):
     """ 
-        indexing_ = (ja_ma[HI], jb_mb[HI], K_M[I])
+        indexing_ = (ja_ma[HafInt], jb_mb[HalfInt], K_M[Int])
     Remember the index do not contain information from the orbital part!
     """
-    list_ = (indx_a, indx_b, indx_K)
+    # list_ = (indx_a, indx_b, indx_K)
         
-    return ','.join(map(lambda x: str(x), list_))
+    return '{},{},{}'.format(indx_a, indx_b, indx_K)
 
 def _angularYCoeff_evaluation(la, ja, mja, lb, jb, mjb, K):
     if (la + lb + K) % 2 == 1:

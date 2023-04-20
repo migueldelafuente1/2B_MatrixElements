@@ -27,6 +27,7 @@ from helpers.mathFunctionsHelper import _buildAngularYCoeffsArray,\
     _angular_Y_KM_memo_accessor, _radial_2Body_functions, _angular_Y_KM_me_memo
 from helpers import SCIPY_INSTALLED
 from copy import deepcopy
+from scipy.special._ufuncs import sph_harm
 
 class CentralForce(TalmiTransformation):
     
@@ -802,11 +803,11 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         Process has the antisymmetrization in the uncoupled matrix element.
         Process does not require the LS coupling
         """
-        ma_valid = [m for m in range(-self.bra.j1, self.bra.j1+1, 2)]
-        mb_valid = [m for m in range(-self.bra.j2, self.bra.j2+1, 2)]
+        ma_valid = [m for m in range(-self.bra.j1, self.bra.j1 +1, 2)]
+        mb_valid = [m for m in range(-self.bra.j2, self.bra.j2 +1, 2)]
         
-        mc_valid = [m for m in range(-self.ket.j1, self.ket.j1+1, 2)]
-        md_valid = [m for m in range(-self.ket.j2, self.ket.j2+1, 2)]
+        mc_valid = [m for m in range(-self.ket.j1, self.ket.j1 +1, 2)]
+        md_valid = [m for m in range(-self.ket.j2, self.ket.j2 +1, 2)]
         
         me_value = 0.0
         for ma in ma_valid:
@@ -824,14 +825,18 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                         if self.ket.M != (mc+md)//2: continue
                         args_k = (S(self.ket.j1)/2, S(self.ket.j2)/2, S(self.ket.J),
                                   S(mc)/2, S(md)/2, S(self.ket.M))
-                        
-                        ang_recoup = ccg_b * safe_clebsch_gordan(*args_k)
-                        
+                        ccg_k = safe_clebsch_gordan(*args_k)
+                        ang_recoup = ccg_b * ccg_k
+                        if self.DEBUG_MODE:
+                            XLog.write('junc', ccg_b=ccg_b, ccg_k=ccg_k,
+                                       ma=ma,mb=mb,mc=mc, md=md)
                         if self.isNullValue(ang_recoup): continue
                         
                         dd_integral = self._radialAngularIntegral(ma,mb,mc,md)
                         me_value += (ang_recoup * dd_integral *  
                                      self.PARAMS_FORCE[dd_p.constant])
+                        
+                        if self.DEBUG_MODE: XLog.write('junc', dd_int=dd_integral)
         
         self._value = me_value
     
@@ -877,47 +882,54 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         aux_e   = np.zeros(self._A_DIM)
         ## DIR
         if not self.isNullValue(self.X_ac_bd):
-            for K1 in range(max(0, abs(ja-jc)//2), (ja+jc)//2 +1):
-                M = (mjc - mja) // 2
-                if ((abs(M) > K1) or ((K1 + la + lc) % 2 == 1)): continue
+            if self.DEBUG_MODE:  XLog.write('rangDir')
+            for K1 in range(abs(ja-jc)//2, (ja+jc)//2 +1):
+                M1 = (mjc - mja) // 2
+                if ((abs(M1) > K1) or ((K1 + la + lc) % 2 == 1)): continue
                 
-                indx_K1  = angular_Y_KM_index(K1, M, False)
+                indx_K1  = angular_Y_KM_index(K1, M1, False)
                 key_acK = _angular_Y_KM_memo_accessor(indx_a,indx_c,indx_K1)
                 
-                for K2 in range(max(0, abs(jb-jd)//2), (jb+jd)//2 +1):
+                for K2 in range(abs(jb-jd)//2, (jb+jd)//2 +1):
                     M2 = (mjd - mjb) // 2
                     if ((abs(M2) > K2) or ((K2 + lb + ld) % 2 == 1)): continue
                 
                     indx_K2 = angular_Y_KM_index(K2, M2, False)
                     key_bdK = _angular_Y_KM_memo_accessor(indx_b,indx_d,indx_K2)
-                
-                    c_ang    = _angular_Y_KM_me_memo [key_acK]
-                    c_ang   *= _angular_Y_KM_me_memo [key_bdK]
+                    
+                    c_ang    = _angular_Y_KM_me_memo.get(key_acK, 0)
+                    c_ang   *= _angular_Y_KM_me_memo.get(key_bdK, 0)
                     sph_har  = self._sph_harmonic_memo[indx_K1]
                     sph_har *= self._sph_harmonic_memo[indx_K2]
-                    aux_d    = aux_d + c_ang
+                    aux_d    = aux_d + (c_ang * sph_har)
+                    
+                    if self.DEBUG_MODE:
+                        XLog.write('rangDir', km1=(K1,M1), km2=(K2,M2), cang=c_ang)
             
         ## EXCH
         if not self.isNullValue(self.X_ad_bc):
-            for K1 in range(max(0, abs(ja-jd)//2), (ja+jd)//2 +1):
-                M = (mjd - mja) // 2
-                if ((abs(M) > K1) or ((K1 + la + ld) % 2 == 1)): continue
+            if self.DEBUG_MODE:  XLog.write('rangExc')
+            for K1 in range(abs(ja-jd)//2, (ja+jd)//2 +1):
+                M1 = (mjd - mja) // 2
+                if ((abs(M1) > K1) or ((K1 + la + ld) % 2 == 1)): continue
                 
-                indx_K1  = angular_Y_KM_index(K1, M, False)
+                indx_K1  = angular_Y_KM_index(K1, M1, False)
                 key_adK = _angular_Y_KM_memo_accessor(indx_a,indx_d,indx_K1)
                 
-                for K2 in range(max(0, abs(jb-jc)//2), (jb+jc)//2 +1):
+                for K2 in range(0, abs(jb-jc)//2, (jb+jc)//2 +1):
                     M2 = (mjc - mjb) // 2
                     if ((abs(M2) > K2) or ((K2 + lb + lc) % 2 == 1)): continue
                 
                     indx_K2 = angular_Y_KM_index(K2, M2, False)
                     key_bcK = _angular_Y_KM_memo_accessor(indx_b,indx_c,indx_K2)
                 
-                    c_ang    = _angular_Y_KM_me_memo [key_adK]
-                    c_ang   *= _angular_Y_KM_me_memo [key_bcK]
+                    c_ang    = _angular_Y_KM_me_memo.get(key_adK, 0)
+                    c_ang   *= _angular_Y_KM_me_memo.get(key_bcK, 0)
                     sph_har  = self._sph_harmonic_memo[indx_K1]
                     sph_har *= self._sph_harmonic_memo[indx_K2]
-                    aux_e    = aux_e + c_ang * sph_har
+                    aux_e    = aux_e + (c_ang * sph_har)
+                    if self.DEBUG_MODE:
+                        XLog.write('rangExc', km1=(K1,M1), km2=(K2,M2), cang=c_ang)
         
         angular = (self.X_ac_bd * aux_d) - (self.X_ad_bc * aux_e)
         angular = angular * self._weight_ang

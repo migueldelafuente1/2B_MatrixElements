@@ -115,23 +115,23 @@ if __name__ == "__main__":
     
     
     kwargs = {
-        SHO_Parameters.b_length     : 2.0, #1.4989,
+        SHO_Parameters.b_length     : 1.8, #1.4989,
         SHO_Parameters.A_Mass       : 40,
         SHO_Parameters.hbar_omega   : 18.4586,
     
-        # DensityDependentParameters.alpha : 0.333333,
-        # DensityDependentParameters.x0    : 1.0,
-        # DensityDependentParameters.core  : {},
-        # DensityDependentParameters.constant : 1000.0, # 1390.6, #
-        # DensityDependentParameters.file : 'finalMz3_wf.txt', #'intermediate_wf.bin', #
+        DensityDependentParameters.alpha : 0.333333,
+        DensityDependentParameters.x0    : 1.0,
+        DensityDependentParameters.core  : {},
+        DensityDependentParameters.constant : 1000.0, # 1390.6, #
+        DensityDependentParameters.file : 'final16OMz2_wf.txt', #'finalMz3_wf.txt', #
     
-        CentralMEParameters.potential : PotentialForms.Power,
-        CentralMEParameters.n_power   : 0,
-        CentralMEParameters.mu_length : 1.,
-        CentralMEParameters.constant  : 1.0
+        # CentralMEParameters.potential : PotentialForms.Power,
+        # CentralMEParameters.n_power   : 0,
+        # CentralMEParameters.mu_length : 1.,
+        # CentralMEParameters.constant  : 1.0
     }
     
-    J = 2
+    J = 0
     T = 1
     
     # bra_ = QN_2body_LS_Coupling(QN_1body_radial(2,0, mt= 1), 
@@ -139,35 +139,35 @@ if __name__ == "__main__":
     # ket_ = QN_2body_LS_Coupling(QN_1body_radial(0,1, mt= 1), 
     #                             QN_1body_radial(1,3, mt=-1), L, S)
     
-    # bra_ = QN_2body_jj_J_Coupling(QN_1body_jj(0,0,1, mt=-1), 
-    #                               QN_1body_jj(0,0,1, mt= 1), J, M=0)
-    # ket_ = QN_2body_jj_J_Coupling(QN_1body_jj(0,0,1, mt=-1), 
-    #                               QN_1body_jj(0,0,1, mt= 1), J, M=0)
-    bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,3), 
-                                   QN_1body_jj(0,1,3), J, T)
-    ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,3), 
-                                   QN_1body_jj(0,3,7), J, T)
+    bra_ = QN_2body_jj_J_Coupling(QN_1body_jj(0,0,1, mt=-1), 
+                                  QN_1body_jj(0,0,1, mt= 1), J, M=0)
+    ket_ = QN_2body_jj_J_Coupling(QN_1body_jj(0,0,1, mt=-1), 
+                                  QN_1body_jj(0,0,1, mt= 1), J, M=0)
+    # bra_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
+    #                                QN_1body_jj(0,0,1), J, T)
+    # ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
+    #                                QN_1body_jj(0,0,1), J, T)
     #
     # TensorForce_JTScheme.turnDebugMode(True) # TensorForce_JTScheme
     # TensorForce_JTScheme.setInteractionParameters(**kwargs)
     # me = TensorForce_JTScheme(bra_, ket_)#, run_it=False)
-    TensorS12_JTScheme.turnDebugMode(True) # TensorForce_JTScheme
-    TensorS12_JTScheme.setInteractionParameters(**kwargs)
-    # me = TensorS12_JTScheme(bra_, ket_)#, run_it=False)
-    me = TensorS12_JTScheme(ket_, bra_)#, run_it=False)
+    # TensorS12_JTScheme.turnDebugMode(True) # TensorForce_JTScheme
+    # TensorS12_JTScheme.setInteractionParameters(**kwargs)
+    # # me = TensorS12_JTScheme(bra_, ket_)#, run_it=False)
+    # me = TensorS12_JTScheme(ket_, bra_)#, run_it=False)
     
-    # DensityDependentForceFromFile_JScheme.USING_LEBEDEV = True
-    # DensityDependentForceFromFile_JScheme.turnDebugMode(True)
-    # DensityDependentForceFromFile_JScheme.setInteractionParameters(**kwargs)
-    # me = DensityDependentForceFromFile_JScheme(bra_, ket_)
+    DensityDependentForceFromFile_JScheme.USING_LEBEDEV = True
+    DensityDependentForceFromFile_JScheme.turnDebugMode(True)
+    DensityDependentForceFromFile_JScheme.setInteractionParameters(**kwargs)
+    me = DensityDependentForceFromFile_JScheme(bra_, ket_)
     
     # TensorS12_JTScheme.turnDebugMode(True) # TensorForce_JTScheme
     # TensorS12_JTScheme.setInteractionParameters(**kwargs)
     # me = TensorS12_JTScheme(bra_, ket_)#, run_it=False)
     # me.T = T
     print("me: ", me.value)
-    me.saveXLog('tens_S12')
-    # me.saveXLog('me_DD_import')
+    # me.saveXLog('tens_S12')
+    me.saveXLog('me_DD_import')
     # df = me.getDebuggingTable('me_{}_table.csv'.format('(2d2d_LS_2d2d)L2S1J2'))
     XLog.resetLog()
     
