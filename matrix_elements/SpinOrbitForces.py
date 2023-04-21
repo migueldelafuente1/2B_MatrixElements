@@ -58,14 +58,6 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
-            
-            # for arg, value in kwargs.items():
-            #     if arg in _map:
-            #         attr_parser = _map[arg]
-            #         attr_, parser_ = attr_parser
-            #         kwargs[arg] = parser_(kwargs[arg].get(attr_))
-            #     elif isinstance(value, str):
-            #         kwargs[arg] = float(value) if '.' in value else int(value)
             kwargs = SpinOrbitForce._automaticParseInteractionParameters(_map, kwargs)
         
         super(SpinOrbitForce, cls).setInteractionParameters(*args, **kwargs)
@@ -121,83 +113,31 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         skip, spin_me = self._totalSpinTensorMatrixElement()
         if skip:
             return 0
-    
-        factor = safe_racah(self.L_bra, self.L_ket, 
-                            self.S_bra, self.S_ket,
-                            1, self.J)
+        
+        factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
+                                self.S_ket, self.L_ket,      1)
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
-    
+        
         return  factor * spin_me * self._BrodyMoshinskyTransformation()
     
     def _globalInteractionCoefficient(self):
-        phase = (-1)**(self.S_bra + self.L_bra - self.J)
+        
+        phase   = (-1)**(self.L_bra + self.L_ket + self.J) # + S_bra+1
         #phase = (-1)**(self._l + self._L - self.J)
-        factor = 1#np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
+        factor = np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
     
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME
-        factor = safe_racah(self.L_bra, self.L_ket, 
-                            self._l, self._l_q,
-                            1, self._L)
+        factor = safe_wigner_6j(self._l,    self._l_q,         1, 
+                                self.L_ket, self._L_bra, self._L)
         if self.isNullValue(factor):
             return 0
     
         return factor * np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
-    
-    
-    #===========================================================================
-    # Version From "The Harmonic Oscillator" book (excessive values)
-    #===========================================================================
-    # def centerOfMassMatrixElementEvaluation(self):
-    #     #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
-    #     """ 
-    #     Radial Brody-Moshinsky transformation, direct implementation for  
-    #     non-central spin orbit force.
-    #     """
-    #     # the spin matrix element is 0 unless S=S'=1
-    #     # skip, spin_me = self._totalSpinTensorMatrixElement()
-    #     # if skip:
-    #     #     return 0
-    #
-    #     factor = np.sqrt((2*self.L_bra + 1) * (2*self.L_ket + 1))
-    #     factor *= ((-1)**(self.L_bra + self.L_ket))
-    #
-    #     return  factor * self._BrodyMoshinskyTransformation()
-    #
-    # def _globalInteractionCoefficient(self):
-    #     factor = np.sqrt((2*self.L_bra + 1) * (2*self.L_ket + 1))
-    #     phase  = ((-1)**(self.L_bra + self.L_ket))
-    #
-    #     return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
-    #
-    #
-    # def _interactionConstantsForCOM_Iteration(self):
-    #     # no special internal c.o.m interaction constants for the Central ME
-    #     S = self.S_bra
-    #     if self.DEBUG_MODE:
-    #         XLog.write('C_ls')
-    #     factor = 0
-    #     for j in range(abs(self.S_bra - self._l), self.S_bra + self._l +1):
-    #
-    #         aux  = safe_wigner_6j(j,  self._L, self.J,
-    #                                  self.L_bra, S, self._l)
-    #         aux *= safe_wigner_6j(j,  self._L, self.J,
-    #                                  self.L_ket, S, self._l_q)
-    #
-    #         aux *= 0.5*((j*(j + 1)) - (self._l*(self._l + 1)) - (S*(S + 1)))
-    #         aux *= (j*(j + 1))
-    #         factor += aux
-    #         if self.DEBUG_MODE:
-    #             XLog.write('C_ls', j=j, aux_j=aux)
-    #
-    #     if self.DEBUG_MODE:
-    #         XLog.write('C_ls', value=factor)
-    #     return factor
-
 
 
 
@@ -209,10 +149,6 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         
         _TwoBodyMatrixElement_JTCoupled.__init__(self, bra, ket, run_it=run_it)
     
-    # def _run(self):
-    #     ## First method that runs antisymmetrization by exchange the quantum
-    #     ## numbers (X2 time), change 2* _series_coefficient
-    #     return _TwoBodyMatrixElement_JTCoupled._run(self)
     
     def _deltaConditionsForCOM_Iteration(self):
         """ Antisymmetrization condition (*2 in BrodyMoshinkytransformation)"""
@@ -239,8 +175,9 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
         OJO: Moshinski, lambda' = lambda, lambda +- 1!!! as condition
         in the C_LS
         """
-        _L_min = max(0, self.L_bra - self.S_bra)
-        gen_ = (L_ket for L_ket in range(_L_min, self.L_bra + self.S_bra +1))
+        _L_min = max(0, self.L_bra - 1)
+        _L_max =        self.L_bra + 1
+        gen_ = (l_q for l_q in range(_L_min, _L_max +1))
         return tuple(gen_)
     
     def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
