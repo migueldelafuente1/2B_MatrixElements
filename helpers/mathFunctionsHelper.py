@@ -275,6 +275,8 @@ def _buildAngularYCoeffsArray(sh_states_list):
 def _radial2Body_bench_Generator(na,la, nb,lb, HO_b_length=1.0):
     """
     returns the lambda function to pass for the radial grid.
+        radial grid must not include the r/b. This is done here
+    
     Constant:
         Anla = np.sqrt( (2**(na+la+2) * fact(na)) / 
                       (np.sqrt(np.pi) * double_factorial(2*na+2*la+1)) )
@@ -290,11 +292,10 @@ def _radial2Body_bench_Generator(na,la, nb,lb, HO_b_length=1.0):
     alpha_a = la + 0.5
     alpha_b = lb + 0.5
     
-    # rOb = r / HO_b
-    wf_prod_on_r = lambda rOb: C_ab * (rOb**(la+lb)) \
-                  * genlaguerre(na,alpha_a)(rOb**2) \
-                  * genlaguerre(nb,alpha_b)(rOb**2) \
-                  * (HO_b_length**-3.0) / np.exp(rOb**2.0) 
+    wf_prod_on_r = lambda r: C_ab * ((r/HO_b_length)**(la+lb)) \
+                  * genlaguerre(na,alpha_a)((r/HO_b_length)**2) \
+                  * genlaguerre(nb,alpha_b)((r/HO_b_length)**2) \
+                  * (HO_b_length**-3.0) / np.exp((r/HO_b_length)**2.0)
     return wf_prod_on_r
 
 
