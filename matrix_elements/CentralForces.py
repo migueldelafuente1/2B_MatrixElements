@@ -387,7 +387,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
     
     _R_DIM = 25
     _A_DIM = 0
-    _OMEGA = 15
+    _OMEGA = 20
     USING_LEBEDEV = False
     
     @classmethod
