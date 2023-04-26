@@ -385,10 +385,10 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
     RECOUPLES_LS    = False
     _BREAK_ISOSPIN  = True
     
-    _R_DIM = 10
+    _R_DIM = 20
     _A_DIM = 0
-    _OMEGA = 10
-    USING_LEBEDEV = False
+    _OMEGA = 20
+    USING_LEBEDEV = True
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
