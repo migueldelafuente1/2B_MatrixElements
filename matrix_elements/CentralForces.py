@@ -469,7 +469,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
             ## Angular Grid (Theta_dim=Phi_dim = Ang_dim)
             xA, wA, sum_ = roots_legendre(OmegaOrd, True)
             costh = xA
-            phi   = np.pi * xA
+            phi   = np.pi * copy(xA)
             for i in range(OmegaOrd):
                 for j in range(OmegaOrd):
                     cls._ang.append( (costh[i], phi[j]) )
@@ -528,8 +528,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                         self._sp_states.append(QN_1body_jj(n, l, j, m, mt))
             
             self.setBasis2BFunctions(self.PARAMS_SHO[SHO_Parameters.b_length])
-        _=0
-    
+        
     @classmethod
     def _angularComponentsForDensity(cls, a,la,ja,mja,indx_a, b,lb,jb,mjb,indx_b):
         """ Find the K,M components of the two body angular wave function and
@@ -559,7 +558,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                     val = val_p + val_n
                     cls._spatial_dens_imag[ir, ia] += np.imag(val)
                     cls._spatial_dens[ir, ia]      += np.real(val)
-        
+    
     @classmethod
     def evalutate_spatial_density(cls):
         """
@@ -612,6 +611,8 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         integ_A *= (cls._b_density**3) / (2.0*((2.0 + ALPHA_)**1.5))
         if cls.USING_LEBEDEV:
             integ_A *= 4 * np.pi
+        else:
+            integ_A *= np.pi ## not checked
         _= 0
         
         # import matplotlib.pyplot as plt
@@ -969,6 +970,8 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         me_val /= (2.0 + ALPHA_)**1.5
         if self.USING_LEBEDEV:
             me_val *= 4 * np.pi
+        else:
+            me_val *= np.pi ## not checked
         if almostEqual(me_val, 0, 1.0e-6):
             return 0.0
         if abs(np.imag(me_val)) > 1.0e-10:
