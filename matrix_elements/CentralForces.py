@@ -385,9 +385,9 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
     RECOUPLES_LS    = False
     _BREAK_ISOSPIN  = True
     
-    _R_DIM = 25
+    _R_DIM = 10
     _A_DIM = 0
-    _OMEGA = 20
+    _OMEGA = 10
     USING_LEBEDEV = False
     
     @classmethod
@@ -445,6 +445,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         cls._r =  B_LEN * np.sqrt(xR / (2.0 + ALPHA_)) # 
         cls._weight_r = wR
         
+        cls._OMEGA = OmegaOrd
         ## Angular Grid: Choice between stored Lebedev_ grid mesh (commonly used).
         if cls.USING_LEBEDEV:
             ## Angular Grid from Lebedev_ Imported from /docs/LebedevPointsWeights

@@ -343,19 +343,38 @@ class TBME_SpeedRunner(TBME_Runner):
         if self._allForcesAreLS:
             return
         
+        bra, ket = self._qqnn_curr
+        
+        all_null = True
+        _last = len(self.me_instances) - 1
         for f, force in enumerate(self.forces):
             _ = 0
             if not force.RECOUPLES_LS:
                 bra, ket = self._qqnn_curr
-                if self.forcesScheme[f] == self._Scheme.JT:
-                    for t in (0, 1):
-                        val = self.me_instances[f][t].value
+                
+                _t_range = (0, 1)
+                if self.forcesScheme[f] != self._Scheme.JT:
+                    _t_range = range(6)
+                
+                for t in _t_range:
+                    val = self.me_instances[f][t].value
+                    if self.forcesScheme[f] == self._Scheme.JT:
                         self.results_JT[bra][ket][t][self.J] += val
-                else:
-                    for t in range(6):
-                        val = self.me_instances[f][t].value
+                    else:
                         self.results_J[bra][ket][self.J][t] += val
                     
+                    all_null = all_null and self.isNullValue(val)
+        
+        if not all_null:
+            if self.PRINT_LOG:
+                print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})>'
+                      .format(self._count, self._total_me, time() - self._tic, 
+                              bra, ket, self.J))
+            else:
+                ## print progress bar only for delta_steps % > 0.1%
+                if (self._count-self._progress_stp)/self._total_me > 0.001:
+                    printProgressBar(self._count, self._total_me)
+                    self._progress_stp = self._count
             
     
     def _LS_recoupling_ME(self):
