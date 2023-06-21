@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>tensor_Mosh</Output_Filename>
+		<Output_Filename>DD_dff_4He</Output_Filename>
 		<!--Output_Filename>DDFromMz4NC_SPSD_2 kin2_geo_SPSD</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
@@ -14,19 +14,19 @@
 		<A_mass>4</A_mass>
 		<Z>2</Z>
 		<!--hbar_omega units='MeV'>18.431586884467016</hbar_omega -->
-		<b_length units='fm'>1.0</b_length>
+		<b_length units='fm'>1.8</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
 		
 		<Q_Number sp_state='101' sp_energy=''/>
-		<Q_Number sp_state='103' sp_energy=''/>
+		<!--Q_Number sp_state='103' sp_energy=''/>
 		
 		<Q_Number sp_state='205' sp_energy=''/>
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		
-		<!--Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='307' sp_energy=''/>
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
@@ -195,7 +195,7 @@
 			<!--constant value='1.0'  	units='MeV*fm^-4'/-->
 			<alpha    value='0.3333'/>
 			<x0		  value='1'/>
-			<core protons='' neutrons ='' core_b_len=''/>
+			<core protons='8' neutrons ='8' core_b_len='1.8'/>
 		</Density_Dependent>
 		<Density_From_File active='True'>
 			<!-- Density dependent Force based on Fermi density for the nucleus,
@@ -207,7 +207,7 @@
 			<constant value='1390.6'  	units='MeV*fm^-4'/>
 			<alpha    value='0.3333'/>
 			<x0		  value='1'/>
-			<file name='final16OMz2_wf.txt' />
+			<file name='final4HeMz1_b18_wf.txt' />
 			<core protons='20' neutrons ='20' core_b_len='1.8'/>
 		</Density_From_File>
 		<Force_From_File active='False'>

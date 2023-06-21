@@ -295,7 +295,7 @@ def _radial2Body_bench_Generator(na,la, nb,lb, HO_b_length=1.0):
     wf_prod_on_r = lambda r: C_ab * ((r/HO_b_length)**(la+lb)) \
                   * genlaguerre(na,alpha_a)((r/HO_b_length)**2) \
                   * genlaguerre(nb,alpha_b)((r/HO_b_length)**2) \
-                  * (HO_b_length**-3.0) / np.exp((r/HO_b_length)**2.0)
+                  * (HO_b_length**(-3.0)) / np.exp((r/HO_b_length)**2.0)
     return wf_prod_on_r
 
 

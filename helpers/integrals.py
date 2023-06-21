@@ -875,6 +875,8 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
     _DENSITY_APROX = False # True for profile, False for Fermi occupation filling
     _instance = None
     
+    _R_DIM = 20
+    
     @staticmethod
     def _getInstance():
         if _RadialDensityDependentFermi._instance == None:
@@ -998,7 +1000,7 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             density = self._FermiDensity(A, u , Z)
         
         if self._ASSOCIATED_LAGUERRE:
-            return (x**(No2 - 1)) * (density ** alpha)
+            return (x**(No2 - 1.0)) * (density ** alpha)
         else:
             return (x**(No2 - 0.5)) * (density ** alpha)
     @staticmethod
@@ -1014,9 +1016,9 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
         """
         cte = 2 * ((alpha + 2)**(No2 + 0.5))
         ## cte is the same for both methods
-        N_integr = 100
+        N_integr = self._R_DIM   ## 100
         if abs(self.b_length_core - self.b_length) > 0.01:
-            N_integr = 180
+            N_integr = self._R_DIM  ## 180
         aux = GaussianQuadrature.laguerre(self._auxFunction_static, 
                                           (N_integr, 0.5), No2, A, Z, alpha)
         if self.DEBUG_MODE: XLog.write("Ip_q", Lag_int=aux)
@@ -1077,7 +1079,8 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
                 sum_ += aux
                 if self.DEBUG_MODE: XLog.write("Ip_q", val= aux)
         
-        norm_fact = 1 / ((4*np.pi)**alpha * b_length**(3)) # b_length**(3*(1 - 2))
+        norm_fact = 1 / ((4*np.pi)**alpha * (b_length**3)) # b_length**(3*(1 - 2))
+        # norm_fact *= 4*np.pi
         if not self._DENSITY_APROX:
             norm_fact /=  self.b_length_core**(3*alpha)
         

@@ -238,6 +238,10 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
     
     _BREAK_ISOSPIN = False
     
+    _R_DIM = 12
+    _A_DIM = None
+    _OMEGA = None
+    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """
@@ -274,8 +278,9 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
             kwargs[dd_p.file] = None
         
         for param in dd_p.members():
-            aux = kwargs[param]
+            aux = kwargs.get(param, None)
             if param == dd_p.core:
+                if aux==None: aux = {}
                 b = aux.get(fa.DensDep.core_b_len, None)
                 if (b != None) and (b != ''):
                     cls.PARAMS_CORE[fa.DensDep.core_b_len] = float(b)
@@ -297,12 +302,28 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
                     continue
                 cls.PARAMS_CORE[fa.DensDep.protons ] = int(_z)
                 cls.PARAMS_CORE[fa.DensDep.neutrons] = int(_n)  
-            elif param == dd_p.file:
-                if isinstance(aux, dict):
-                    if AttributeArgs.name in aux:
-                        aux = aux[AttributeArgs.name]
-                cls.PARAMS_FORCE[param] = aux ## is string
+            
+            elif param in (dd_p.file, dd_p.integration):
+                # Entries for DFromFile but not for BaseDensity, 
+                # "file" is mandatory, "integration" is optional (both dict like)
+                if param == dd_p.file:
+                    if (cls.__name__==DensityDependentForceFromFile_JScheme.__name__
+                        and (aux==None)):
+                        raise MatrixElementException(
+                            f"Required tag parameter f[{param}] for file importing.")
+                    if isinstance(aux, dict):
+                        if AttributeArgs.name in aux:
+                            aux = aux[AttributeArgs.name]
+                    cls.PARAMS_FORCE[param] = aux ## is string
+                else:
+                    if aux == None: continue
+                    new_rdim = aux.get(fa.DensDep.r_dim, None)
+                    if new_rdim : cls._R_DIM = int(new_rdim)
+                    new_omeg = aux.get(fa.DensDep.omega_ord, None)
+                    if new_omeg : cls._OMEGA = int(new_omeg)
+                    # _OMEGA is not used in the SHO density matrix element.
             else:
+                assert aux != None, f"Required tag parameter [{param}], not given"
                 if isinstance(aux, dict):
                     aux = float(aux[AttributeArgs.value])
                 cls.PARAMS_FORCE[param] = aux
@@ -321,17 +342,16 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         fact = 1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0])
         
         ## Antisymmetrization_ factor 
-        fact *= (1 - ((-1)**(self.T + self.S_bra + 
-                             self.L_bra + self.ket.l2 + self.ket.l1)))
+        fact *= (1 - ((-1)**(self.T + self.S_ket)))
         
         if self.isNullValue(fact):
             return 0.0
-        fact *= ((2*self.bra.l1 + 1)*(2*self.bra.l2 + 1)
-                 *(2*self.ket.l1 + 1)*(2*self.ket.l2 + 1))**0.5
+        fact *= ( (2*self.bra.l1 + 1) * (2*self.bra.l2 + 1)
+                 *(2*self.ket.l1 + 1) * (2*self.ket.l2 + 1))**0.5
         
         fact *= safe_3j_symbols(self.bra.l1, self.L_bra, self.bra.l2, 0, 0, 0)
         fact *= safe_3j_symbols(self.ket.l1, self.L_ket, self.ket.l2, 0, 0, 0)
-        fact *= self.PARAMS_FORCE[DensityDependentParameters.constant]/ (4*np.pi)
+        fact *= self.PARAMS_FORCE[DensityDependentParameters.constant]/(4*np.pi)
         
         if self.isNullValue(fact):
             return 0.0
@@ -340,8 +360,11 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         _Z = self.PARAMS_SHO.get(SHO_Parameters.Z)
         fa = atrE.ForceArgs
         if ((fa.DensDep.protons in self.PARAMS_CORE)
-             and (fa.DensDep.neutrons in self.PARAMS_CORE)):
-            ## it only reset the DD core if there both parameters are defined
+            and (fa.DensDep.neutrons in self.PARAMS_CORE)
+            and (self.PARAMS_CORE[fa.DensDep.protons]  > 0)
+            and (self.PARAMS_CORE[fa.DensDep.neutrons] > 0)):
+            ## it only reset the DD core if there both parameters are defined 
+            ## and non zero
             _Z = self.PARAMS_CORE[fa.DensDep.protons]
             _A =  _Z + self.PARAMS_CORE[fa.DensDep.neutrons]
         
@@ -358,6 +381,7 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
             _RadialDensityDependentFermi.DEBUG_MODE = True
             
         _RadialDensityDependentFermi._DENSITY_APROX = False
+        _RadialDensityDependentFermi._R_DIM = self._R_DIM
             
         radial = _RadialDensityDependentFermi.integral(*args)
         
@@ -386,7 +410,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
     _BREAK_ISOSPIN  = True
     
     _R_DIM = 20
-    _A_DIM = 0
+    _A_DIM =  0
     _OMEGA = 20
     USING_LEBEDEV = True
     
@@ -438,15 +462,18 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
             from scipy.special import roots_genlaguerre, roots_legendre
         else:
             raise MatrixElementException("Scipy Required to use this MatrixElement")
-        B_LEN  = cls.PARAMS_SHO[SHO_Parameters.b_length]
-        ALPHA_ = cls.PARAMS_FORCE[dd_p.alpha]
+        B_LEN  = cls.PARAMS_SHO.get(SHO_Parameters.b_length, 1.0)
+        ALPHA_ = cls.PARAMS_FORCE.get(dd_p.alpha,  1.0)
         ## Radial Grid
         xR, wR, sum_ = roots_genlaguerre(R_dim, 0.5, True)
         cls._r =  B_LEN * np.sqrt(xR / (2.0 + ALPHA_)) # 
         cls._weight_r = wR
         
+        cls._R_DIM = R_dim
         cls._OMEGA = OmegaOrd
         ## Angular Grid: Choice between stored Lebedev_ grid mesh (commonly used).
+        cls._ang = []
+        cls._weight_ang = []
         if cls.USING_LEBEDEV:
             ## Angular Grid from Lebedev_ Imported from /docs/LebedevPointsWeights
             if cls._OMEGA % 2 == 1:
@@ -597,7 +624,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                     cls._angularComponentsForDensity(b,lb,jb,mjb,indx_b,
                                                      a,la,ja,mja,indx_a)
         
-        integ_A = 0.0 
+        integ_A = 0.0
         ALPHA_  = cls.PARAMS_FORCE[dd_p.alpha]
         for ir in range(len(cls._r)):
             radial  = np.exp(( (2.0+ALPHA_) * (cls._r[ir] / cls._b_density)**2))
@@ -615,7 +642,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
             integ_A *= np.pi ## not checked
         _= 0
         
-        # import matplotlib.pyplot as plt
+        import matplotlib.pyplot as plt
         #
         # fig_ = plt.figure()
         # for ia in range(0, len(cls._ang), cls._OMEGA):
@@ -625,13 +652,13 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         # plt.legend()
         # plt.show()
         #
-        # fig_ = plt.figure
-        # off_diag = deepcopy(cls._density_matrix)
+        fig_ = plt.figure
+        off_diag = deepcopy(cls._density_matrix)
         # for i in range(cls._sp_dim):
         #     if off_diag[i,i] > 0.1:
         #         off_diag[i,i] = 0
-        # plt.imshow(off_diag)
-        # plt.show()
+        plt.imshow(off_diag)
+        plt.show()
         # TODO:: Test the density
         t_ = (time.time() - t_)
         print( " [DONE] Spatial Density has been imported and evaluated. ",
@@ -657,6 +684,14 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         cls._sp_dim = dim_
         cls._density_matrix = np.matmul(V.conjugate(), np.transpose(V)) 
         cls._kappa_matrix   = np.matmul(V.conjugate(), np.transpose(U))
+        
+        # print("Warning, copying 16O diagonal wf")
+        # cls._density_matrix = np.zeros((dim_, dim_))
+        # for i in range(dim_ // 2):
+        #     if i >= 8: 
+        #         continue
+        #     cls._density_matrix[i,i] = 1
+        #     cls._density_matrix[(dim_//2) + i,(dim_//2) + i] = 1
         
         ## Set the sp_states in the file order
         for mt in (-1, 1):
@@ -956,12 +991,12 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         angular = (self.X_ac_bd * aux_d) - (self.X_ad_bc * aux_e)
         angular = angular * self._weight_ang
         
-        # me_val = 0.0
+        me_val = 0.0
         # for ir in range(len(self._r)):
         #     for ia in range(len(self._ang)):
         #         val = self._curr_radial[ir] * angular [ia]
         #         me_val += val * (self._spatial_dens_alp[ir,ia])
-        #
+        
         ## Same loop but using a the matrix product  [rad]*[dens_pow]*[ang]
         me_val = np.inner(self._curr_radial, 
                           np.inner(self._spatial_dens_alp, angular))

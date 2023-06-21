@@ -101,6 +101,7 @@ class DensityDependentParameters(Enum):
     alpha = 'alpha'
     core  = 'core'
     file  = 'file'
+    integration = 'integration'
     
 class SkyrmeBulkParameters(Enum):
     t0 = 't0'
@@ -185,6 +186,8 @@ class AttributeArgs(Enum):
             protons  = 'protons'
             neutrons = 'neutrons'
             core_b_len = 'core_b_len'
+            r_dim      = 'r_dim'
+            omega_ord  = 'omega_ord'
         
     class FileReader(Enum):
         ignorelines = 'ignorelines'

@@ -48,19 +48,20 @@ if __name__ == "__main__":
     
         #_runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
-        # _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_SpeedRunner(filename='input.xml')
         # _ = 0
-        # _runner = TBME_Runner(filename='input_D1S.xml')
+        _runner = TBME_Runner(filename='input_D1S.xml')
         # _runner.run()
     
-        _runner = TBME_SpeedRunner(filename='input.xml', verbose=True)
+        # _runner = TBME_SpeedRunner(filename='input.xml', verbose=True)
         # _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
         _runner.run()
     
+    raise Exception(" Program ended without incidences! Stop.")
+    
 
-    
-    
-    
+
+
     
         
     # kwargs = {
@@ -115,15 +116,18 @@ if __name__ == "__main__":
     
     
     kwargs = {
-        SHO_Parameters.b_length     : 1.8, #1.4989,
-        SHO_Parameters.A_Mass       : 40,
-        SHO_Parameters.hbar_omega   : 18.4586,
+        SHO_Parameters.b_length     : 1.5953,
+        SHO_Parameters.A_Mass       : 16,
+        SHO_Parameters.Z            : 8,
+        # SHO_Parameters.hbar_omega   : 18.4586,
     
         DensityDependentParameters.alpha : 0.333333,
         DensityDependentParameters.x0    : 1.0,
-        DensityDependentParameters.core  : {},
-        DensityDependentParameters.constant : 1000.0, # 1390.6, #
-        DensityDependentParameters.file : 'final16OMz2_wf.txt', #'finalMz3_wf.txt', #
+        DensityDependentParameters.core  : {'core_b_len': 1.5953},
+        DensityDependentParameters.constant :  1390.6, #1000.0, #
+        DensityDependentParameters.file : 'final16OMz2_b15953_wf2.txt',
+        DensityDependentParameters.integration : {'r_dim': 12, 'omega_ord': 14},
+         #'final16OMz2_wf.txt', #'finalMz3_wf.txt', #
     
         # CentralMEParameters.potential : PotentialForms.Power,
         # CentralMEParameters.n_power   : 0,
@@ -131,8 +135,8 @@ if __name__ == "__main__":
         # CentralMEParameters.constant  : 1.0
     }
     
-    J = 0
-    T = 1
+    J = 1
+    T = 0
     
     # bra_ = QN_2body_LS_Coupling(QN_1body_radial(2,0, mt= 1), 
     #                             QN_1body_radial(0,2, mt=-1), L, S)
@@ -147,7 +151,7 @@ if __name__ == "__main__":
     #                                QN_1body_jj(0,0,1), J, T)
     # ket_ = QN_2body_jj_JT_Coupling(QN_1body_jj(0,0,1), 
     #                                QN_1body_jj(0,0,1), J, T)
-    #
+    
     # TensorForce_JTScheme.turnDebugMode(True) # TensorForce_JTScheme
     # TensorForce_JTScheme.setInteractionParameters(**kwargs)
     # me = TensorForce_JTScheme(bra_, ket_)#, run_it=False)
@@ -158,8 +162,17 @@ if __name__ == "__main__":
     
     DensityDependentForceFromFile_JScheme.USING_LEBEDEV = True
     DensityDependentForceFromFile_JScheme.turnDebugMode(True)
+    # OmegaOrd = 22
+    # R_dim    = 30
+    # DensityDependentForceFromFile_JScheme.setIntegrationGrid(R_dim, OmegaOrd)
     DensityDependentForceFromFile_JScheme.setInteractionParameters(**kwargs)
     me = DensityDependentForceFromFile_JScheme(bra_, ket_)
+    
+    
+    # # kwargs['core'] = {'protons':'2', 'neutrons':'2', 'core_b_len':2}
+    # DensityDependentForce_JTScheme.turnDebugMode(True)
+    # DensityDependentForce_JTScheme.setInteractionParameters(**kwargs)
+    # me = DensityDependentForce_JTScheme(bra_, ket_)
     
     # TensorS12_JTScheme.turnDebugMode(True) # TensorForce_JTScheme
     # TensorS12_JTScheme.setInteractionParameters(**kwargs)
