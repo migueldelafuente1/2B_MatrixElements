@@ -1,8 +1,7 @@
 <input>
-	<Interaction_Title name="D1S(+Coul) sho density 16O" details=""/>
+	<Interaction_Title name="D1S(+Coul) t=0 34 Mg" details=""/>
 	<Output_Parameters>
-		<!--Output_Filename>D1S_t0_Pu240MZ4to6</Output_Filename-->
-		<Output_Filename>D1S_16O_MZ2_edf3</Output_Filename>
+		<Output_Filename>D1S_t0_A34_MZ3</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>
@@ -11,15 +10,14 @@
 			   are not required parameters, define values only for explicit 
 			   setting.
 			-->
-		<A_mass>16</A_mass>
-		<Z>8</Z>
-		<!--hbar_omega units='MeV'>12.617</hbar_omega bA70:1.751 1.689 -->
+		<A_mass>34</A_mass>
+		<Z>12</Z>
 		<hbar_omega units='MeV'/>
-		<b_length units='fm'>1.5953</b_length>
+		<b_length units='fm'>1.89</b_length>
 	</SHO_Parameters>
 	<Core>
 		<innert_core protons='0' neutrons ='0' name=''/>
-		<energy value='15.2' units='MeV'/>
+		<energy value='0.0' units='MeV'/>
 	</Core>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
@@ -31,11 +29,12 @@
 		<Q_Number sp_state='10001' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 			
-		<!--Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='307' sp_energy=''/>
 		<Q_Number sp_state='10103' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10101' sp_energy=''/>
-		
+
+		<!--		
 		<Q_Number sp_state='409' sp_energy=''/>
 		<Q_Number sp_state='10205' sp_energy=''/>
 		<Q_Number sp_state='407' sp_energy=''/>
@@ -158,21 +157,23 @@
 			<constant value='1390.6'  	units='MeV*fm^-4'/>
 			<alpha    value='0.333333'/>
 			<x0		  value='1'/>
-			<!--core protons='' neutrons ='' core_b_len='1.8'/-->
+			<core     protons='0' neutrons ='0' core_b_len='1.5953'/>
 		</Density_Dependent>
-		<Density_From_File active='False'>
-			<!-- Density dependent Force based on imported density for a nucleus,
-				parametrization from Gogny D1S:
-					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)
-				final_wf_16O_2
-				optional Levedeb: <integration r_dim='int' omega_ord='int'/>
+		<TensorS12 active='True'>
+			<!-- Tensor Force.
+				Standard non central force S_12 parameterized with exponential, 
+				gaussian, power term, yukawa or coulomb potential functions 
+				f(r; mu, n), central term and exchange operators:
+					V(r)= f(r; mu, n) * (W + P(S)* B - P(T)* H - P(T)*P(S)* M)
+				Spatial (Majorana), spin (Bartlett) and isospin (Heisenberg)
 				-->
-			<constant value='1390.6'  	units='MeV*fm^-4'/>
-			<alpha    value='0.3333'/>
-			<x0		  value='1'/>
-			<core core_b_len='1.5953'/>
-			<file name='final16OMz2_b15953_wf4.txt' />
-			<integration r_dim='12' omega_ord='14'/>
-		</Density_From_File>
+			<potential 	name='gaussian'/>
+			<Wigner 	value='-135.0'  units='MeV'/>
+			<Majorana 	value='0.0'  	units='MeV'/>
+			<Barlett	value='0.0'  	units='MeV'/>
+			<Heisenberg	value='-115.0'  units='MeV'/>
+			<mu_length	value='1.2' 	units='fm'/>
+			<n_power  	value='0'/>
+		</TensorS12>
 	</Force_Parameters>
 </input>

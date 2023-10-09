@@ -15,7 +15,7 @@ class Enum(object):
             if not (name.startswith('_') or inspect.ismethod(value)):
                 result.append(value)
         return result
-
+        
 #===============================================================================
 #  DEFINED ENUMERATIONS
 #===============================================================================
@@ -92,6 +92,16 @@ class BrinkBoekerParameters(Enum):
     Bartlett    = 'Bartlett'
     Heisenberg  = 'Heisenberg'
 
+class CentralWithExchangeParameters(Enum):
+    potential = 'potential'
+    constant  = 'constant'
+    mu_length = 'mu_length'
+    n_power   = 'n_power'
+    Wigner    = 'Wigner'
+    Majorana  = 'Majorana'
+    Bartlett  = 'Bartlett'
+    Heisenberg= 'Heisenberg'
+    
 class PotentialSeriesParameters(Enum):
     part    = 'part'
 
@@ -130,7 +140,7 @@ ForceVariablesDict = {
     ForceEnum.Central : CentralMEParameters,
     ForceEnum.Coulomb : Enum,
     ForceEnum.Tensor  : CentralMEParameters,
-    ForceEnum.TensorS12     : CentralMEParameters,
+    ForceEnum.TensorS12 : CentralWithExchangeParameters,
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
