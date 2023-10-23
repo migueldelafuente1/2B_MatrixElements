@@ -1,7 +1,7 @@
 <input>
-	<Interaction_Title name="D1S(+Coul) t=0 34 Mg" details=""/>
+	<Interaction_Title name="D1S(+Coul) with Tensor t0=0 20 Mg" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_t0_A34_MZ3</Output_Filename>
+		<Output_Filename>D1S_t0_MZ3</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>
@@ -10,10 +10,10 @@
 			   are not required parameters, define values only for explicit 
 			   setting.
 			-->
-		<A_mass>34</A_mass>
+		<A_mass>20</A_mass>
 		<Z>12</Z>
 		<hbar_omega units='MeV'/>
-		<b_length units='fm'>1.89</b_length>
+		<b_length units='fm'>1.81</b_length>
 	</SHO_Parameters>
 	<Core>
 		<innert_core protons='0' neutrons ='0' name=''/>
@@ -159,7 +159,7 @@
 			<x0		  value='1'/>
 			<core     protons='0' neutrons ='0' core_b_len='1.5953'/>
 		</Density_Dependent>
-		<TensorS12 active='True'>
+		<TensorS12 active='False'>
 			<!-- Tensor Force.
 				Standard non central force S_12 parameterized with exponential, 
 				gaussian, power term, yukawa or coulomb potential functions 

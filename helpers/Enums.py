@@ -61,8 +61,9 @@ class ForceEnum(Enum):
     PotentialSeries = 'PotentialSeries'
     Density_Dependent = 'Density_Dependent'
     Density_Dependent_From_File = 'Density_From_File'
-    Kinetic_2Body = 'Kinetic_2Body'
-    Multipole_Delta = 'Multipole_Delta'
+    Kinetic_2Body  = 'Kinetic_2Body'
+    Multipole_Delta  = 'Multipole_Delta'
+    Multipole_Moment = 'Multipole_Moment'
     SkyrmeBulk = 'SkyrmeBulk'
     TensorS12  = 'TensorS12'
     Force_From_File = 'Force_From_File'
@@ -148,8 +149,9 @@ ForceVariablesDict = {
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,
-    ForceEnum.Multipole_Delta: MultipoleParameters,
-    ForceEnum.Force_From_File: ForceFromFileParameters
+    ForceEnum.Multipole_Delta : MultipoleParameters,
+    ForceEnum.Multipole_Moment: CentralMEParameters, 
+    ForceEnum.Force_From_File : ForceFromFileParameters,
 }
 
 ForcesWithRepeatedParametersList = [

@@ -789,7 +789,7 @@ class _RadialTwoBodyDecoupled():
 class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
     
     def _r_dependentIntegral(self, No2):
-        """ Integral r^2*No2 exp(-r^2), b lengths extracted (b**6)
+        """ Integral r^2*No2 exp(-2* r^2), b lengths extracted (b**6)
         :No2 stands for N over 2, being N = 2*(p+p') + sum{l} (+2 opt.)"""
         
         # l1 + l2 + l1_q + l2_q is even
@@ -1088,6 +1088,65 @@ class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             
         return  norm_fact * sum_
+
+
+class _RadialMultipoleMoment(_RadialTwoBodyDecoupled):
+    
+    """ Integral of a one body matrix element  <a | r^lambda | b> for the 
+    multipole interaction. """
+    
+    @staticmethod
+    def integral(moment, wf_bra, wf_ket, b_length): 
+        """
+        :moment <integer>
+        """
+        
+        self = _RadialMultipoleMoment()
+        args = (wf_bra, wf_ket, b_length)
+        return self._integral(moment, *args)
+    
+    
+    def _integral(self, moment, wf_bra, wf_ket, b_length):
+        
+        assert isinstance(moment, int) and moment >= 0, \
+            "The moment must be non-negative integer"
+            
+        n_q, l_q = wf_bra.n, wf_bra.l
+        n, l = wf_ket.n, wf_ket.l
+        
+        sum_ = 0
+        if self.DEBUG_MODE:
+            XLog.write("R_int", lamb=moment, wf1=wf_bra, wf2=wf_ket)
+        
+        for p in range(n_q+n +1):
+            coeff = self._B_coeff(n_q, l_q, n, l, p)
+            
+            if self.DEBUG_MODE: XLog.write("Ip", p=p, ket_C=coeff)
+            
+            No2 = p + (l + l_q + moment)//2 + 1   # 3/2 = 1 + 1/2(in the integral)
+            I_rm = self._r_dependentIntegral(No2)
+            
+            sum_ += coeff * I_rm
+        
+        norm_fact = b_length ** moment
+        if self.DEBUG_MODE:
+            XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
+            
+        return norm_fact * sum_
+    
+    
+    def _r_dependentIntegral(self, No2):
+        """ Integral r^2*No2 exp(-r^2), b lengths extracted
+        :No2 stands for N over 2, being N = 2*(p) + (l1+ l2+ _Lambda) + 1
+        
+        Note: this integral is not the same as the LS or fermi (two body), those
+        include a factor 2 in the exp(-r^2) that has to be included in the r/b 
+        series. """
+        
+        return 0.5 * np.exp(gamma_half_int(2*No2 + 1))
+    
+
+
 
 
 if __name__ == "__main__":

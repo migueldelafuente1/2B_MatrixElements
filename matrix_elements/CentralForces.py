@@ -18,7 +18,8 @@ from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs
     PotentialForms, SHO_Parameters, DensityDependentParameters,\
     MultipoleParameters
 from helpers.Log import XLog
-from helpers.integrals import _RadialDensityDependentFermi, _RadialIntegralsLS
+from helpers.integrals import _RadialDensityDependentFermi, _RadialIntegralsLS,\
+    _RadialMultipoleMoment
 from helpers.WaveFunctions import QN_1body_radial, QN_2body_jj_JT_Coupling,\
     QN_2body_jj_J_Coupling, QN_1body_jj
 from numpy import dtype
@@ -178,7 +179,6 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
     
     def __init__(self, bra, ket, run_it=True):
         _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
-            
     
     def _run(self):
     
@@ -1326,4 +1326,143 @@ class MultipoleDelta_JTScheme(_Multipole_JTScheme):
         rad = _RadialIntegralsLS.integral(2, qnr_a, qnr_b, qnr_c, qnr_d, b)
         
         return rad * (b**3)
+
+
+
+class MultipoleMoment_JTScheme(_Multipole_JTScheme):
+    
+    """
+    Matrix element for the Central Quadrupole-Quadrupole Interaction:
+        V = Q_2 * Q_2     Q_2m = r^2 Y_2m
+    differs from the Multipole-Delta interaction on having only L=2 term.
+    """
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """
+        Arguments for a general potential form delta(r; mu_length, constant)
         
+        :b_length 
+        :hbar_omega
+        :constants <dict> 
+            constant : <float>
+            n_order  : <integer>      
+        """
+        cst_ = CentralMEParameters.constant
+        lmd_ = CentralMEParameters.n_power
+        kwargs[cst_] = float(kwargs[cst_][AttributeArgs.value])
+        kwargs[lmd_] = int  (kwargs[lmd_][AttributeArgs.value])
+        
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        params_and_defaults = {
+            SHO_Parameters.b_length     : 1,
+            SHO_Parameters.hbar_omega   : 1,
+            CentralMEParameters.constant : 1,
+            CentralMEParameters.n_power  : 0,
+        }
+        
+        for param, default in params_and_defaults.items():
+            value = kwargs.get(param)
+            value = default if value == None else value
+            
+            if param in SHO_Parameters.members():
+                cls.PARAMS_SHO[param] = value
+            else:
+                if param in (CentralMEParameters.potential,
+                             CentralMEParameters.mu_length,) :
+                    print(" [WARNING] Multipole interaction has only power-type"
+                          " potential and mu_length = 1, ignoring these arguments.")
+                cls.PARAMS_FORCE[param] = value
+    
+    def _run(self):
+        
+        if self.isNullMatrixElement:
+            return
+        
+        phase, exchanged_ket = self.ket.exchange()
+        self.exchange_phase = phase
+        self.exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        
+        if self.DEBUG_MODE: 
+            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+        
+        self._value = 0.0
+        
+        L = self.PARAMS_FORCE[CentralMEParameters.n_power]
+        C = self.PARAMS_FORCE[CentralMEParameters.constant]
+        
+        #-----------------------------------------------------------------------
+        # NOTE ON THE CONDITIONS FOR L:
+        # The following condition _L_min(max) is for the possible orbital L to be
+        # between bra and ket (like for any central force), but L order is only 
+        # available for the range between bra and ket scalar components 
+        # (expand the interaction in LS scheme and see the conditions on the 6j)
+        # 
+        # The correct condition is la + L = lc(ld) and lb + L = ld(lc) for the 
+        # direct(exchange) terms, but require to apply for dir and exch separately
+        # 
+        # Whit this condition and the parity check, the previous one is fulfilled
+        #-----------------------------------------------------------------------
+        _L_min = max(abs(self.bra.l1-self.bra.l2), abs(self.ket.l1-self.ket.l2))
+        _L_max = min(    self.bra.l1+self.bra.l2 ,     self.ket.l1+self.ket.l2 )
+        if (L < _L_min) or (L > _L_max):
+            return
+        
+        ang_cent_d  = self._AngularCoeff_Central(L)
+        ang_cent_e  = self.exch_2bme._AngularCoeff_Central(L) 
+        ang_cent_e *= self.exchange_phase
+        
+        if self.DEBUG_MODE:
+            XLog.write('nas_me', lambda_=L, value=self._value, 
+                       norms=self.bra.norm()*self.ket.norm())
+        
+        rad_d = self._RadialCoeff(L)
+        rad_e = self.exch_2bme._RadialCoeff(L) 
+        
+        self._value  = (ang_cent_d * rad_d) - (ang_cent_e * rad_e)
+        self._value *= C * self.bra.norm() * self.ket.norm()
+    
+    
+    def _AngularCoeff_Central(self, lambda_):
+        
+        j_a, j_b = self.bra.j1, self.bra.j2
+        j_c, j_d = self.ket.j1, self.ket.j2
+        
+        if ( ((self.bra.l1 + self.ket.l1 + lambda_) % 2 == 1) or  
+             ((self.bra.l2 + self.ket.l2 + lambda_) % 2 == 1)) :
+            return 0 # parity condition form _redAngCoeff
+        
+        val = safe_wigner_6j(j_a / 2, j_b / 2, self.J, 
+                             j_d / 2, j_c / 2, lambda_)
+        if not almostEqual(val, 0, self.NULL_TOLERANCE): 
+            val *= (  safe_3j_symbols(j_a / 2, j_c / 2, lambda_, .5, -.5, 0)
+                    * safe_3j_symbols(j_b / 2, j_d / 2, lambda_, .5, -.5, 0))
+        
+        factor  = ((j_a + 1) * (j_b + 1) * (j_c + 1) * (j_d + 1))**0.5
+        factor *= ((2*lambda_) + 1 ) / (4 * np.pi)
+        
+        phs = (-1)**((j_a + j_b + j_c + j_d)//2 + self.J - 1)
+        
+        return phs * factor * val
+    
+    
+    def _RadialCoeff(self, lambda_):
+        
+        """Implementation of the integral for the multipole"""
+        
+        b = self.PARAMS_SHO.get(SHO_Parameters.b_length)
+        
+        qnr_a = QN_1body_radial(self.bra.n1, self.bra.l1) # conjugated
+        qnr_b = QN_1body_radial(self.bra.n2, self.bra.l2) # conjugated
+        qnr_c = QN_1body_radial(self.ket.n1, self.ket.l1)
+        qnr_d = QN_1body_radial(self.ket.n2, self.ket.l2)
+        
+        rad_ac = _RadialMultipoleMoment.integral(lambda_, qnr_a, qnr_c, b)
+        rad_bd = _RadialMultipoleMoment.integral(lambda_, qnr_b, qnr_d, b)
+        
+        return rad_ac * rad_bd
+    
+
+

@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>tensor_marta</Output_Filename>
+		<Output_Filename>hamil</Output_Filename>
 		<!--Output_Filename>DDFromMz4NC_SPSD_2 kin2_geo_SPSD</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
@@ -11,10 +11,10 @@
 			   are not required parameters, define values only for explicit 
 			   setting
 			-->
-		<A_mass>4</A_mass>
-		<Z>2</Z>
+		<A_mass>20</A_mass>
+		<Z>12</Z>
 		<!--hbar_omega units='MeV'>18.431586884467016</hbar_omega -->
-		<b_length units='fm'>1.8</b_length>
+		<b_length units='fm'>1.50</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
@@ -209,9 +209,7 @@
 		</Density_From_File>
 		<Force_From_File active='False'>
 			<!-- Import an interaction already saved -->
-			<!--file name='tests/bench_me/TBME_J.2b'/--> 
-			<file name='results/0s0p1s0d.2b'/>
-			<!--file name='tests/bench_me/TBME_JT_BLC_bench.sho'/-->
+			<file name='results/D1S_vs_scalar.2b'/>
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
 			<scheme name='J'/>
 		</Force_From_File>
@@ -239,6 +237,11 @@
 				parametrized form Brussaard_ & Glaudemans_ book (1977) -->
 			<constants AT0='-1' AT1='-1' B='0.0'  C='0.0' units='Mev'/>
 		</SDI>
+		<Multipole_Moment active='False'>
+			<!-- Central Multipole Component: C * r^(n) * ( Y_(n)*Y_(n) )   -->
+			<constant	value='1' 	units='MeV*fm^-n_power'/>
+			<n_power  	value='2'/>
+		</Multipole_Moment>
 		<SkyrmeBulk active='False'>
 			<!-- Bulk part of the Skyrme interaction. d(r12):=delta(r)
 			     t0(1+x0*P_s)d(r12) + t1(|k|^2 +|k'|^2)d(r12)/2 + t2 k'd(r12)k -->
