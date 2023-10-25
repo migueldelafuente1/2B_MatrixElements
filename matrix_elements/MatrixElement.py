@@ -5,7 +5,8 @@ Created on Feb 23, 2021
 '''
 import numpy as np
 
-from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Coupling
+from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Coupling,\
+    QN_1body_jj
 from helpers.Helpers import safe_wigner_9j
 from helpers.Enums import CouplingSchemeEnum
 from helpers.Log import XLog
@@ -13,11 +14,11 @@ from helpers.Log import XLog
 class MatrixElementException(BaseException):
     pass
 
-class _TwoBodyMatrixElement:
+class _OneBodyMatrixElement:
     '''
-    Abstract class to be implemented according to reduced matrix element
+    Abstract class for implementing a reduced matrix element.
     
-    <Bra(1,2) | V(1,2) [lambda, mu]| Ket(1,2)>
+    <Bra | V(r,th) [lambda, mu]| Ket>
     
     don't care M, Mt, Ml or Ms in further implementations
     '''
@@ -27,9 +28,6 @@ class _TwoBodyMatrixElement:
     
     COUPLING = None
     _BREAK_ISOSPIN = None
-    ## Explicit antisymmetrization_ of the matrix element, <ab V cd> - <ab V dc>
-    ## set False if the matrix element do it implicitly.
-    EXPLICIT_ANTISYMM = True
     
     DEBUG_MODE = False
     
@@ -79,10 +77,6 @@ class _TwoBodyMatrixElement:
         if also_SHO:
             cls.PARAMS_SHO   = {}
     
-    def getExchangedME(self):
-        """ Permute single particle functions """
-        raise MatrixElementException("Abstract method, implement me!")
-    
     def __call__(self):
         return self.value
         
@@ -118,18 +112,6 @@ class _TwoBodyMatrixElement:
             self._isNullMatrixElement = False
             
         return self._isNullMatrixElement
-    
-    @property
-    def parity_bra(self):
-        if not hasattr(self, '_parity_bra'):
-            self._parity_bra = (self.bra.l1 + self.bra.l2) % 2
-        return self._parity_bra
-    
-    @property
-    def parity_ket(self):
-        if not hasattr(self, '_parity_ket'):
-            self._parity_ket = (self.ket.l1 + self.ket.l2) % 2
-        return self._parity_ket
     
     @property
     def breakIsospin(self):
@@ -168,14 +150,84 @@ class _TwoBodyMatrixElement:
     
     def isNullValue(self, value):
         """ Method to fix cero values and stop calculations."""
-        if abs(value) < self.NULL_TOLERANCE:
-            return True
-        return False
-    
-    
+        return abs(value) < self.NULL_TOLERANCE
 
+
+
+class _TwoBodyMatrixElement(_OneBodyMatrixElement):
+    '''
+    Abstract class to be implemented according to reduced matrix element
+    
+    <Bra(1,2) | V(1,2) [lambda, mu]| Ket(1,2)>
+    
+    don't care M, Mt, Ml or Ms in further implementations
+    '''
+    
+    PARAMS_FORCE = {}
+    PARAMS_SHO   = {}
+    
+    COUPLING = None
+    _BREAK_ISOSPIN = None
+    ## Explicit antisymmetrization_ of the matrix element, <ab V cd> - <ab V dc>
+    ## set False if the matrix element do it implicitly.
+    EXPLICIT_ANTISYMM = True
+    
+    DEBUG_MODE = False
+    
+    NULL_TOLERANCE = 1.e-14
+    
+    ## Abstract class, the setting methods remain abstract from 1B m.e template
+    
+    def getExchangedME(self):
+        """ Permute single particle functions """
+        raise MatrixElementException("Abstract method, implement me!")
+    
+    @property
+    def parity_bra(self):
+        if not hasattr(self, '_parity_bra'):
+            self._parity_bra = (self.bra.l1 + self.bra.l2) % 2
+        return self._parity_bra
+    
+    @property
+    def parity_ket(self):
+        if not hasattr(self, '_parity_ket'):
+            self._parity_ket = (self.ket.l1 + self.ket.l2) % 2
+        return self._parity_ket
+    
 #===============================================================================
-# 
+# ONE BODY MATRIX ELEMENT TEMPLATE
+#===============================================================================
+
+class _OneBodyMatrixElement_jjscheme(_OneBodyMatrixElement):
+    
+    COUPLING = CouplingSchemeEnum.JJ
+    _BREAK_ISOSPIN = True
+    
+    def __init__(self, bra, ket, run_it=True):
+        
+        self.__checkInputArguments(bra, ket)
+        
+        self.bra = bra
+        self.ket = ket
+        
+        if not self.isNullMatrixElement and run_it:
+            # evaluate the normal and antisymmetrized me
+            self._run()
+    
+    def __checkInputArguments(self, bra, ket):
+        if not isinstance(bra, QN_1body_jj):
+            raise MatrixElementException("<bra| is not <QN_1body_jj>")
+        if not isinstance(ket, QN_1body_jj):
+            raise MatrixElementException("|ket> is not <QN_1body_jj>")
+        
+        ## i.e. Matrix elements from neutron cannot connect with proton 
+        if bra.m_t != ket.m_t:
+            self._value = 0.0
+            self._isNullMatrixElement = True
+    
+    
+#===============================================================================
+# TWO BODY MATRIX ELEMENT TEMPLATE
 #===============================================================================
 class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     """
@@ -186,8 +238,12 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     _BREAK_ISOSPIN = True
     COUPLING = CouplingSchemeEnum.JJ
     EXPLICIT_ANTISYMM = False
-    RECOUPLES_LS = True  
+    RECOUPLES_LS      = True
     ## Set RECOUPLES_LS as False if the interaction don't require LS re_coupling
+    
+    SYMMETRICAL_PNPN  = True ## set to False in case pnpn!=npnp (and pnnp!=nppn)
+    
+    ONEBODY_MATRIXELEMENT = None ## 1-B Interaction associate with the force.
     
     def __init__(self, bra, ket, run_it=True):
         
@@ -454,7 +510,7 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
     """
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
-    _BREAK_ISOSPIN = False
+    _BREAK_ISOSPIN    = False
     EXPLICIT_ANTISYMM = False
     
     def __init__(self, bra, ket, run_it=True):

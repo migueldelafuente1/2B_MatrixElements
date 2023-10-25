@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="D1S(+Coul) with Tensor t0=0 20 Mg" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_t0_MZ3</Output_Filename>
+		<Output_Filename>D1S_t0_MZ3_2</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>

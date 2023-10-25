@@ -5,13 +5,15 @@ from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme,\
     TensorS12_JTScheme
 from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
     CoulombForce, DensityDependentForce_JTScheme, KineticTwoBody_JTScheme,\
-    MultipoleDelta_JTScheme, DensityDependentForceFromFile_JScheme,\
-    MultipoleMoment_JTScheme
+    DensityDependentForceFromFile_JScheme
+    
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
     ShortRangeSpinOrbit_JTScheme
 from matrix_elements.MatrixElement import _MatrixElementReader
 from matrix_elements.ZeroRangeForces import SDI_JTScheme
 from matrix_elements.SkyrmeForces import SkrymeBulk_JTScheme
+from matrix_elements.MultipoleForces import MultipoleDelta_JTScheme,\
+    MultipoleMoment_JTScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):

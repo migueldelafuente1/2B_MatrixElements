@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="TBME_Runner" details=""/>
 	<Output_Parameters>
-		<Output_Filename>hamil</Output_Filename>
+		<Output_Filename>D1S_vs_scalar_QQ</Output_Filename>
 		<!--Output_Filename>DDFromMz4NC_SPSD_2 kin2_geo_SPSD</Output_Filename-->
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>0</COM_correction>
@@ -11,10 +11,10 @@
 			   are not required parameters, define values only for explicit 
 			   setting
 			-->
-		<A_mass>20</A_mass>
+		<A_mass>34</A_mass>
 		<Z>12</Z>
 		<!--hbar_omega units='MeV'>18.431586884467016</hbar_omega -->
-		<b_length units='fm'>1.50</b_length>
+		<b_length units='fm'>1.89</b_length>
 	</SHO_Parameters>
 	<Valence_Space l_great_than_10='True'>
 		<Q_Number sp_state='001' sp_energy=''/>
@@ -207,7 +207,7 @@
 			<file name='final4HeMz1_b18_wf.txt' />
 			<core protons='20' neutrons ='20' core_b_len='1.8'/>
 		</Density_From_File>
-		<Force_From_File active='False'>
+		<Force_From_File active='True'>
 			<!-- Import an interaction already saved -->
 			<file name='results/D1S_vs_scalar.2b'/>
 			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
@@ -237,9 +237,9 @@
 				parametrized form Brussaard_ & Glaudemans_ book (1977) -->
 			<constants AT0='-1' AT1='-1' B='0.0'  C='0.0' units='Mev'/>
 		</SDI>
-		<Multipole_Moment active='False'>
+		<Multipole_Moment active='True'>
 			<!-- Central Multipole Component: C * r^(n) * ( Y_(n)*Y_(n) )   -->
-			<constant	value='1' 	units='MeV*fm^-n_power'/>
+			<constant	value='0.1' 	units='MeV*fm^-n_power'/>
 			<n_power  	value='2'/>
 		</Multipole_Moment>
 		<SkyrmeBulk active='False'>
