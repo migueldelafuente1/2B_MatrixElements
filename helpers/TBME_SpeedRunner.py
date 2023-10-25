@@ -357,7 +357,13 @@ class TBME_SpeedRunner(TBME_Runner):
                     _t_range = range(6)
                 
                 for t in _t_range:
-                    val = self.me_instances[f][t].value
+                    ## Process to skip already calculated m.e if pnpn=npnp
+                    if (max(_t_range)==5 and self.forcesScheme[f].SYMMETRICAL_PNPN 
+                        and t in (3,4)):
+                        t2 = 1 if (t == 4) else 2
+                        val = self.me_instances[f][t2].value
+                    else:
+                        val = self.me_instances[f][t].value
                     if self.forcesScheme[f] == self._Scheme.JT:
                         self.results_JT[bra][ket][t][self.J] += val
                     else:
@@ -425,6 +431,10 @@ class TBME_SpeedRunner(TBME_Runner):
         Mediator function to evaluate the direct and exchange LS m.e, 
         This is an explicitly antysimetrized_ m.e, it evaluates the both direct
         and exchange matrix elements in the LS scheme.
+        
+            Note: It can not be applied here the* npnp -> pnpn since the values
+        are computed on the run (_LS_matrixElement), and not saved from already 
+        calculated m.e.
         """
         bra, ket = self._qqnn_curr
         
@@ -477,8 +487,8 @@ class TBME_SpeedRunner(TBME_Runner):
                       .format(self._count, self._total_me, time() - self._tic, 
                               bra, ket, self.J))
             else:
-                ## print progress bar only for delta_steps % > 0.1%
-                if (self._count-self._progress_stp)/self._total_me > 0.001:
+                ## print progress bar only for delta_steps % > 0.3%
+                if (self._count-self._progress_stp)/self._total_me > 0.003:
                     printProgressBar(self._count, self._total_me)
                     self._progress_stp = self._count
 

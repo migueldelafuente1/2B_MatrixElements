@@ -442,6 +442,13 @@ The program will exclude it from the interaction file and will produce the .com 
                 self._count += 1
                 for J in range(J_min, J_max +1):
                     for m, mts in self._JSchemeIndexing.items():
+                        ## Process to skip already calculated m.e if pnpn=npnp
+                        if self.tbme_class.SYMMETRICAL_PNPN and m in (3,4):
+                            m2 = 1 if (m == 4) else 2
+                            val_ = self.results[q_numbs[i]][q_numbs[j]][J][m2]
+                            self.results[q_numbs[i]][q_numbs[j]][J][m] = val_
+                            continue
+                        
                         tic = time.time()
                         
                         n1_bra.m_t = mts[0]
@@ -1102,8 +1109,6 @@ The program will exclude it from the interaction file and will produce the .com 
                     me_dict[bra][ket] = vals_J
                 elif conv_2JT:
                     ## J scheme 2
-                    #TODO: ("WARNING !! Converting from J scheme to JT TODO: verify")
-                    
                     vals_T = {0 : {}, 1: {}}
                     for j, j_block in block_vals.items():
                         v_t0, v_t1 = self._getIsospinvaluesFromLabels(j_block, j,
