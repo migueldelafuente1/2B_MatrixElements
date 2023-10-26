@@ -177,6 +177,10 @@ class _WaveFunction:
     _IGNORE_LABEL = True
     
     def __init__(self, *args):
+        
+        self.sp_state_1 : _1Body_WaveFunction = None
+        self.sp_state_2 : _1Body_WaveFunction = None
+        
         raise WaveFunctionException("Abstract method, implement me!")
     
     def __checkQNArguments(self, *args):
@@ -252,8 +256,8 @@ class QN_2body_L_Coupling(_ParticleWaveFunction):
         
         self.__checkQNArguments(sp_state_1, sp_state_2, L, ML)
         
-        self.sp_state_1 = sp_state_1
-        self.sp_state_2 = sp_state_2
+        self.sp_state_1 : QN_1body_radial = sp_state_1
+        self.sp_state_2 : QN_1body_radial = sp_state_2
         
         self.n1 = sp_state_1.n
         self.l1 = sp_state_1.l
@@ -393,8 +397,8 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
         
         self._checkQNArguments(sp_state_jj_1, sp_state_jj_2, J,T, M, MT)
         
-        self.sp_state_1 = sp_state_jj_1
-        self.sp_state_2 = sp_state_jj_2
+        self.sp_state_1 : QN_1body_jj = sp_state_jj_1
+        self.sp_state_2 : QN_1body_jj = sp_state_jj_2
         
         self.n1 = sp_state_jj_1.n
         self.l1 = sp_state_jj_1.l
@@ -554,8 +558,8 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
         
         self._checkQNArguments(sp_state_jj_1, sp_state_jj_2, J, M)
         
-        self.sp_state_1 = sp_state_jj_1
-        self.sp_state_2 = sp_state_jj_2
+        self.sp_state_1 : QN_1body_jj = sp_state_jj_1
+        self.sp_state_2 : QN_1body_jj = sp_state_jj_2
         
         self.n1 = sp_state_jj_1.n
         self.l1 = sp_state_jj_1.l

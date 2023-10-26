@@ -121,6 +121,7 @@ class TBME_SpeedRunner(TBME_Runner):
         """
         self._defineValenceSpaceEnergies()
         self._checkHamilTypeAndForces()
+        
         c_time = time()
         
         # get force from file if appears
@@ -139,6 +140,8 @@ class TBME_SpeedRunner(TBME_Runner):
         self.resultsByInteraction[ForceEnum.Kinetic_2Body] = self.com_2bme 
         self.interactionSchemes[ForceEnum.Kinetic_2Body]   = self._Scheme.JT
         
+        self._calculate1BodyME()      
+        
         self.combineAllResults()
         
         print(("\nForces and their parameters calculated:   "+_LINE_2[1:])[:80])
@@ -153,7 +156,19 @@ class TBME_SpeedRunner(TBME_Runner):
         now = now.strftime("%d/%m/%Y %H:%M:%S")
         print(f" ** Suite Runner [{self.__class__.__name__}] ended without incidences. ")
         print(f" ** end at: {now}")
+    
+    
+    def _calculate1BodyME(self):
+        """ Addapt the TBME_runner to addapt the 1b matrix elements. """
+        if self._hamil_type != '3': 
+            return 
         
+        self._sortQQNNFromTheValenceSpace()
+        self._compute1BodyMatrixElements(kin=True)
+        
+        for force, indx_f in self.forcesDict.items():
+            self.tbme_class = self.forces[indx_f]
+            self._compute1BodyMatrixElements(force=force, kin=False)
     
     def _calculateCommonPhaseKet9j(self):
         """ Common phase for the direct antisymmetrized m.e. """
@@ -232,7 +247,6 @@ class TBME_SpeedRunner(TBME_Runner):
         
         self._non_LS_Forces_ME()
         self._LS_recoupling_ME()
-    
     
     def _instance_J_SchemeWF(self, force_index):
         f = force_index

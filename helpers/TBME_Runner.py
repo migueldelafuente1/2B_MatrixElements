@@ -13,7 +13,8 @@ from helpers.Enums import InputParts as ip, AttributeArgs, OUTPUT_FOLDER,\
     CouplingSchemeEnum, ForceEnum, ForceFromFileParameters, CoreParameters,\
     InputParts
 from matrix_elements import switchMatrixElementType
-from matrix_elements.MatrixElement import _TwoBodyMatrixElement
+from matrix_elements.MatrixElement import _TwoBodyMatrixElement,\
+    _OneBodyMatrixElement
 from itertools import combinations_with_replacement
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
     QN_2body_jj_J_Coupling
@@ -25,6 +26,7 @@ import os
 import numpy as np
 import traceback
 from datetime import datetime
+from matrix_elements.CentralForces import _Kinetic_1BME
 
 _SUITE_PRESENTATION_TEMPLATE = """
 * ================================================================= *
@@ -80,6 +82,7 @@ class TBME_Runner(object):
         self._com_correction = False
         
         self.results = {}
+        self.results_1b_byInterac = {}
         self.resultsByInteraction = {}
         self.resultsSummedUp    = {}
         self.com_2bme           = {}
@@ -280,6 +283,9 @@ The program will exclude it from the interaction file and will produce the .com 
         A_mass      = sho_params.get(SHO_Parameters.A_Mass)
         hbar_omega  = sho_params.get(SHO_Parameters.hbar_omega)
         b_length    = sho_params.get(SHO_Parameters.b_length)
+        Z           = int(sho_params.get(SHO_Parameters.Z, 0))
+        if A_mass and Z == 0:
+            Z = int(A_mass)//2
         
         if b_length != None:
             b_length = float(b_length)
@@ -310,6 +316,7 @@ The program will exclude it from the interaction file and will produce the .com 
         self.input_obj.SHO_Parameters[SHO_Parameters.A_Mass]     = A_mass
         self.input_obj.SHO_Parameters[SHO_Parameters.hbar_omega] = hbar_omega
         self.input_obj.SHO_Parameters[SHO_Parameters.b_length]   = b_length
+        self.input_obj.SHO_Parameters[SHO_Parameters.Z]          = Z
         
     
     def _defineValenceSpaceEnergies(self):
@@ -341,7 +348,11 @@ The program will exclude it from the interaction file and will produce the .com 
             for spst_ant in valence_space:
                 
                 n, l, _j = readAntoine(spst_ant, l_ge_10)
-                energ = hbar_omega * (2*n + l + 1.5)
+                energ = 0.0 
+                ## The definition of the single particle energies is only for 
+                ## Antoine type hamiltonians
+                if self._hamil_type in '12':
+                    energ = hbar_omega * (2*n + l + 1.5) # this is not the kinetic energy
                 
                 self.input_obj.Valence_Space[spst_ant] = float(energ)
                  
@@ -368,6 +379,51 @@ The program will exclude it from the interaction file and will produce the .com 
         
         self._twoBodyQuantumNumbersSorted = q_numbs
     
+    def _compute1BodyMatrixElements(self, kin=False, force=None):
+        """
+        Function to evaluate all the space for 1-body matrix elements,
+        :kin option selects the Kinetic 1B for these matrix elements 
+        otherwise, it evaluates (if OBME associated to the current interaction)
+        
+        In case of an interaction, the method must be called after parameter 
+        setting.
+        """
+        obme_class : _OneBodyMatrixElement = None
+        if kin or force == ForceEnum.Kinetic_2Body:
+            force = ForceEnum.Kinetic_2Body
+            obme_class = _Kinetic_1BME
+            obme_class.setInteractionParameters(**self.input_obj.SHO_Parameters)
+            self.results_1b_byInterac[force] = {}
+        else:
+            obme_class = self.tbme_class.ONEBODY_MATRIXELEMENT
+            
+            ## in case of several component force, count wich
+            indx_ = list(filter(lambda x: x.startswith(force), 
+                                self.input_obj.Force_Parameters.keys()))
+            indx_ = len(indx_) - 1
+            
+            sho_params = getattr(self.input_obj, ip.SHO_Parameters)
+            params = self.input_obj.Force_Parameters.get(force)
+            params = params[indx_]
+            
+            force = "{}_{}".format(force, indx_)
+            self.results_1b_byInterac[force] = {}
+            
+            if obme_class != None:
+                obme_class.setInteractionParameters(**params, **sho_params)
+            else:
+                return 
+        
+        for q_numb in self._twoBodyQuantumNumbersSorted:
+            bra = QN_1body_jj(*readAntoine(q_numb[0], l_ge_10=True))
+            ket = QN_1body_jj(*readAntoine(q_numb[1], l_ge_10=True))
+            
+            me_val = obme_class(bra, ket).value
+            
+            self.results_1b_byInterac[force][q_numb] = [me_val, me_val] # prot, neutr
+            
+        
+        
     def _computeForValenceSpaceJTCoupled(self, force=''):
         """ 
         method to run the whole valence space m.e. in the JT scheme
@@ -573,6 +629,8 @@ The program will exclude it from the interaction file and will produce the .com 
         self._sortQQNNFromTheValenceSpace()      
         self._checkHamilTypeAndForces()
         
+        if self._hamil_type == '3': self._compute1BodyMatrixElements(kin=True)
+        
         _forcesAttr = ip.Force_Parameters
         times_ = {}
         for force, force_list in getattr(self.input_obj, _forcesAttr).items():
@@ -582,6 +640,7 @@ The program will exclude it from the interaction file and will produce the .com 
                 # update arrays and variables
                 i += 1
                 self.results = {}
+                
                 self._forceNameFromForceEnum[force_str] = force
                 tic_ = time.time()
                 if force == ForceEnum.Force_From_File:
@@ -598,6 +657,8 @@ The program will exclude it from the interaction file and will produce the .com 
                     self.tbme_class.setInteractionParameters(**params, 
                                                              **sho_params)
                     self._computeForValenceSpace(force)
+                    if self._hamil_type == '3':
+                        self._compute1BodyMatrixElements(force=force, kin=False)
                     
                     self.resultsByInteraction[force_str] = deepcopy(self.results)
                     times_[force_str] = round(time.time() - tic_, 4)
@@ -820,11 +881,6 @@ The program will exclude it from the interaction file and will produce the .com 
         if self._hamil_type in '12':
             # Basic Antoine Format (2 difference between neutrons-protons)
             self._printHamilType_12_File()
-        elif self._hamil_type == '3':
-            # J scheme 3 file output  (0, 1 & 2 body Hamiltonian_)
-            print("WARNING :: hamil_type=3 not jet implemented, running hamil_type=4")
-            self._printHamilType_34_Files()            
-            # raise TBME_RunnerException("hamil_type=3 not jet implemented")
         else:
             # J scheme "bare" hamiltonian, return .sho header and .2b files
             self._printHamilType_34_Files()
@@ -955,17 +1011,24 @@ The program will exclude it from the interaction file and will produce the .com 
         for a, b in self._twoBodyQuantumNumbersSorted:
             a = castAntoineFormat2Str(a, l_ge_10=True)
             b = castAntoineFormat2Str(b, l_ge_10=True)
-            val_ab = 0.0
-            ## TODO: define here how to get the 1B matrix elements
+            val_ab_p, val_ab_n = 0.0, 0.0
             
+            ## to get the 1B matrix elements
+            for f_ in self.results_1b_byInterac.keys():
+                k_ab = (int(a),int(b))
+                val_ab = self.results_1b_byInterac[f_].get( k_ab, [0.0, 0.0])
+                val_ab_p += val_ab[0]
+                val_ab_n += val_ab[1]
             if a == b:
                 ## append s.p energy of the element
                 sp_e = self.input_obj.Valence_Space.get(a, 0.0)
                 sp_e = float(sp_e)
-                val_ab += sp_e
-            if abs(val_ab) < 1.e-6:
+                val_ab_p += sp_e
+                val_ab_n += sp_e
+            if (abs(val_ab_p) < 1.e-6) and (abs(val_ab_n) < 1.e-6):
                 continue
-            aux = "{:>5} {:>5}  {:13.6f}".format(a, b, val_ab)
+            
+            aux = "{:>5} {:>5}  {:13.6f}  {:13.6f}".format(a,b,val_ab_p,val_ab_n)
             strings_.append(aux)
                 
         strings_ = '\n'.join(strings_)

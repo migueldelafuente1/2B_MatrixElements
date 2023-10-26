@@ -6,7 +6,7 @@ Created on Feb 23, 2021
 import numpy as np
 
 from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Coupling,\
-    QN_1body_jj
+    QN_1body_jj, _1Body_WaveFunction, _WaveFunction
 from helpers.Helpers import safe_wigner_9j
 from helpers.Enums import CouplingSchemeEnum
 from helpers.Log import XLog
@@ -34,6 +34,10 @@ class _OneBodyMatrixElement:
     NULL_TOLERANCE = 1.e-14
     
     def __init__(self, bra, ket, run_it=True):
+        
+        self.bra : _WaveFunction = None
+        self.ket : _WaveFunction = None
+        
         raise MatrixElementException("Abstract method, implement me!")
     
     def __checkInputArguments(self, *args, **kwargs):
@@ -176,6 +180,8 @@ class _TwoBodyMatrixElement(_OneBodyMatrixElement):
     
     NULL_TOLERANCE = 1.e-14
     
+    ONEBODY_MATRIXELEMENT = None ## 1-B Interaction associate with the force.
+    
     ## Abstract class, the setting methods remain abstract from 1B m.e template
     
     def getExchangedME(self):
@@ -194,6 +200,32 @@ class _TwoBodyMatrixElement(_OneBodyMatrixElement):
             self._parity_ket = (self.ket.l1 + self.ket.l2) % 2
         return self._parity_ket
     
+    def calculate_1BME(self, bra=None, ket=None):
+        """
+        Calculate the 1-body component of the interaction (if present):
+        
+        If bra and ket given <_1Body_WaveFunction>, evaluate them for the
+        associated force.
+        
+        If not, the matrix element will be evaluated with the first states of 
+        the matrix element instance. (Raise error if the m.e. is not instanciated)
+        """
+        
+        if self.ONEBODY_MATRIXELEMENT != None:
+            return
+        
+        if (bra != None) and (ket != None):
+            
+            assert isinstance(bra, _1Body_WaveFunction), "Invalid type [{}]".format(bra.__class__)
+            assert isinstance(ket, _1Body_WaveFunction), "Invalid type [{}]".format(ket.__class__)
+            
+            return self.ONEBODY_MATRIXELEMENT(bra, ket, run_it=True)
+        else:
+            
+            return self.ONEBODY_MATRIXELEMENT(self.bra.sp_state_1, 
+                                              self.ket.sp_state_1, run_it=True)
+    
+        
 #===============================================================================
 # ONE BODY MATRIX ELEMENT TEMPLATE
 #===============================================================================
@@ -225,6 +257,8 @@ class _OneBodyMatrixElement_jjscheme(_OneBodyMatrixElement):
             self._value = 0.0
             self._isNullMatrixElement = True
     
+    ## NOTE: If the interaction will be called from the runner, remember to call 
+    ##  the parameter setting (or define it) from the 2-Body matrix element.!!!
     
 #===============================================================================
 # TWO BODY MATRIX ELEMENT TEMPLATE
@@ -243,14 +277,12 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     
     SYMMETRICAL_PNPN  = True ## set to False in case pnpn!=npnp (and pnnp!=nppn)
     
-    ONEBODY_MATRIXELEMENT = None ## 1-B Interaction associate with the force.
-    
     def __init__(self, bra, ket, run_it=True):
         
         self.__checkInputArguments(bra, ket)
         
-        self.bra = bra
-        self.ket = ket
+        self.bra : QN_1body_jj = bra
+        self.ket : QN_1body_jj = ket
         
         self.J = bra.J
         self.exchange_phase = None

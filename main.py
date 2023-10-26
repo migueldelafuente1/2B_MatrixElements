@@ -12,25 +12,16 @@ from sys import argv
 
 from helpers.TBME_Runner import TBME_Runner
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial,\
-    QN_2body_LS_Coupling, QN_1body_jj, QN_2body_jj_JT_Coupling,\
-    QN_2body_jj_J_Coupling
+    QN_1body_jj, QN_2body_jj_J_Coupling
 
-from matrix_elements.BrinkBoeker import BrinkBoeker
-from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme,\
-    TensorS12_JTScheme
 from helpers.Enums import PotentialForms, SHO_Parameters, BrinkBoekerParameters, \
     ForceEnum, CentralMEParameters, DensityDependentParameters,\
     SkyrmeBulkParameters
-from matrix_elements.SpinOrbitForces import SpinOrbitForce, ShortRangeSpinOrbit_JTScheme,\
-    SpinOrbitForce_JTScheme 
 from helpers.Log import XLog
 from matrix_elements.CentralForces import CoulombForce, KineticTwoBody_JTScheme,\
     DensityDependentForce_JTScheme, CentralForce_JTScheme,\
     DensityDependentForceFromFile_JScheme
 from helpers.TBME_SpeedRunner import TBME_SpeedRunner
-from helpers.matrixElementHandlers import MatrixElementFilesComparator
-from matrix_elements.SkyrmeForces import SkrymeBulk_JTScheme
-from matrix_elements.BM_brackets import BM_Bracket
 
 
 if __name__ == "__main__":
@@ -48,12 +39,12 @@ if __name__ == "__main__":
     
         #_runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
-        _runner = TBME_SpeedRunner(filename='input.xml')
+        # _runner = TBME_SpeedRunner(filename='input.xml')
         # _ = 0
         # _runner = TBME_Runner(filename='input_D1S.xml')
         # _runner.run()
     
-        # _runner = TBME_SpeedRunner(filename='input.xml', verbose=True)
+        _runner = TBME_SpeedRunner(filename='input.xml', verbose=True)
         # _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
         _runner.run()
     

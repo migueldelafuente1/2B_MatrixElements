@@ -1063,7 +1063,7 @@ class _Kinetic_1BME(_OneBodyMatrixElement_jjscheme):
         elif (n_a == n_b + 1):
             val = ((n_b + 1) * (2*n_b + l_b + 1.5))**.5
         
-        self._value  = val * self.PARAMS_FORCE[SHO_Parameters.hbar_omega]
+        self._value  = 0.5 * val * self.PARAMS_SHO[SHO_Parameters.hbar_omega]
     
 
 class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
@@ -1072,7 +1072,7 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     
     _BREAK_ISOSPIN = False
-    
+        
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """
@@ -1094,7 +1094,7 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
         
         cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
         cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
-    
+            
     
     def _validKetTotalAngularMomentums(self):
         return (self.L_bra, )
