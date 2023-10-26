@@ -12,7 +12,8 @@ from helpers.Helpers import Constants, safe_wigner_6j,\
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled, \
-    MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled
+    MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled,\
+    _OneBodyMatrixElement_jjscheme
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
     PotentialForms, SHO_Parameters, DensityDependentParameters
@@ -1016,7 +1017,55 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
     
     def _validKetTotalAngularMomentums(self):
         return tuple()
+
+
+
+class _Kinetic_1BME(_OneBodyMatrixElement_jjscheme):
     
+    """ Matrix Element for the kinetic one-body operator. """
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b  = SHO_Parameters.b_length
+        _ho = SHO_Parameters.hbar_omega
+        _A  = SHO_Parameters.A_Mass
+        assert _A in kwargs and _b in kwargs, "A_mass and oscillator b length are mandatory"
+        
+        b_len = float(kwargs.get(_b))
+        cls.PARAMS_SHO[_b] = b_len
+        cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
+        hbaromega = (Constants.HBAR_C**2) / (Constants.M_NUCLEON * (b_len**2))
+        cls.PARAMS_SHO[_ho] = hbaromega
+        
+    def _run(self):
+        
+        if self.isNullMatrixElement: return
+        if self.DEBUG_MODE: 
+            XLog.write('nas_me', ket=self.ket.shellStatesNotation)
+        
+        self._value = 0.0
+        
+        n_a, n_b = self.bra.n, self.ket.n
+        l_a, l_b = self.bra.l, self.ket.l
+        j_a, j_b = self.bra.j, self.ket.j
+        
+        if ((l_a != l_b) or (j_a != j_b)) : return 
+        
+        val = 0.0
+        if (n_a == n_b):
+            val = 2*n_a + l_a + 1.5
+        elif (n_a == n_b - 1):
+            val = (n_b * (2*n_b + l_b + 0.5))**.5
+        elif (n_a == n_b + 1):
+            val = ((n_b + 1) * (2*n_b + l_b + 1.5))**.5
+        
+        self._value  = val * self.PARAMS_FORCE[SHO_Parameters.hbar_omega]
+    
+
 class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
     # _TwoBodyMatrixElement_JTCoupled): #
     
