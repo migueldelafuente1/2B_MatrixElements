@@ -389,10 +389,12 @@ The program will exclude it from the interaction file and will produce the .com 
         setting.
         """
         obme_class : _OneBodyMatrixElement = None
+        sho_params = getattr(self.input_obj, ip.SHO_Parameters)
+        
         if kin or force == ForceEnum.Kinetic_2Body:
             force = ForceEnum.Kinetic_2Body
             obme_class = _Kinetic_1BME
-            obme_class.setInteractionParameters(**self.input_obj.SHO_Parameters)
+            obme_class.setInteractionParameters(**sho_params)
             self.results_1b_byInterac[force] = {}
         else:
             obme_class = self.tbme_class.ONEBODY_MATRIXELEMENT
@@ -409,7 +411,6 @@ The program will exclude it from the interaction file and will produce the .com 
             self.results_1b_byInterac[force] = {}
             
             if obme_class != None:
-                sho_params = getattr(self.input_obj, ip.SHO_Parameters)
                 obme_class.setInteractionParameters(**params, **sho_params)
             else:
                 return 

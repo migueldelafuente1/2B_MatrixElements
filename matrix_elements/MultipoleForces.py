@@ -17,7 +17,6 @@ from helpers.integrals import _RadialIntegralsLS, _RadialMultipoleMoment
 from helpers.WaveFunctions import QN_1body_radial, QN_2body_jj_JT_Coupling
 
 from copy import deepcopy, copy
-from debugpy._vendored.pydevd._pydevd_bundle.pydevd_cython import self
 
 
 
