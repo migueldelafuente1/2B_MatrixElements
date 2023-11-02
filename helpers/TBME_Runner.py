@@ -402,7 +402,6 @@ The program will exclude it from the interaction file and will produce the .com 
                                 self.input_obj.Force_Parameters.keys()))
             indx_ = len(indx_) - 1
             
-            sho_params = getattr(self.input_obj, ip.SHO_Parameters)
             params = self.input_obj.Force_Parameters.get(force)
             params = params[indx_]
             
@@ -410,6 +409,7 @@ The program will exclude it from the interaction file and will produce the .com 
             self.results_1b_byInterac[force] = {}
             
             if obme_class != None:
+                sho_params = getattr(self.input_obj, ip.SHO_Parameters)
                 obme_class.setInteractionParameters(**params, **sho_params)
             else:
                 return 
