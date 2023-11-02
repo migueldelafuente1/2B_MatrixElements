@@ -17,6 +17,7 @@ from helpers.integrals import _RadialIntegralsLS, _RadialMultipoleMoment
 from helpers.WaveFunctions import QN_1body_radial, QN_2body_jj_JT_Coupling
 
 from copy import deepcopy, copy
+from debugpy._vendored.pydevd._pydevd_bundle.pydevd_cython import self
 
 
 
@@ -251,6 +252,8 @@ class MultipoleDelta_JTScheme(_Multipole_JTScheme):
 
 class _MultipoleMoment_1BME(_OneBodyMatrixElement_jjscheme):
     
+    _VERSION_QQ_EXPLICIT = False
+    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         print(" [WARNING] setInteractionParameters must be called from the "
@@ -270,15 +273,20 @@ class _MultipoleMoment_1BME(_OneBodyMatrixElement_jjscheme):
         L = self.PARAMS_FORCE[CentralMEParameters.n_power]
         C = self.PARAMS_FORCE[CentralMEParameters.constant]
         
-        ang_cent_d  = self._AngularCoeff_Central(L)
-        if almostEqual(abs(ang_cent_d), 0, self.NULL_TOLERANCE): return
+        if not self._VERSION_QQ_EXPLICIT:
+            ang_cent  = self._AngularCoeff_Central(L)
+        else:
+            ang_cent = self._AngularCoeff_Central_explicit(L)
+        
+        if almostEqual(abs(ang_cent), 0, self.NULL_TOLERANCE): return
         
         if self.DEBUG_MODE:
             XLog.write('nas_me', lambda_=L, value=self._value)
         
-        rad_d = self._RadialCoeff(L)   ## 2*L if using the old expression
+        if self._VERSION_QQ_EXPLICIT: L = 2*L  ## 2*L if using the old expression
         
-        self._value  = C * ang_cent_d * rad_d
+        rad_d = self._RadialCoeff(L)   
+        self._value  = C * ang_cent * rad_d
     
     def _AngularCoeff_Central_explicit(self, lambda_):
         """ First version, it is wrong """
@@ -322,7 +330,6 @@ class _MultipoleMoment_1BME(_OneBodyMatrixElement_jjscheme):
         Implementation of the integral for the multipole
         TEST(passed), Look the integral table 6.2 from Suhonen rad_ac/b**lambda_
         """
-        
         b = self.PARAMS_SHO.get(SHO_Parameters.b_length)
         
         qnr_a = QN_1body_radial(self.bra.n, self.bra.l) # conjugated
