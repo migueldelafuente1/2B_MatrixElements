@@ -1038,7 +1038,7 @@ class _Kinetic_1BME(_OneBodyMatrixElement_jjscheme):
         b_len = float(kwargs.get(_b))
         cls.PARAMS_SHO[_b] = b_len
         cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
-        hbaromega = (Constants.HBAR_C**2) / (Constants.M_NUCLEON * (b_len**2))
+        hbaromega = (Constants.HBAR_C**2) / (Constants.M_MEAN * (b_len**2))
         cls.PARAMS_SHO[_ho] = hbaromega
         
     def _run(self):
@@ -1061,7 +1061,7 @@ class _Kinetic_1BME(_OneBodyMatrixElement_jjscheme):
         elif (n_a == n_b - 1):
             val = (n_b * (2*n_b + l_b + 0.5))**.5
         elif (n_a == n_b + 1):
-            val = ((n_b + 1) * (2*n_b + l_b + 1.5))**.5
+            val = (n_a * (2*n_a + l_a + 0.5))**.5
         
         self._value  = 0.5 * val * self.PARAMS_SHO[SHO_Parameters.hbar_omega]
     

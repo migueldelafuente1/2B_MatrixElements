@@ -378,6 +378,15 @@ The program will exclude it from the interaction file and will produce the .com 
         q_numbs = list(combinations_with_replacement(q_numbs, 2))
         
         self._twoBodyQuantumNumbersSorted = q_numbs
+        
+        all_permut_ = []
+        for a,b in self._twoBodyQuantumNumbersSorted:
+            all_permut_.append((a,b))
+            if a != b:
+                all_permut_.append((b,a))
+        all_permut_.sort()
+        self._allPermutations_twoBodyQuantumNumbers = all_permut_
+        self._allPermutations_twoBodyQuantumNumbers = self._twoBodyQuantumNumbersSorted
     
     def _compute1BodyMatrixElements(self, kin=False, force=None):
         """
@@ -415,7 +424,7 @@ The program will exclude it from the interaction file and will produce the .com 
             else:
                 return 
         
-        for q_numb in self._twoBodyQuantumNumbersSorted:
+        for q_numb in self._allPermutations_twoBodyQuantumNumbers:
             bra = QN_1body_jj(*readAntoine(q_numb[0], l_ge_10=True))
             ket = QN_1body_jj(*readAntoine(q_numb[1], l_ge_10=True))
             
@@ -1009,7 +1018,7 @@ The program will exclude it from the interaction file and will produce the .com 
         core_energy = getattr(core, CoreParameters.energy, '0.0') 
         
         strings_ = [title, core_energy,] # title
-        for a, b in self._twoBodyQuantumNumbersSorted:
+        for a, b in self._allPermutations_twoBodyQuantumNumbers:
             a = castAntoineFormat2Str(a, l_ge_10=True)
             b = castAntoineFormat2Str(b, l_ge_10=True)
             val_ab_p, val_ab_n = 0.0, 0.0

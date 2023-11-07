@@ -268,6 +268,7 @@ class _MultipoleMoment_1BME(_OneBodyMatrixElement_jjscheme):
             XLog.write('nas_me', ket=self.ket.shellStatesNotation)
         
         self._value = 0.0
+        if ((self.bra.j + self.ket.j) // 2) % 2 == 1: return
         
         L = self.PARAMS_FORCE[CentralMEParameters.n_power]
         C = self.PARAMS_FORCE[CentralMEParameters.constant]

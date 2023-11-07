@@ -37,14 +37,14 @@ if __name__ == "__main__":
         pass
         # TODO: Run the program from a file 'input.xml' next to the main
     
-        #_runner = TBME_SpeedRunner(filename='input_B1.xml')
+        # _runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
         # _runner = TBME_SpeedRunner(filename='input.xml')
         # _ = 0
         # _runner = TBME_Runner(filename='input_D1S.xml')
         # _runner.run()
     
-        _runner = TBME_SpeedRunner(filename='input.xml', verbose=True)
+        _runner = TBME_SpeedRunner(filename='input.xml', verbose=False)
         # _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
         _runner.run()
     
