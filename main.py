@@ -18,7 +18,8 @@ if __name__ == "__main__":
     
     terminal_args_given = argv
     if len(terminal_args_given) > 1:
-        print(" Running SpeedRunner Suite, argv:", terminal_args_given)
+        print(" [2B_MatrixElements.main] Running SpeedRunner Suite, argv:", 
+              terminal_args_given)
         assert terminal_args_given[1].endswith('.xml'), \
             f"Only XML input files accepted. Got [{terminal_args_given[1]}]"
         _runner = TBME_SpeedRunner(argv[1], verbose=False)
@@ -38,4 +39,4 @@ if __name__ == "__main__":
         # _runner = TBME_SpeedRunner(filename='input_D1S.xml', verbose=False)
         _runner.run()
     
-    print(" Program ended without incidences! Stop.")
+    print(" [2B_MatrixElements.main] Program ended without incidences! Bye.")
