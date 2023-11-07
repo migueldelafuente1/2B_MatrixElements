@@ -24,10 +24,7 @@ if __name__ == "__main__":
             f"Only XML input files accepted. Got [{terminal_args_given[1]}]"
         _runner = TBME_SpeedRunner(argv[1], verbose=False)
         _runner.run()
-    else:
-        pass
-        # TODO: Run the program from a file 'input.xml' next to the main
-    
+    else:    
         # _runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner = TBME_Runner(filename='input.xml')
         # _runner = TBME_SpeedRunner(filename='input.xml')
