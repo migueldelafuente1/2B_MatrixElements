@@ -10,7 +10,8 @@ from helpers.Enums import ForceVariablesDict
 import xml.etree.ElementTree as et
 from helpers.WaveFunctions import QN_1body_jj
 from helpers.Helpers import readAntoine, shellSHO_Notation, valenceSpacesDict_l_ge10,\
-    getCoreNucleus
+    getCoreNucleus, getAllPermutationsOf2Bstates, prettyPrintDictionary,\
+    sortingHamiltonian
 from copy import deepcopy
 
 
@@ -595,6 +596,7 @@ class TBME_Reader():
             :constant    <float>, Factor to multiply all the matrix elements
             :val_space   <list of Antoine indexes>, when given, it skips matrix
                           elements that contain other quantum numbers.
+            :sorting_2b_order <list>, order of two-body wf, [(a,b), ...]
         """
         with open(filename, 'r') as f:
             data = f.readlines()
@@ -606,7 +608,8 @@ class TBME_Reader():
         
         if filename.endswith(OutputFileTypes.sho):
             self.scheme = self._Scheme.JT
-        elif filename.endswith(OutputFileTypes.twoBody):
+        elif (filename.endswith(OutputFileTypes.twoBody)
+              or filename.endswith(OutputFileTypes.centerOfMass)):
             self.scheme = self._Scheme.J
         else:
             raise ParserException("Unidentified Scheme for importing")
@@ -614,6 +617,7 @@ class TBME_Reader():
         self._elements = {}
         self._valence_space = []
         self._strict_val_space = False
+        self._sorting_2b_order = []
         if val_space:
             self._strict_val_space = True
             self._valence_space = [int(st) for st in val_space]
@@ -623,33 +627,17 @@ class TBME_Reader():
     def getMatrixElemnts(self, sorting_order=None):
         """ Get the imported matrix elements,
         : sorting order: <list> of tuples with the qqnn in """
-        
+        print("\n\n Exporting matrix elements READED:\n\n *****************")
         if sorting_order:
-            dict_2 = {}
-            q_numbs = sorting_order
-            for i in range(len(q_numbs)):
-                bra = q_numbs[i]
-                
-                if not bra in self._elements: 
-                    continue
-                else:
-                    if not bra in dict_2:
-                        dict_2[q_numbs[i]] = {}
+            args = (
+                self._elements,
+                sorting_order,
+                self.scheme == self._Scheme.JT,
+                self.l_ge_10
+            )
+            self._elements = sortingHamiltonian(*args)
             
-                for j in range(0, len(q_numbs)): # start i = 0
-                    ket = q_numbs[j]            
-                    if not ket in self._elements[bra]:
-                        continue
-                    else:
-                        if not ket in dict_2[bra]:
-                            dict_2[bra][ket] = {}
-                    
-                    block = self._elements[q_numbs[i]][q_numbs[j]]
-                    dict_2[q_numbs[i]][q_numbs[j]] = block
-            
-            self._elements = deepcopy(dict_2)
-                
-        return deepcopy(self._elements)
+        return self._elements
     
     def _importMatrixElements(self, data):
         if self.scheme == self._Scheme.JT:
@@ -657,53 +645,43 @@ class TBME_Reader():
         elif self.scheme == self._Scheme.J:
             self._getJSchemeMatrixElements(data)
     
-    
     def _getJTSchemeMatrixElements(self, data):
-        
         JT_block = {}
         bra, ket = None, None
-        index    = 0
-        j_min, j_max, T = 0, 0, 0
+        index = 0
+        j_min, j_max, J = 0, 0, 0
         
         for line in data:
             line = line.strip()
             if index == 0:
                 bra, ket, j_min, j_max, skip = self._getBlockQN_HamilType(line)
-
+                j_length = j_max - j_min + 1
                 if skip:
                     index += 1
                     continue
-                # JT_block[bra] = {0: {}, 1: {}}
-                phs_bra, phs_ket, bra, ket = self._getPermutationPhase(bra, ket)
+                
+                j_dict = dict([(j, {}) for j in range(j_min, j_max+1)])
+                
                 if bra in JT_block:
                     if ket in JT_block[bra]:
                         print("WARNING, while reading the file found repeated "
                               "matrix element block:", bra, ket)
-                    JT_block[bra][ket] = {0: {}, 1: {}}
+                    JT_block[bra][ket] = deepcopy(j_dict)
                 else:
-                    JT_block[bra] = {ket : {0: {}, 1: {}}}
+                    JT_block[bra] = {ket : deepcopy(j_dict)}         
             elif index > 0 and (not skip):
                 T = index - 1
                 
                 line = line.split()
                 for i in range(j_max - j_min +1):
                     J = j_min + i
-                    
-                    phs = 1
-                    if self.bra_exch:
-                        phs *= (-1)**(phs_bra + J + T)
-                    if self.ket_exch:
-                        phs *= (-1)**(phs_ket + J + T)
-                    
-                    JT_block[bra][ket][T][J] = self.const * phs * float(line[i])
-            
-            index = index + 1 if index < 2 else 0
+                    JT_block[bra][ket][T][J] = self.const * float(line[i])
+                
+            index = index + 1 if index < j_length else 0
         
         self._elements = JT_block
     
-    
     def _getJSchemeMatrixElements(self, data):
-        
         J_block = {}
         bra, ket = None, None
         index = 0
@@ -720,50 +698,58 @@ class TBME_Reader():
                 
                 j_dict = dict([(j, {}) for j in range(j_min, j_max+1)])
                 
-                phs_bra, phs_ket, bra, ket = self._getPermutationPhase(bra, ket)
                 if bra in J_block:
                     if ket in J_block[bra]:
                         print("WARNING, while reading the file found repeated "
                               "matrix element block:", bra, ket)
                     J_block[bra][ket] = deepcopy(j_dict)
                 else:
-                    J_block[bra] = {ket : deepcopy(j_dict)}
-                
-                t_indexing = self._getParticleLabelIndexingAfterPermutation()
-                
+                    J_block[bra] = {ket : deepcopy(j_dict)}         
             elif index > 0 and (not skip):
                 J = j_min + index - 1
-                
                 line = line.split()
-                phs = 1
-                if self.bra_exch:
-                    phs *= (-1)**(phs_bra + J + 1)
-                if self.ket_exch:
-                    phs *= (-1)**(phs_ket + J + 1)
                 
-                for T in t_indexing:
-                    J_block[bra][ket][J][T] = self.const * phs * float(line[T])
-            
+                for i in range(6):
+                    J_block[bra][ket][J][i] = self.const * float(line[i])
+                
             index = index + 1 if index < j_length else 0
         
         self._elements = J_block
     
     def _getParticleLabelIndexingAfterPermutation(self):
         """ When bra or ket are exchanged, the index  of the particle
-         lables have to be reorganized """
-        t_indexing = [0, 1, 2, 3, 4, 5]
-        #         pppp pnpn pnnp nppn npnp nnnn
-        if self.bra_exch:
-            if self.ket_exch:
-                # pppp npnp nppn pnnp pnpn nnnn
-                t_indexing = [0, 4, 3, 2, 1, 5]
-            else:
-                # pppp nppn npnp pnpn pnnp nnnn
-                t_indexing = [0, 3, 4, 1, 2, 5]
-        if self.ket_exch:
-            #     pppp pnnp pnpn npnp nppn nnnn
-            t_indexing = [0, 2, 1, 4, 3, 5]
+        lables have to be reorganized 
+             NOTE: the permutation only considers the bra or ket exchange
+             but cannot tell the switch ket-bra for the v.s. order.
+             this permutation does not affect the value.
+        """ 
         
+        t_indexing = [0, 1, 2, 3, 4, 5]
+        #             pppp pnpn pnnp nppn npnp nnnn
+        if self.bra_ket_switch:
+            t_indexing = [0, 1, 3, 2, 4, 5]
+            #         pppp pnpn nppn pnnp npnp nnnn
+            if self.bra_exch:
+                if self.ket_exch:
+                    # pppp npnp pnnp nppn pnpn nnnn
+                    t_indexing = [0, 4, 2, 3, 1, 5]
+                else:
+                    # pppp pnnp npnp pnpn nppn nnnn
+                    t_indexing = [0, 2, 4, 1, 3, 5]
+            if self.ket_exch:
+                #     pppp nppn pnpn npnp pnnp nnnn
+                t_indexing = [0, 3, 1, 4, 2, 5]
+        else:
+            if self.bra_exch:
+                if self.ket_exch:
+                    # pppp npnp nppn pnnp pnpn nnnn
+                    t_indexing = [0, 4, 3, 2, 1, 5]
+                else:
+                    # pppp nppn npnp pnpn pnnp nnnn
+                    t_indexing = [0, 3, 4, 1, 2, 5]
+            if self.ket_exch:
+                #     pppp pnnp pnpn npnp nppn nnnn
+                t_indexing = [0, 2, 1, 4, 3, 5]
         return t_indexing
     
     def _getBlockQN_HamilType(self, header):
@@ -785,39 +771,12 @@ class TBME_Reader():
                     skip = True
                 else:
                     self._valence_space.append(st)
-        
-        bra = min(tuple(spss[0:2]), tuple(spss[2:4]))
-        ket = max(tuple(spss[0:2]), tuple(spss[2:4]))
-        
+            
+        bra, ket = tuple(spss[0:2]), tuple(spss[2:4])
+        ## NOTE: do not sort here bra-ket, since it has a particle-label in the
+        ##       J-scheme related to the possition in the imported line.
         return bra, ket, int(header[-2]), int(header[-1]), skip
     
-    def _getPermutationPhase(self, bra, ket):
-        """ 
-        return the bra and the ket in increasing order (avoids repetition).
-        
-        phases do not have the (J + 1) or (J + T) part (append afterwards), 
-        just j1 + j2
-        """
-        
-        self.bra_exch  = False
-        self.ket_exch  = False
-        phs_bra, phs_ket    = 0, 0
-        
-        if bra[0] > bra[1]:
-            self.bra_exch = True
-            bra = (bra[1], bra[0])
-            phs_bra = (readAntoine(bra[0], self.l_ge_10)[2] + 
-                       readAntoine(bra[1], self.l_ge_10)[2]) // 2
-        if ket[0] > ket[1]:
-            self.ket_exch = True
-            ket = (ket[1], ket[0])
-            phs_ket = (readAntoine(ket[0], self.l_ge_10)[2] + 
-                       readAntoine(ket[1], self.l_ge_10)[2]) // 2
-            
-        return phs_bra, phs_ket, bra, ket
-
-
-
 #===============================================================================
 # AUXIALIRY METHODS FOR EXPORTATION,
 #===============================================================================

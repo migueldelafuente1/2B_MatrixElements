@@ -5,6 +5,7 @@ Created on Feb 25, 2021
 '''
 
 import os
+from copy import deepcopy
 #===============================================================================
 #%% Constants
 #===============================================================================
@@ -379,6 +380,106 @@ def prettyPrintDictionary(dictionary, level=0, delimiter=' . '):
         else:
             print(header+str(k)+':'+str(val))
 
+
+#------------------------------------------------------------------------------ 
+
+def __copyHamiltonian_4keyTo2keys(results_0, reverse=False):
+    """ Convert hamiltonian from 4-key <*bra, *ket> to 2-key (bra, ket) form"""
+    results = {}
+    if not reverse:
+        for key_, vals in results_0.items():
+            bra_, ket_ = key_[:2], key_[2:]
+            if not bra_ in results:
+                results[bra_] = {ket_: vals, }
+            else:
+                results[bra_][ket_] = vals
+    else:
+        for bra_, kvals in results_0.items():
+            for ket_, vals in kvals.items():
+                results[(*bra_, *ket_)] = vals
+    return results
+
+def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
+    """
+    This function returns a hamiltonian in the order given, applying the phase
+    changes from the J or JT scheme.
+    
+    Note: use it before [recursiveSumOnDictionaries]
+    Input:
+        :results <dict>        {(1, 1): {(101, 1): [{J,T: [values]}] ...}}
+        :sorted_2b_comb<list>  [(1,1), (1,101), (1,10001), ... ]
+    Returns:
+        the same result dictionary with the keys in the order of sorted_2b_comb
+    """
+    dict_0 = {}
+    ## 0. Structure as the imported hamiltonian (keys involve (a,b,c,d):{J})
+    if list(results.keys()) == []: return dict_0
+    
+    _transform_to_key4 = False
+    if list(results.keys())[0].__len__() == 2:
+        dict_0 = __copyHamiltonian_4keyTo2keys(results, True)
+        _transform_to_key4 = True
+    else:
+        dict_0 = results
+    
+    # 1 read all the 4-keys and sort in the order bra-ket (assign permutat and particle order)
+    dict_1 = {}
+    for bk, vals in dict_0.items():
+        permuts = getAllPermutationsOf2Bstates(bk, l_ge_10,  not is_jt)
+        
+        for i, item_ in enumerate(permuts):
+            bk_perm, t_perm, phs = item_
+            if phs == 0: continue ## redundant permutation
+            
+            not_in_ = not bk_perm in dict_1
+            
+            if is_jt:
+                dict_1[bk_perm] = {0: {}, 1:{}}
+                for T in (0,1):
+                    for J in vals:
+                        phs2 = phs * (-1)**(J + T)
+                        if not_in_:
+                            dict_1[bk_perm][T][J] = phs2 * vals[T][J]
+                        else:
+                            # Test if matches
+                            assert abs(dict_1[bk_perm][T][J] 
+                                       - phs2 * vals[T][J]) < 1.0e-6,\
+                                       "[ERROR]: values of:{} does not match "\
+                                       "\with previous:{}".format(bk_perm, bk)
+            else:
+                dict_1[bk_perm] = dict([(J, dict()) for J in vals])
+                for J in vals:
+                    phs2 = phs
+                    if i not in (0,4, 3,7): ## double/non exchange has no J dep.
+                        phs2 = phs * (-1)**(J + 1)
+                    for T in range(6):
+                        if not_in_:
+                            dict_1[bk_perm][J][T] = phs2 * vals[J][t_perm[T]]
+                        else:
+                            # Test if matches
+                            # Test if matches
+                            assert abs(dict_1[bk_perm][J][T] 
+                                   - phs2 * vals[J][t_perm[T]]) < 1.0e-6,\
+                                       "[ERROR]: values of:{} does not match "\
+                                       "\with previous:{}".format(bk_perm, bk)
+    
+    # 2 sort in the order of bra (sorting_order) and apply the phs-changes
+    dict_2 = {}
+    for i in range(len(sorted_2b_comb)):
+        bra = sorted_2b_comb[i]
+        for j in range(i, len(sorted_2b_comb)):
+            ket = sorted_2b_comb[j]
+            
+            srt_key = (*bra, *ket)
+            if srt_key in dict_1:
+                dict_2[srt_key] = dict_1[srt_key]
+    
+    ## 0.2 In case of modifying to 4-key index: ----------
+    if _transform_to_key4:
+        dict_2 = __copyHamiltonian_4keyTo2keys(dict_2) 
+    return dict_2
+
+
 def recursiveSumOnDictionaries(dict2read, dict2write):
     """
     Given dictionaries with numerical end point values, sum the value to read if
@@ -547,6 +648,56 @@ def readAntoine(index, l_ge_10=False):
     
     raise Exception("Invalid state index for Antoine Format [{}]".format(index))
 
+def getAllPermutationsOf2Bstates(tb_states, l_ge_10, is_j_scheme=True):
+    """ 
+    Given all permutations of the quantum numbers < a,b| c,d> for pnpn states
+    return in this order:
+        [(0,1,2,3), (1,0,2,3), (0,1,3,2), (1,0,3,2),    :: bra-ket
+         (2,3,0,1), (3,2,0,1), (2,3,1,0), (3,2,1,0) ]   :: ket-bra
+    with their phases, if the quantum numbers are equal
+    * If it cannot be permuted, then phs = 0
+    
+    OUTPUT: (all states permutations, particle-label perm associated, phs)
+    
+        WARNING: give the tb_states in the correct order (the one for export)
+    In case of JT-scheme, it will not be considered the t_perm
+    """
+    _return_format2 = False
+    if len(tb_states) == 2:
+        _return_format2 = True
+        tb_states = (tb_states[0][0], tb_states[0][1],
+                     tb_states[1][0], tb_states[1][1])
+    
+    QQNN_PERMUTATIONS = [(0,1,2,3), (1,0,2,3), (0,1,3,2), (1,0,3,2),
+                         (2,3,0,1), (3,2,0,1), (2,3,1,0), (3,2,1,0)]
+    PART_LABEL_PERMUT = [(1,2,3,4), (3,4,1,2), (2,1,4,3), (4,3,2,1),
+                         (1,3,2,4), (3,1,4,2), (2,4,1,3), (4,2,3,1)]
+    
+    permuts = []
+    perv_permuts = set()
+    for i, key_perm in enumerate(QQNN_PERMUTATIONS):
+        phs = [1, 1]
+        if   i in (1, 3, 6, 7):
+            phs[0] = (-1)**((readAntoine(tb_states[0], l_ge_10)[2] + 
+                             readAntoine(tb_states[1], l_ge_10)[2]) // 2)
+        if i in (2, 3, 5, 7):
+            phs[1] = (-1)**((readAntoine(tb_states[2], l_ge_10)[2] + 
+                             readAntoine(tb_states[3], l_ge_10)[2]) // 2)
+        
+        phs = phs[0] * phs[1]
+        
+        st_perm = tuple([tb_states[k] for k in key_perm])
+        t_perm  = tuple([0, *PART_LABEL_PERMUT[i], 5]) if is_j_scheme else None
+        if st_perm in perv_permuts:
+            phs = 0
+        perv_permuts.add(st_perm)
+        permuts.append( (st_perm, t_perm, phs))
+    
+    if _return_format2:
+        permuts = []
+        for bk, t_perm, phs in permuts:
+            permuts.append( ((bk[0], bk[1]), (bk[2], bk[3]), t_perm, phs) )
+    return permuts
 
 
 def shellSHO_Notation(n, l, j=0):

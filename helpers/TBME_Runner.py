@@ -20,7 +20,8 @@ from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_JT_Coupling,\
     QN_2body_jj_J_Coupling
 from copy import deepcopy
 from helpers.Helpers import recursiveSumOnDictionaries, getCoreNucleus,\
-    Constants, almostEqual, printProgressBar, _LINE_1, _LINE_2
+    Constants, almostEqual, printProgressBar, _LINE_1, _LINE_2,\
+    sortingHamiltonian
 
 import os
 import numpy as np
@@ -375,8 +376,9 @@ The program will exclude it from the interaction file and will produce the .com 
         
         q_numbs = map(lambda qn: int(qn), q_numbs)
         q_numbs = sorted(q_numbs)#, reverse=True)
-        q_numbs = list(combinations_with_replacement(q_numbs, 2))
+        self._valence_space_sorted = q_numbs   ## to keep the order of exporting
         
+        q_numbs = list(combinations_with_replacement(q_numbs, 2))
         self._twoBodyQuantumNumbersSorted = q_numbs
         
         all_permut_ = []
@@ -386,7 +388,6 @@ The program will exclude it from the interaction file and will produce the .com 
                 all_permut_.append((b,a))
         all_permut_.sort()
         self._allPermutations_twoBodyQuantumNumbers = all_permut_
-        self._allPermutations_twoBodyQuantumNumbers = self._twoBodyQuantumNumbersSorted
     
     def _compute1BodyMatrixElements(self, kin=False, force=None):
         """
@@ -576,7 +577,7 @@ The program will exclude it from the interaction file and will produce the .com 
         if l_ge_10:
             l_ge_10 = False if l_ge_10.lower() == 'false' else True
         
-        valence_space = list(self.input_obj.Valence_Space.keys())
+        valence_space = self._valence_space_sorted
         
         data_ = TBME_Reader(filename, ignorelines, 
                             constant, valence_space, l_ge_10)
@@ -595,12 +596,15 @@ The program will exclude it from the interaction file and will produce the .com 
     
     def combineAllResults(self):
         
+        ## Get all matrix elements in the correct order.
+        
         kin_key = ForceEnum.Kinetic_2Body
         final_J  = {}
         final_JT = {}
         for force, results in self.resultsByInteraction.items():
-            if self.__class__ == TBME_Runner:
-                force = self._forceNameFromForceEnum[force]
+            ## NOTE: Why this was here?
+            # if self.__class__ == TBME_Runner:
+            #     force = self._forceNameFromForceEnum[force]
             
             if self.interactionSchemes[force] == self._Scheme.J:
                 # Kin 2Body is a JT scheme interaction
