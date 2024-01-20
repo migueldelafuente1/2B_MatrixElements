@@ -5,7 +5,8 @@ Created on Mar 8, 2021
 '''
 import numpy as np
 
-from helpers.Enums import CouplingSchemeEnum, CentralMEParameters
+from helpers.Enums import CouplingSchemeEnum, CentralMEParameters,\
+    BrinkBoekerParameters
 from helpers.Enums import AttributeArgs, SHO_Parameters
 from helpers.Helpers import safe_racah, safe_clebsch_gordan, safe_3j_symbols,\
     safe_wigner_6j
@@ -119,12 +120,13 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
         
-        return  factor * spin_me * self._BrodyMoshinskyTransformation()
+        aux = factor * spin_me * self._BrodyMoshinskyTransformation()
+        return  aux # factor * spin_me * self._BrodyMoshinskyTransformation()
     
     def _globalInteractionCoefficient(self):
         
-        phase   = (-1)**(self.L_bra + self.L_ket + self.J) # + S_bra+1
-        #phase = (-1)**(self._l + self._L - self.J)
+        phase   = (-1)**(self.rho_bra + self.J)
+        
         factor = np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
     
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
@@ -132,8 +134,8 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
     
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME
-        factor = safe_wigner_6j(self._l,    self._l_q,         1, 
-                                self.L_ket, self._L_bra, self._L)
+        factor = safe_wigner_6j(self._l,    self.L_bra, self._L, 
+                                self.L_ket, self._l_q,         1)
         if self.isNullValue(factor):
             return 0
     
@@ -188,8 +190,91 @@ class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):
 
 
 
-
-
+class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Tensor interaction calculation. 
+        
+        Modification to import Exchange operators in the Brink-Boeker form.
+        """
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b = SHO_Parameters.b_length
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+        
+        cls.PARAMS_FORCE = {}
+        
+        ## Exchange forms, if not pressent, all will be 0.0
+        for param in BrinkBoekerParameters.members():
+            exch_param = kwargs.get(param, {})
+            cls.PARAMS_FORCE[param] = float(exch_param.get(AttributeArgs.value, 0.0))
+        
+        assert CentralMEParameters.potential in kwargs, "Argument [potential] is required."
+        potential_ = kwargs[CentralMEParameters.potential][AttributeArgs.name]
+        cls.PARAMS_FORCE[CentralMEParameters.potential] = potential_.lower()
+        cls.PARAMS_FORCE[CentralMEParameters.constant]  = 1.0
+        
+        if CentralMEParameters.n_power in kwargs:
+            n_pow = kwargs[CentralMEParameters.n_power][AttributeArgs.value]
+            cls.PARAMS_FORCE[CentralMEParameters.n_power] = int(n_pow)
+        
+        if (CentralMEParameters.constant in kwargs.keys()):
+            print("[WARNING] Constant argument is not accepted for this matrix element, ",
+                  "if no permutation-operators was given, the constant value ",
+                  "will be assign to the Wigner term.")
+            exchange_constants = (
+                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner)),
+                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)),
+                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg)),
+                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)),
+            )
+            if sum(exchange_constants) > 1.0e-6:
+                print("  ** Constants assigned, omitting given constant "
+                      "(absolute value) W,B,H,M :", *exchange_constants )
+            else:
+                print("  ** Constants not assigned, constant -> Wigner")
+                value_ = float(kwargs[CentralMEParameters.constant])
+                self.PARAMS_FORCE[BrinkBoekerParameters.Wigner] = value_
+        #cls.plotRadialPotential()
+        
+        cls._integrals_p_max = -1
+        cls._talmiIntegrals  = []
+    
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        """    
+        # Radial Part for Gaussian Integral
+        radial_energy = self.centerOfMassMatrixElementEvaluation()
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
+        
+        # Exchange Part
+        # W + P(S)* B - P(T)* H - P(T)*P(S)* M
+        _S_aux = (-1)**(self.S_bra + 1)
+        _T_aux = (-1)**(self.T)
+        _L_aux = (-1)**(self.T + self.S_bra + 1)
+        
+        exchange_energy = (
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner),
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)   * _S_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg) * _T_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)   * _L_aux
+        )
+        
+        # Add up
+        prod_part = radial_energy * sum(exchange_energy)
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', radial=radial_energy, exch=exchange_energy, 
+                       exch_sum=sum(exchange_energy), val=prod_part)
+        
+        return prod_part
 
 
 class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):

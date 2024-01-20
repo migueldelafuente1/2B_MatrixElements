@@ -415,10 +415,10 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
     ## 0. Structure as the imported hamiltonian (keys involve (a,b,c,d):{J})
     if list(results.keys()) == []: return dict_0
     
-    _transform_to_key4 = False
+    _transform_to_key2 = False
     if list(results.keys())[0].__len__() == 2:
-        dict_0 = __copyHamiltonian_4keyTo2keys(results, True)
-        _transform_to_key4 = True
+        dict_0 = __copyHamiltonian_4keyTo2keys(results, reverse=True)
+        _transform_to_key2 = True
     else:
         dict_0 = results
     
@@ -475,7 +475,7 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
                 dict_2[srt_key] = dict_1[srt_key]
     
     ## 0.2 In case of modifying to 4-key index: ----------
-    if _transform_to_key4:
+    if _transform_to_key2:
         dict_2 = __copyHamiltonian_4keyTo2keys(dict_2) 
     return dict_2
 

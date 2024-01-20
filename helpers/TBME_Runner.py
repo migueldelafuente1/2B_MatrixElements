@@ -284,8 +284,9 @@ The program will exclude it from the interaction file and will produce the .com 
         A_mass      = sho_params.get(SHO_Parameters.A_Mass)
         hbar_omega  = sho_params.get(SHO_Parameters.hbar_omega)
         b_length    = sho_params.get(SHO_Parameters.b_length)
-        Z           = int(sho_params.get(SHO_Parameters.Z, 0))
-        if A_mass and Z == 0:
+        Z           = sho_params.get(SHO_Parameters.Z, 0)
+        
+        if A_mass and Z in (0, None):
             Z = int(A_mass)//2
         
         if b_length != None:

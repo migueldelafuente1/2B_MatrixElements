@@ -56,7 +56,8 @@ class ForceEnum(Enum):
     Coulomb = 'Coulomb'
     Tensor  = 'Tensor'
     SpinOrbit = 'SpinOrbit'
-    SpinOrbitShortRange = 'SpinOrbitShortRange'
+    SpinOrbitFiniteRange = 'SpinOrbitFiniteRange'
+    SpinOrbitShortRange  = 'SpinOrbitShortRange'
     Brink_Boeker  = 'Brink_Boeker'
     PotentialSeries = 'PotentialSeries'
     Density_Dependent = 'Density_Dependent'
@@ -144,6 +145,7 @@ ForceVariablesDict = {
     ForceEnum.TensorS12 : CentralWithExchangeParameters,
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
+    ForceEnum.SpinOrbitFiniteRange: CentralWithExchangeParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
     ForceEnum.Density_Dependent_From_File   : DensityDependentParameters, 
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 

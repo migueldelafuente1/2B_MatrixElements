@@ -411,12 +411,20 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
     N,L, n,n', l,l' under verifications on parity and angular momentum
     """
     
-    def _validCOM_Bra_qqnn(self):
-                
-        rho = self.rho_bra
-        lambda_ = self.L_bra
-        ## Notation: big_Lambda = L + l, big_N = N + n
+    def _validCOM_qqnn(self, elem):
         
+        if elem == 'bra':  
+            rho = self.rho_bra
+            lambda_ = self.L_bra
+            parity_ = self.parity_bra
+        elif elem == 'ket':
+            rho = self.rho_ket
+            lambda_ = self.L_ket
+            parity_ = self.parity_ket
+        else:
+            raise MatrixElementException("Set elem as 'bra' or 'ket', stopping")
+        
+        ## Notation: big_Lambda = L + l, big_N = N + n
         
         rho_lambda_dont_pair = (rho - lambda_) % 2
         
@@ -444,10 +452,8 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                     L = rho - l - (2*big_N)
                     
                     if not angular_condition(l, L, lambda_):
-                        _ = 0
                         continue 
-                    elif self.parity_bra + (L + l)% 2 == 1:
-                        _ = 1
+                    elif parity_ + (L + l)% 2 == 1:
                         continue
                     valid_qqnn.append((n, l, N, L))
         
@@ -470,7 +476,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
         if self.DEBUG_MODE:
             XLog.write('intSer')
         
-        for qqnn_bra in self._validCOM_Bra_qqnn():
+        for qqnn_bra in self._validCOM_qqnn('bra'):
             
             self._n, self._l, self._N, self._L = qqnn_bra
             
@@ -726,4 +732,35 @@ class TalmiTransformation(_TalmiTransformation_SecureIter):
         if  save_pdf:
             plt.savefig("central_potential.pdf")
         plt.show()
+    
+
+class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
+    
+    
+    def _BrodyMoshinskyTransformation(self):
+        """
+        ##  WARNING: This method is final. Do not overwrite!!
+        
+        Sum over valid p-Talmi integrals range (Energy + Ang. momentum + parity 
+        conservation laws). Call implemented Talmi Coefficients for 
+        Brody-Moshinsky transformation
+        """
+        
+        sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('talmi')
+        for p in range(max(self.rho_bra, self.rho_ket) +1):
+            if self.DEBUG_MODE:
+                XLog.write('talmi', p=p)
+            self._p1 = p
+            # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
+            series = 2 * self._interactionSeries()
+            Ip =     self.talmiIntegral()
+            product = series * Ip
+            sum_ += product
+            # sum_ += self._interactionSeries() * self.talmiIntegral()
+            
+            if self.DEBUG_MODE:
+                XLog.write('talmi', series = series, Ip=Ip, val=product)
+        return self._globalInteractionCoefficient() * sum_
     
