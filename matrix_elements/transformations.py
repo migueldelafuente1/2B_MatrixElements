@@ -175,7 +175,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         
         args = [
             cls.PARAMS_FORCE.get(CentralMEParameters.potential),
-            cls.PARAMS_SHO.get(SHO_Parameters.b_length),
+            cls.PARAMS_SHO  .get(SHO_Parameters.b_length),
             cls.PARAMS_FORCE.get(CentralMEParameters.mu_length),
             cls.PARAMS_FORCE.get(CentralMEParameters.n_power),
         ]
@@ -218,54 +218,60 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         return _dummy_me._B_coefficient_evaluation() / (b_param**3)
     
     
-    def _B_coefficient(self, b_param=None):
+    def _B_coefficient(self, b_param=None, com_qqnn=False):
         """ _Memorization Pattern for B coefficients. """
         
         if not b_param:
             b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
         
-        tpl   = (self._n, self._l, self._n_q, self._l_q, self._p)
-        tpl = _B_coeff_memo_accessor(*tpl)
+        if com_qqnn:
+            tpl_0   = (self._N, self._L, self._N_q, self._L_q, self._q)
+        else: ## relative qqnn
+            tpl_0   = (self._n, self._l, self._n_q, self._l_q, self._p)
+        
+        ## NOTE: the accessor sort the (n,l) > (n',l') to not evaluate it 
+        ## twice the element, since B(n,l,n',l', p) = B(n',l',n,l, p)
+        tpl = _B_coeff_memo_accessor(*tpl_0)
         
         global _B_Coefficient_Memo
         
         if not tpl in _B_Coefficient_Memo:
-            _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation()
-
+            _B_Coefficient_Memo[tpl] = self._B_coefficient_evaluation(*tpl_0)
         return _B_Coefficient_Memo[tpl] / (b_param**3)
     
-    def _B_coefficient_evaluation(self):
-        """ SHO normalization coefficients for WF, not b_length dependent """
-        
+    def _B_coefficient_evaluation(self, n, l, n_q, l_q, p):
+        """ 
+        SHO normalization coefficients for WF, not b_length dependent 
+        """
         # parity condition
-        if(((self._l + self._l_q)%2)!=0):
+        if(((l + l_q)%2)!=0):
             return 0
         
-        const = 0.5*((fact(self._n) + fact(self._n_q)
-                      + fact(2*(self._n + self._l) + 1)
-                      + fact(2*(self._n_q + self._l_q) + 1))
+        const = 0.5*((fact(n) + fact(n_q)
+                      + fact(2*(n + l) + 1)
+                      + fact(2*(n_q + l_q) + 1))
                       - 
-                      (fact(self._n + self._l)
-                       + fact(self._n_q + self._l_q))
+                      (fact(n + l)
+                       + fact(n_q + l_q))
                     )
         
-        const += fact(2*self._p + 1) - fact(self._p)
+        const += fact(2*p + 1) - fact(p)
         
-        const = (-1)**(self._p - (self._l + self._l_q)//2) * np.exp(const)
-        const /= (2**(self._n + self._n_q))
+        const = (-1)**(p - (l + l_q)//2) * np.exp(const)
+        const /= (2**(n + n_q))
         
         aux_sum = 0.
-        max_ = min(self._n, self._p - (self._l + self._l_q)//2)
-        min_ = max(0, self._p - (self._l + self._l_q)//2 - self._n_q)
+        max_ = min(n, p - (l + l_q)//2)
+        min_ = max(0, p - (l + l_q)//2 - n_q)
         
         for k in range(min_, max_ +1):
-            const_k = ((fact(self._l + k) 
-                      + fact(self._p - k - (self._l - self._l_q)//2))
+            const_k = ((fact(l + k) 
+                      + fact(p - k - (l - l_q)//2))
                        -
-                     (fact(k) + fact(self._n - k) + fact(2*(self._l + k) + 1)
-                      + fact(self._p - (self._l + self._l_q)//2 - k) 
-                      + fact(self._n_q - self._p + k + (self._l + self._l_q)//2)
-                      + fact(2*(self._p - k) + self._l_q - self._l + 1))
+                     (fact(k) + fact(n - k) + fact(2*(l + k) + 1)
+                      + fact(p - (l + l_q)//2 - k) 
+                      + fact(n_q - p + k + (l + l_q)//2)
+                      + fact(2*(p - k) + l_q - l + 1))
                     )
             aux_sum += np.exp(const_k)
         
@@ -736,10 +742,101 @@ class TalmiTransformation(_TalmiTransformation_SecureIter):
 
 class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
     
+    """
+    Generalization of the Talmi interaction to emply R - dependent terms
+    by extend the sumatory for N' != N and L' != L
+    """
+    
+    def __init__(self, bra, ket, run_it=True):
+        _TalmiTransformation_SecureIter.__init__(self, bra, ket, run_it=False)
+        
+        self._L_q = None
+        self._N_q = None
+        self._q   = None
+        
+        if not self.isNullMatrixElement and run_it:
+            # evaluate the normal and anti_symmetrized m.e.
+            self._run()
+    
+    def _validKet_totalAngularMomentums(self):
+        """ 
+        Valid orbital Angular momentum L to L' (system (r1 + r2)/2 )
+        """
+        raise MatrixElementException("Abstract Method, implement me!")
+    
+    def totalRCoordinateTalmiIntegral(self, **kwargs):
+        """
+        Define the integral for the total system in powers of r^q:
+            I_q = 2*b^3/Gamma(p+3/2) * 
+                        integral ( (dR/b) (R/b)^{2p+2} e^{-(R/2)^2} U(R))
+        being b the oscillator length.
+        """
+        raise MatrixElementException("Abstract method, implement me!")
+        
+    def _interactionSeries(self):
+        
+        sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('intSer')
+        B_LEN = self.PARAMS_SHO.get(SHO_Parameters.b_length)
+        for qqnn_bra in self._validCOM_qqnn('bra'):
+            
+            self._n, self._l, self._N, self._L = qqnn_bra
+            
+            bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, 
+                                 self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, 
+                                 self.L_bra)
+            if self.isNullValue(bmb_bra):
+                continue
+            if self.DEBUG_MODE:
+                XLog.write('intSer', nlNL=qqnn_bra)
+            
+            for qqnn_ket in self._validCOM_qqnn('ket'):
+                
+                self._n_q, self._l_q, self._N_q, self._L_q = qqnn_ket
+                
+                if not self._l_q in self._validKet_relativeAngularMomentums():
+                    continue
+                if not self._L_q in self._validKet_totalAngularMomentums():
+                    continue
+                skip  = (self._n_q + self._N_q)
+                skip -= (self._n + self._N) + (self.rho_ket - self.rho_bra )//2
+                if skip != 0: 
+                    continue
+                
+                bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N_q, self._L_q, 
+                                     self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
+                                     self.L_ket)
+                
+                if not self._deltaConditionsForCOM_Iteration():
+                    continue
+                if self.isNullValue(bmb_ket):
+                    continue
+                
+                _b_coeff_p = self._B_coefficient(B_LEN, com_qqnn=False)
+                _b_coeff_q = self._B_coefficient(B_LEN, com_qqnn=True )
+                _com_coeff = self._interactionConstantsForCOM_Iteration()
+                
+                aux =  _com_coeff * bmb_bra * bmb_ket * _b_coeff_p * _b_coeff_q
+                sum_ += aux
+                
+                # TODO: comment when not debugging
+                if self.DEBUG_MODE:
+                    XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q, 
+                               bmbs=bmb_bra * bmb_ket, 
+                               Bp=_b_coeff_p, Bq=_b_coeff_q, comCoeff=_com_coeff, 
+                               aux=aux)
+                #     self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
+        if self.DEBUG_MODE:
+            XLog.write('intSer', value=sum_)
+        return sum_
+    
     
     def _BrodyMoshinskyTransformation(self):
         """
         ##  WARNING: This method is final. Do not overwrite!!
+        
+        # This overwritting is for general R and r integrable interactions.
         
         Sum over valid p-Talmi integrals range (Energy + Ang. momentum + parity 
         conservation laws). Call implemented Talmi Coefficients for 
@@ -752,15 +849,22 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
         for p in range(max(self.rho_bra, self.rho_ket) +1):
             if self.DEBUG_MODE:
                 XLog.write('talmi', p=p)
-            self._p1 = p
-            # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
-            series = 2 * self._interactionSeries()
-            Ip =     self.talmiIntegral()
-            product = series * Ip
-            sum_ += product
-            # sum_ += self._interactionSeries() * self.talmiIntegral()
-            
-            if self.DEBUG_MODE:
-                XLog.write('talmi', series = series, Ip=Ip, val=product)
+            self._p = p
+            for q in range(max(self.rho_bra, self.rho_ket) +1):
+                if self.DEBUG_MODE:
+                    XLog.write('talmi', q=q)
+                self._q = q
+                
+                # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
+                series = 2 * self._interactionSeries()
+                Ip =     self.talmiIntegral()
+                Iq =     self.totalRCoordinateTalmiIntegral()
+                product = series * Ip * Iq
+                sum_ += product
+                                
+                if self.DEBUG_MODE:
+                    XLog.write('talmi', series = series, Ip=Ip, Iq=Iq, val=product)
+        
         return self._globalInteractionCoefficient() * sum_
     
+

@@ -11,9 +11,11 @@ from helpers.Helpers import safe_3j_symbols, almostEqual, safe_clebsch_gordan,\
     readAntoine
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled
+    MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled,\
+    _standardSetUpForCentralWithExchangeOps
 from helpers.Enums import CouplingSchemeEnum, AttributeArgs,\
-    SHO_Parameters, DensityDependentParameters
+    SHO_Parameters, DensityDependentParameters, BrinkBoekerParameters,\
+    CentralMEParameters
 from helpers.Log import XLog
 from helpers.integrals import _RadialDensityDependentFermi
 from helpers.WaveFunctions import QN_1body_radial, \
@@ -26,6 +28,7 @@ from copy import deepcopy, copy
 
 from helpers.Enums import DensityDependentParameters as dd_p
 from helpers.Enums import AttributeArgs as atrE
+from matrix_elements.transformations import TalmiGeneralizedTransformation
 
 # class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
 class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
@@ -822,16 +825,23 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         return tuple()
 
 
-
-
-class Density(object):
+class DensityFiniteRange_JTScheme(TalmiGeneralizedTransformation,
+                                  _TwoBodyMatrixElement_JTCoupled):
     '''
-    classdocs
+    Density for finite range for D2 type interactions.
+    Include the series of exchange operators as for D1 type interactions.
     '''
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Tensor interaction calculation. 
+        
+        Modification to import Exchange operators in the Brink-Boeker form.
+        """
+        cls = _standardSetUpForCentralWithExchangeOps(cls, **kwargs)        
+        
+        cls._integrals_p_max = -1
+        cls._talmiIntegrals  = []
 
-
-    def __init__(self, params):
-        '''
-        Constructor
-        '''
+    
         
