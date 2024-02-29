@@ -26,7 +26,7 @@ pip install pandas
 To update Python into a newer version see i.e. [How to Upgrade to Python 3.8 on Ubuntu](https://tech.serhatteker.com/post/2019-12/upgrade-python38-on-ubuntu/)
 
 ## Theory<a name="theory"></a>
-Many nuclear codes require require the implementation of a certain Hamiltonian two body interaction, for example, *Interaction-Shell-model* solves the Schrödinger equation by direct diagonalization of these hamiltonians. Others, like *Mean Field-HFB* like codes implement internally (predefined) the two-body Hamiltonian to access larger valence spaces
+Many nuclear codes require require the implementation of a certain Hamiltonian two body interaction, for example, *Interaction-Shell-model* solves the Schrï¿½dinger equation by direct diagonalization of these hamiltonians. Others, like *Mean Field-HFB* like codes implement internally (predefined) the two-body Hamiltonian to access larger valence spaces
 
 In this suite, we develop the tools to implement them and program several potentials of common use. The main base of single-particle wave functions is the *spherical harmonic oscillator (SHO)* (but could be extended to another basis).
 
@@ -37,7 +37,7 @@ The suite have extensions to connect with **taurus_vap** code, also for the diff
 Interactions are deal with the *object oriented paradigm*, in order to deal with their hierarchical complexity (coupling schemes, radial implementation, wave functions or specific constructions) and reuse  certain processes. Details of these ideas and the parameters/definitions of currently implemented matrix elements are in [docs/How_to_2B_MatrixElements.pdf](https://github.com/migueldelafuente1/2B_MatrixElements/blob/main/docs/How_to_2B_MatrixElements.pdf).
 
 ## Usage:<a name="usage"></a>
-### Compute a whole valence space using TBME_Runner, M.E. format à la Antoine<a name="TBMERunner"></a>
+### Compute a whole valence space using TBME_Runner, M.E. format ï¿½ la Antoine<a name="TBMERunner"></a>
 
 This program was originally designed to feed the interactions for a nuclear mean field code ([taurus_vap](https://github.com/project-taurus/taurus_vap)), that solves the Hartree-Fock-Bogoliubov equations for an arbitrary two-body interaction. The requirements for the Hamiltonian files are based in another shell model code called [Antoine](http://www.iphc.cnrs.fr/nutheo/code_antoine/menu.html), here we use its notation for the harmonic oscillator base.
 
@@ -75,12 +75,17 @@ where A, a and N are mandatory parameters to give when setting up. A=`constant` 
 * **Coulomb** interaction (J scheme)
 * **Brink-Boeker** like interactions or gaussian potential series.
 * **Short range Spin-Orbit** approximation potential
+* **Finite range Spin-Orbit** and **Finite range Tensor S12** interactions, dependent on arbitrary potentials and usual exchange potentials (Wigner, Barlett, Heisenberg, Majorana).
 * Fixed **Density dependent** (Nuclear Fermi shell filling approximation), updated for a fixed core-nucleus with different oscillator b length and Z/N different from SHO arguments.
 * **Series of potentials**, an extension of the Brink-Boeker sum of radial potential forms (any from the previous *Central* enumeration) to as many you want (I.e, to expand other potentials in terms of gaussians).
 * Get them **from a file**, reuse previous computations to save time (also valid to multiply the results by a global factor).
 * **Kinetic two-body** matrix element, necessary to evaluate the *center of mass* correction. Be careful with the internal setting of nucleon mass and *HbarC* constants in the code.
+* **Squared LS** and ** L^2** finite range interactions, for realistic nucleon-nucleon potentials, also with Exchange operators. 
 * **SDI / MSDI** (Surface Delta Interaction / Modified SDI) interaction is *Zero-range* and isospin-dependant. The modified version append a repulsive constant for the diagonal matrix elements in order to correct the binding energy misbehaviour of the SDI (Brussaard_ & Glaudemans_ book (1977)).
 * **Multipole-Delta** Multipole expansion of the dirac-delta interaction (explicit computation of the delta and sho-wf radial integral)
+* **Multipole-Moments** in the form Q_l*Q_l (Q_l=C_l r^l Y_lm), i.e. QuadrupoleQuadrupole intractions.
+* **Density-Dependent Forces**, set up for Gogny type parametrizations, in spherical symmetry and both for zero-range (also importable from rho/kappa wave functions data file) for D1S or the spherical-Fermi approximation for the **finite-range** for of the DG.
+* **Skyrme k-dependent components** (IN PROGRESS)
 ***
 
 ### Evaluating matrix elements individually<a name="MEindividual"></a>
