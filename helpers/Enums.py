@@ -58,10 +58,12 @@ class ForceEnum(Enum):
     SpinOrbit = 'SpinOrbit'
     SpinOrbitFiniteRange = 'SpinOrbitFiniteRange'
     SpinOrbitShortRange  = 'SpinOrbitShortRange'
+    SpinOrbitSquaredFiniteRange = 'SpinOrbitSquaredFiniteRange'
     Brink_Boeker  = 'Brink_Boeker'
     PotentialSeries = 'PotentialSeries'
     Density_Dependent = 'Density_Dependent'
     Density_Dependent_From_File = 'Density_From_File'
+    OrbitalMomentumSquared = 'OrbitalMomentumSquared'
     Kinetic_2Body  = 'Kinetic_2Body'
     Multipole_Delta  = 'Multipole_Delta'
     Multipole_Moment = 'Multipole_Moment'
@@ -139,15 +141,17 @@ class ForceFromFileParameters(Enum):
 ForceVariablesDict = {
     ForceEnum.Brink_Boeker    : BrinkBoekerParameters,
     ForceEnum.PotentialSeries : PotentialSeriesParameters,
-    ForceEnum.Central : CentralMEParameters,
+    ForceEnum.Central : CentralWithExchangeParameters,    # CentralMEParameters DEP
     ForceEnum.Coulomb : Enum,
     ForceEnum.Tensor  : CentralMEParameters,
     ForceEnum.TensorS12 : CentralWithExchangeParameters,
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.SpinOrbitFiniteRange: CentralWithExchangeParameters,
+    ForceEnum.SpinOrbitSquaredFiniteRange: CentralWithExchangeParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
-    ForceEnum.Density_Dependent_From_File   : DensityDependentParameters, 
+    ForceEnum.Density_Dependent_From_File: DensityDependentParameters,
+    ForceEnum.OrbitalMomentumSquared     : CentralWithExchangeParameters,
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,

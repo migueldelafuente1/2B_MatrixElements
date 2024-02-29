@@ -8,7 +8,8 @@ import numpy as np
 from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Coupling,\
     QN_1body_jj, _1Body_WaveFunction, _WaveFunction
 from helpers.Helpers import safe_wigner_9j
-from helpers.Enums import CouplingSchemeEnum
+from helpers.Enums import CouplingSchemeEnum, SHO_Parameters,\
+    BrinkBoekerParameters, AttributeArgs, CentralMEParameters
 from helpers.Log import XLog
 
 class MatrixElementException(BaseException):
@@ -449,7 +450,6 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         Obtains the non antisymmetrized matrix elements by recoupling to total
         L and S and call the Inner Interaction recoupled to LS - T scheme.
         """
-        
         sum_ = 0.
         
         L_max = self.bra.l1+self.bra.l2
@@ -649,4 +649,70 @@ class _MatrixElementReader(_TwoBodyMatrixElement):
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     _BREAK_ISOSPIN = False
+
+#===============================================================================
+#  COMMON METHODS AND FUNCTIONS FOR MATRIX ELEMENTS
+#===============================================================================
+
+def _standardSetUpForCentralWithExchangeOps(cls, **kwargs):
+    """
+    Process to set up Exchange operators and general central interactions.
+    
+    returns the class with the constant.
+    
+    Protocol:
+        0. Reset both sho parameters and force parameters of the class.
+        1. set up b length.
+        2. set up Force constants:
+            2.1. Parts for the radial potential (n_power, mu_length, potential)
+            2.2. Constants for the Exchange Operators
+                Wigner(n.a.), Barlett(spin), Heisenberg(isospin), Majorana(spatial)
+            2.3 set CentralMEParameters.constant = 1.0 for Moshinsky internal 
+                transformation, in case of Value given in the kwargs, warning and
+                assign to Wigner value if no BrinkBoekerParameters where given,
+                ** ommit it otherwise.
+    """
+    # Refresh the Force parameters
+    if cls.PARAMS_FORCE:
+        cls.PARAMS_FORCE = {}
+    
+    _b = SHO_Parameters.b_length
+    cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+    
+    cls.PARAMS_FORCE = {}
+    
+    ## Exchange forms, if not pressent, all will be 0.0
+    for param in BrinkBoekerParameters.members():
+        exch_param = kwargs.get(param, {})
+        cls.PARAMS_FORCE[param] = float(exch_param.get(AttributeArgs.value, 0.0))
+    
+    assert CentralMEParameters.potential in kwargs, "Argument [potential] is required."
+    potential_ = kwargs[CentralMEParameters.potential][AttributeArgs.name]
+    cls.PARAMS_FORCE[CentralMEParameters.potential] = potential_.lower()
+    cls.PARAMS_FORCE[CentralMEParameters.constant]  = 1.0
+    
+    if CentralMEParameters.n_power in kwargs:
+        n_pow = kwargs[CentralMEParameters.n_power][AttributeArgs.value]
+        cls.PARAMS_FORCE[CentralMEParameters.n_power] = int(n_pow)
+    
+    if (CentralMEParameters.constant in kwargs.keys()):
+        # print("[WARNING] Constant argument is not accepted for this matrix element, ",
+        #       "if no permutation-operators was given, the constant value ",
+        #       "will be assign to the Wigner term.")
+        exchange_constants = (
+            abs(cls.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner)),
+            abs(cls.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)),
+            abs(cls.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg)),
+            abs(cls.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)),
+        )
+        if sum(exchange_constants) > 1.0e-6:
+            print("  ** Constants assigned, omitting given constant "
+                  "(absolute value) W,B,H,M :", *exchange_constants )
+        else:
+            # print("  ** Constants not assigned, constant -> Wigner")
+            value_ = float(kwargs[CentralMEParameters.constant][AttributeArgs.value])
+            cls.PARAMS_FORCE[CentralMEParameters.constant] = value_
+            cls.PARAMS_FORCE[BrinkBoekerParameters.Wigner] = 1.0
+    #cls.plotRadialPotential()
+    return cls
     

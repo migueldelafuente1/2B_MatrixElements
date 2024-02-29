@@ -13,10 +13,11 @@ from helpers.Helpers import Constants, safe_wigner_6j,\
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled, \
     MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled,\
-    _OneBodyMatrixElement_jjscheme
+    _OneBodyMatrixElement_jjscheme, _standardSetUpForCentralWithExchangeOps
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
-    PotentialForms, SHO_Parameters, DensityDependentParameters
+    PotentialForms, SHO_Parameters, DensityDependentParameters,\
+    BrinkBoekerParameters
 from helpers.Log import XLog
 from helpers.integrals import _RadialDensityDependentFermi
 from helpers.WaveFunctions import QN_1body_radial, \
@@ -55,14 +56,6 @@ class CentralForce(TalmiTransformation):
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
-            #
-            # for arg, value in kwargs.items():
-            #     if arg in _map:
-            #         attr_parser = _map[arg]
-            #         attr_, parser_ = attr_parser
-            #         kwargs[arg] = parser_(kwargs[arg].get(attr_))
-            #     elif isinstance(value, str):
-            #         kwargs[arg] = float(value) if '.' in value else int(value)
             kwargs = CentralForce._automaticParseInteractionParameters(_map, kwargs)
             
         super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
@@ -127,6 +120,17 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
         ## numbers (X2 time), change 2* _series_coefficient
         return _TwoBodyMatrixElement_JTCoupled._run(self)
     
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Tensor interaction calculation. 
+        
+        Modification to import Exchange operators in the Brink-Boeker form.
+        """
+        cls = _standardSetUpForCentralWithExchangeOps(cls, **kwargs) 
+        
+        cls._integrals_p_max = -1
+        cls._talmiIntegrals  = []
     
     def _validKetTotalSpins(self):
         """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
@@ -139,8 +143,36 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
     def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        
+        (1-st without exchange)    return self.centerOfMassMatrixElementEvaluation()
         """
-        return self.centerOfMassMatrixElementEvaluation()
+        # Radial Part for Gaussian Integral
+        radial_energy = self.centerOfMassMatrixElementEvaluation()
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
+        
+        # Exchange Part
+        # W + P(S)* B - P(T)* H - P(T)*P(S)* M
+        _S_aux = (-1)**(self.S_bra + 1)
+        _T_aux = (-1)**(self.T)
+        _L_aux = (-1)**(self.T + self.S_bra + 1)
+        
+        exchange_energy = (
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner),
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)   * _S_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg) * _T_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)   * _L_aux
+        )
+        
+        # Add up
+        prod_part = radial_energy * sum(exchange_energy)
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', radial=radial_energy, exch=exchange_energy, 
+                       exch_sum=sum(exchange_energy), val=prod_part)
+        
+        return prod_part
     
 
 class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
@@ -345,3 +377,91 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
             
         return fact * self._kin_factor * nabla_1 * nabla_2
 
+class OrbitalMomentumSquared_JTScheme(CentralForce_JTScheme):
+    
+    """
+    Interaction for   V(r) * (Exchange_terms) * (l)^2
+    
+        This interaction uses the decomposition in relative j angular momentum
+    
+     Inhereted methods ::
+        def _validKetTotalSpins(self):                 S=S'
+        def _validKet_relativeAngularMomentums(self):  l=l_q
+        
+        def deltaConditionsForGlobalQN(self):          L_bra == Lket
+        
+        def _deltaConditionsForCOM_Iteration(self):    (l + S + T, even)
+    
+    """
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Tensor interaction calculation. 
+        
+        Modification to import Exchange operators in the Brink-Boeker form.
+        """
+        
+        cls = _standardSetUpForCentralWithExchangeOps(cls, **kwargs) 
+        
+        cls._integrals_p_max = -1
+        cls._talmiIntegrals  = []
+    
+    def _validKetTotalAngularMomentums(self):
+        """ There is delta in the lambda_ = lambda_' from the COM m.e. 6j  """
+        return (self.L_bra, )
+        
+    def centerOfMassMatrixElementEvaluation(self):
+        #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
+        """ 
+        Radial Brody-Moshinsky transformation, direct implementation for  
+        non-central spin orbit force.
+        """       
+        if not self.deltaConditionsForGlobalQN(): return 0
+        
+        aux = self._BrodyMoshinskyTransformation()
+        return  aux
+    
+    def _globalInteractionCoefficient(self):
+        """ _globalInteractionCoefficient() * sum_p { I(p) * series_(p) } """
+        
+        factor = np.sqrt((2*self.L_bra + 1))
+    
+        return  factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
+    
+    
+    def _interactionConstantsForCOM_Iteration(self):
+        # no special internal c.o.m interaction constants for the Central ME
+        ## l_q = l        
+        return self._l * (self._l + 1)
+    
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        """    
+        # Radial Part for Gaussian Integral
+        radial_energy = self.centerOfMassMatrixElementEvaluation()
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
+        
+        # Exchange Part
+        # W + P(S)* B - P(T)* H - P(T)*P(S)* M
+        _S_aux = (-1)**(self.S_bra + 1)
+        _T_aux = (-1)**(self.T)
+        _L_aux = (-1)**(self.T + self.S_bra + 1)
+        
+        exchange_energy = (
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner),
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)   * _S_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg) * _T_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)   * _L_aux
+        )
+        # Add up
+        prod_part = radial_energy * sum(exchange_energy)
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', radial=radial_energy, exch=exchange_energy, 
+                       exch_sum=sum(exchange_energy), val=prod_part)
+        
+        return prod_part

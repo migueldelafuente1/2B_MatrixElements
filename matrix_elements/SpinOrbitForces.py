@@ -12,7 +12,7 @@ from helpers.Helpers import safe_racah, safe_clebsch_gordan, safe_3j_symbols,\
     safe_wigner_6j
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    MatrixElementException
+    MatrixElementException, _standardSetUpForCentralWithExchangeOps
 from matrix_elements.transformations import TalmiTransformation
 from helpers.WaveFunctions import QN_2body_LS_Coupling, QN_1body_radial
 from helpers.integrals import _SpinOrbitPartialIntegral, _RadialIntegralsLS
@@ -71,8 +71,6 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         if not isinstance(ket, QN_2body_LS_Coupling):
             raise MatrixElementException("|ket> is not <QN_2body_LS_Coupling>")
     
-    
-    
     def _validKet_relativeAngularMomentums(self):
         """  Spin orbit interaction only allows l'==l"""
         return (self._l, )
@@ -121,7 +119,7 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
             return 0
         
         aux = factor * spin_me * self._BrodyMoshinskyTransformation()
-        return  aux # factor * spin_me * self._BrodyMoshinskyTransformation()
+        return  aux
     
     def _globalInteractionCoefficient(self):
         
@@ -199,47 +197,7 @@ class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
         
         Modification to import Exchange operators in the Brink-Boeker form.
         """
-        # Refresh the Force parameters
-        if cls.PARAMS_FORCE:
-            cls.PARAMS_FORCE = {}
-        
-        _b = SHO_Parameters.b_length
-        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
-        
-        cls.PARAMS_FORCE = {}
-        
-        ## Exchange forms, if not pressent, all will be 0.0
-        for param in BrinkBoekerParameters.members():
-            exch_param = kwargs.get(param, {})
-            cls.PARAMS_FORCE[param] = float(exch_param.get(AttributeArgs.value, 0.0))
-        
-        assert CentralMEParameters.potential in kwargs, "Argument [potential] is required."
-        potential_ = kwargs[CentralMEParameters.potential][AttributeArgs.name]
-        cls.PARAMS_FORCE[CentralMEParameters.potential] = potential_.lower()
-        cls.PARAMS_FORCE[CentralMEParameters.constant]  = 1.0
-        
-        if CentralMEParameters.n_power in kwargs:
-            n_pow = kwargs[CentralMEParameters.n_power][AttributeArgs.value]
-            cls.PARAMS_FORCE[CentralMEParameters.n_power] = int(n_pow)
-        
-        if (CentralMEParameters.constant in kwargs.keys()):
-            print("[WARNING] Constant argument is not accepted for this matrix element, ",
-                  "if no permutation-operators was given, the constant value ",
-                  "will be assign to the Wigner term.")
-            exchange_constants = (
-                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner)),
-                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)),
-                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg)),
-                abs(self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)),
-            )
-            if sum(exchange_constants) > 1.0e-6:
-                print("  ** Constants assigned, omitting given constant "
-                      "(absolute value) W,B,H,M :", *exchange_constants )
-            else:
-                print("  ** Constants not assigned, constant -> Wigner")
-                value_ = float(kwargs[CentralMEParameters.constant])
-                self.PARAMS_FORCE[BrinkBoekerParameters.Wigner] = value_
-        #cls.plotRadialPotential()
+        cls = _standardSetUpForCentralWithExchangeOps(cls, **kwargs)
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = []
@@ -276,6 +234,87 @@ class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
         
         return prod_part
 
+
+class SpinOrbitSquaredFiniteRange_JTScheme(SpinOrbitFiniteRange_JTScheme):
+    
+    """
+    Interaction for   V(r) * (Exchange_terms) * (l*S)^2
+    
+        This interaction uses the decomposition in relative j angular momentum
+    
+     Inhereted methods ::
+        def _validKet_relativeAngularMomentums(self):  l=l_q
+        
+        def deltaConditionsForGlobalQN(self):          L_bra - Lket <= 1
+        
+        def _deltaConditionsForCOM_Iteration(self):    (l + S + T, even)
+    
+        def _totalSpinTensorMatrixElement(self):       (NOT USED)
+    """
+    def _validKetTotalSpins(self):
+        """ Differs from standard l*S,  when j decoupling include both S=S' """
+        return (self.S_bra, )
+    
+    def centerOfMassMatrixElementEvaluation(self):
+        #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
+        """ 
+        Radial Brody-Moshinsky transformation, direct implementation for  
+        non-central spin orbit force.
+        """       
+        if not self.deltaConditionsForGlobalQN(): return 0
+        
+        aux = self._BrodyMoshinskyTransformation()
+        return  aux
+    
+    def _globalInteractionCoefficient(self):
+        """ _globalInteractionCoefficient() * sum_p { I(p) * series_(p) } """
+        phase   = (-1)**(self.L_bra + self.L_ket)
+        
+        factor = np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
+    
+        return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
+    
+    
+    def _interactionConstantsForCOM_Iteration(self):
+        # no special internal c.o.m interaction constants for the Central ME
+        ## l_q = l
+        j_min = max( abs(self.S_bra - self._l), abs(self.J - self._L))
+        j_max = min(     self.S_bra + self._l,      self.J + self._L)
+        
+        sum_ = 0.0
+        for j in range(j_min, j_max +1):
+            self._j_rel = j
+            fac_1 = safe_wigner_6j(self._l, self.L_bra,  self._L, 
+                                   self.J , self._j_rel, self.S_bra)
+            if self.isNullValue(fac_1): continue
+            fac_2 = safe_wigner_6j(self._l_q, self.L_ket,  self._L, 
+                                   self.J ,   self._j_rel, self.S_ket)
+            if self.isNullValue(fac_2): continue
+            
+            factor = (2*j + 1) * fac_1 * fac_2
+            sum_ += factor * self._spin_isospin_forCOM_Iteration()
+        
+        return sum_
+    
+    def _spin_isospin_forCOM_Iteration(self):
+        """
+        This matrix element sumarize the <lSjT |v| l'SjT> evaluation.
+        
+            Implemented (l*S)^2 = (j^2 - l^2 - S^2)^2
+        """
+        jjp1 = self._j_rel * (self._j_rel + 1)
+        llp1 = self._l * (self._l + 1)
+        ssp1 = self.S_bra * (self.S_bra + 1)
+        
+        aux = llp1*(llp1 + 2*ssp1) + jjp1*(jjp1 - 2*llp1) + ssp1*(ssp1 - 2*jjp1)
+        
+        return 0.25 * aux
+        # TEST: (for l*S) return 0.5 * (jjp1 - llp1 - ssp1)
+    
+    def _LScoupled_MatrixElement(self):
+        """ The exchange operators can be done here, reusing the method."""
+        return SpinOrbitFiniteRange_JTScheme._LScoupled_MatrixElement(self)    
+    
 
 class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
     

@@ -331,6 +331,8 @@ def _B_coeff_memo_accessor(n, l, n_q, l_q, p):
     _B_coeff_memo_accessor(0, 3, 1, 2, 1) >>> (0, 3, 1, 2, 1)
     
     Note: works for both Moshinsky_ and Talman_ coefficients
+    
+    Technical Note: The matrix element B(n,l,n',l', p) = B(n',l',n,l, p)
     """
     
     list_ = [*min((n, l), (n_q, l_q)), *max((n, l), (n_q, l_q)), p]
