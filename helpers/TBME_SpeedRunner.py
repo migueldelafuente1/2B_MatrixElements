@@ -372,7 +372,7 @@ class TBME_SpeedRunner(TBME_Runner):
                 
                 for t in _t_range:
                     ## Process to skip already calculated m.e if pnpn=npnp
-                    if (max(_t_range)==5 and self.forcesScheme[f].SYMMETRICAL_PNPN 
+                    if (max(_t_range)==5 and self.forces[f].SYMMETRICAL_PNPN 
                         and t in (3,4)):
                         t2 = 1 if (t == 4) else 2
                         val = self.me_instances[f][t2].value

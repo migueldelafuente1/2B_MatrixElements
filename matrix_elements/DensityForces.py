@@ -5,21 +5,22 @@ Created on 29 dic 2023
 '''
 
 import numpy as np
+import time
 from sympy import S
 
 from helpers.Helpers import safe_3j_symbols, almostEqual, safe_clebsch_gordan,\
-    readAntoine
+    readAntoine, gamma_half_int
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled,\
-    _standardSetUpForCentralWithExchangeOps
+    _standardSetUpForCentralWithExchangeOps, _TwoBodyMatrixElement_JCoupled
 from helpers.Enums import CouplingSchemeEnum, AttributeArgs,\
     SHO_Parameters, DensityDependentParameters, BrinkBoekerParameters,\
     CentralMEParameters
 from helpers.Log import XLog
 from helpers.integrals import _RadialDensityDependentFermi
 from helpers.WaveFunctions import QN_1body_radial, \
-    QN_2body_jj_J_Coupling, QN_1body_jj
+    QN_2body_jj_J_Coupling, QN_1body_jj, QN_2body_jj_JT_Coupling
 from helpers.mathFunctionsHelper import _buildAngularYCoeffsArray,\
     _buildRadialFunctionsArray, angular_Y_KM_index, sphericalHarmonic,\
     _angular_Y_KM_memo_accessor, _angular_Y_KM_me_memo
@@ -192,23 +193,13 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         return fact * radial
 
 
-class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupled,
-                                            DensityDependentForce_JTScheme):
+class _Base_DensityDep_FromFile_Jscheme(DensityDependentForce_JTScheme):
+    """
+    Abstract class for File importing and Grid-integration related methods
+    for methods that import a density from a taurus-wf file.
     
     """
-    Force for the D1S integrated over a real Mean field density from Taurus:
-        * final_wf.bin
-        * get from txt (easy)
-    Uses the same parameters as the D1S:
-        TODO: Might be necessary the Levedeb_ integration or some sort of 
-            importing for a very precise grid (i,e, Omega=20)
-        # Laguerre_ is also valid x4 points
         
-        
-        # use J scheme to integrate directly over the j-m functions,
-    
-    """
-    
     COUPLING        = CouplingSchemeEnum.JJ
     RECOUPLES_LS    = False
     _BREAK_ISOSPIN  = True
@@ -220,8 +211,8 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
-        super(DensityDependentForceFromFile_JScheme, cls).\
-            setInteractionParameters(*args, **kwargs)
+        super(_Base_DensityDep_FromFile_Jscheme, cls)\
+            .setInteractionParameters(*args, **kwargs)
             
         # Get the filename
         cls._file2import    = None
@@ -231,6 +222,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         cls._sp_states      = [] # <QN_1body_jj> with m and mt
         cls._sp_dim         = None
         cls._orbital_max_sph_harmonic = 0
+        cls._isInDensitySetUpState = True
         
         cls._r   = []  # r of the grid for the me, = HO_b*(x/Alpha+2)^1/2
         cls._ang = []
@@ -250,10 +242,28 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         cls.evalutate_spatial_density()
         
         ## Reset the states to use in the new valence space.
-        cls._sh_states      = [] # <int> index in l_ge_10 format
+        # cls._sh_states      = [] # <int> index in l_ge_10 format
         cls._sp_states      = [] # <QN_1body_jj> with m and mt
         cls._sp_dim         = 0
         cls._orbital_max_sph_harmonic = 0
+        cls._isInDensitySetUpState = False
+        
+        ## Reset the radial and angular functions for the VSpace B-length
+        cls.setBasis2BFunctions(cls.PARAMS_SHO.get(SHO_Parameters.b_length))
+    
+    @classmethod
+    def setRadialIntegrationGrid(cls, R_dim):
+        """
+        Overwritable method for the integral variable
+        """
+        from scipy.special import roots_genlaguerre
+        
+        B_LEN  = cls.PARAMS_SHO.get(SHO_Parameters.b_length, 1.0)
+        ALPHA_ = cls.PARAMS_FORCE.get(dd_p.alpha,  1.0)
+        
+        xR, wR, sum_ = roots_genlaguerre(R_dim, 0.5, True)
+        cls._r =  B_LEN * np.sqrt(xR / (2.0 + ALPHA_)) # 
+        cls._weight_r = wR
     
     @classmethod
     def setIntegrationGrid(cls, R_dim, OmegaOrd):
@@ -263,15 +273,11 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
             Implement Levedev Integral (At least one for a large Omega order)
         """
         if SCIPY_INSTALLED:
-            from scipy.special import roots_genlaguerre, roots_legendre
+            from scipy.special import roots_legendre
         else:
             raise MatrixElementException("Scipy Required to use this MatrixElement")
-        B_LEN  = cls.PARAMS_SHO.get(SHO_Parameters.b_length, 1.0)
-        ALPHA_ = cls.PARAMS_FORCE.get(dd_p.alpha,  1.0)
         ## Radial Grid
-        xR, wR, sum_ = roots_genlaguerre(R_dim, 0.5, True)
-        cls._r =  B_LEN * np.sqrt(xR / (2.0 + ALPHA_)) # 
-        cls._weight_r = wR
+        cls.setRadialIntegrationGrid(R_dim)
         
         cls._R_DIM = R_dim
         cls._OMEGA = OmegaOrd
@@ -313,12 +319,12 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         Once given the w.f. and having the b_lengths (core, m.e.)
         Set the angular and Radial functions and angular coefficents.
         """
-                        
         radial2b = _buildRadialFunctionsArray(cls._sh_states, HO_b_length)
         cls._radial_2b_wf_memo = deepcopy(radial2b)
         
         # Build Base for Angular and Radial coefficients of the quantum numbers
-        K_max = _buildAngularYCoeffsArray(cls._sh_states)
+        K_max = _buildAngularYCoeffsArray(cls._sh_states,
+                                          reset_file_test = cls._isInDensitySetUpState)
         cls._orbital_max_sph_harmonic = K_max
         
         # from scipy.special import sph_harm
@@ -326,6 +332,8 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         for K in range(cls._orbital_max_sph_harmonic +1):
             for M in range(-K, K +1):
                 ind_k = angular_Y_KM_index(K, M, False)
+                
+                if ind_k in cls._sph_harmonic_memo: continue
                 
                 ang_func = [sphericalHarmonic(K, M, angle) for angle in cls._ang]
                 ang_func = np.array(ang_func)
@@ -335,6 +343,13 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         """ 
         Run each time the introduction of a new sh state, to be run at the
         constructor.
+        
+        This function is only used from the instanciation, since the valence space
+        from the matrix elements might be different from the ones defined for the
+        density wave function. I.e. VAL-space = [0f1p], WF: [0s, 0p, 1s0d]
+        
+        The coefficients for the <a|Y_KM|b> and the radial wavefunctions must be
+        reevaluated
         """
         
         new_found = False      
@@ -343,7 +358,7 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                     self.ket.sp_state_1.AntoineStrIndex_l_greatThan10, 
                     self.ket.sp_state_2.AntoineStrIndex_l_greatThan10):
             
-            if st_ not in self._sh_states:
+            if not (int(st_) in self._sh_states):
                 self._sh_states.append(int(st_))
                 n, l, j = readAntoine(st_, l_ge_10=True)
                 self._sp_dim += 2*(j + 1) # counting p and n
@@ -367,6 +382,10 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         
         Note, in order to speed up the density matrix summation"""
         spO2 = cls._sp_dim // 2
+        dens_pn = cls._density_matrix[b, a], cls._density_matrix[b+spO2, a+spO2]
+        
+        if sum(dens_pn) < 1.0e-6: return 
+        
         for K in range(abs(ja-jb)//2, (ja+jb)//2 +1):
             M = (mjb - mja) // 2
             if ((abs(M) > K) or ((K + la + lb) % 2 == 1)):
@@ -383,12 +402,48 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                     angular = cls._sph_harmonic_memo[indx_K][ia] * c_ang
                     val = cls._aux_radial[ir] * angular
                     
-                    val_p = val * cls._density_matrix[b, a]
-                    val_n = val * cls._density_matrix[b + spO2, a + spO2]
+                    val_p = val * dens_pn[0]
+                    val_n = val * dens_pn[1]
                     
                     val = val_p + val_n
                     cls._spatial_dens_imag[ir, ia] += np.imag(val)
                     cls._spatial_dens[ir, ia]      += np.real(val)
+    
+    @classmethod
+    def _testDensityIntegratingForMassNumber(cls, t_start):
+        """
+        This test verify int(density) = A
+        """
+        integ_A = 0.0
+        ALPHA_  = cls.PARAMS_FORCE[dd_p.alpha]
+        for ir in range(len(cls._r)):
+            radial  = np.exp(( (2.0+ALPHA_) * (cls._r[ir] / cls._b_density)**2))
+            for ia in range(len(cls._ang)):
+                val  = cls._spatial_dens[ir, ia] 
+                val *= cls._weight_ang[ia] * cls._weight_r[ir]
+                integ_A +=  radial * val
+                #
+                # cls._spatial_dens_alp[ir,ia] = cls._spatial_dens[ir,ia] **ALPHA_
+        
+        integ_A *= (cls._b_density**3) / (2.0*((2.0 + ALPHA_)**1.5))
+        if cls.USING_LEBEDEV:
+            integ_A *= 4 * np.pi
+        else:
+            integ_A *= np.pi ## not checked
+        
+        import matplotlib.pyplot as plt
+        
+        fig_ = plt.figure
+        off_diag = deepcopy(cls._density_matrix)
+        # for i in range(cls._sp_dim):
+        #     if off_diag[i,i] > 0.1:
+        #         off_diag[i,i] = 0
+        plt.imshow(off_diag)
+        plt.show()
+        # TODO:: Test the density
+        t_ = (time.time() - t_start)
+        print( " [DONE] Spatial Density has been imported and evaluated. ",
+              f"({t_:5.3f}s) A={integ_A:9.5f}")
     
     @classmethod
     def evalutate_spatial_density(cls):
@@ -396,17 +451,16 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         Evaluate the radial and angular functions for the Mean field W.F.
         """
         global _angular_Y_KM_me_memo
-        import time
-        t_ = time.time()
+        t_0 = time.time()
         print(f" [ ] Evaluating Spatial Density ...")
         
         cls._spatial_dens = np.zeros( (cls._R_DIM, cls._A_DIM) )
         cls._spatial_dens_imag = np.zeros( (cls._R_DIM, cls._A_DIM) ) ## test
         cls._spatial_dens_alp  = np.zeros( (cls._R_DIM, cls._A_DIM) )
-        tot_ = (cls._sp_dim // 2) * (cls._sp_dim // 2 + 1) // 2
+        
         for a  in range(cls._sp_dim // 2):
             # print("  progr. a% =", tot_*(1 - a) - (a*(a-1)//2), "/", tot_)
-            print("  progr a:", a+1, "/", cls._sp_dim // 2)
+            if a % 5 == 0: print(f"  progr a:{a+1:>3.0f}/{cls._sp_dim//2:>3.0f}")
             sp_st_a = cls._sp_states[a]
             na, la, ja, mja = sp_st_a.n, sp_st_a.l, sp_st_a.j, sp_st_a.m
             indx_a = angular_Y_KM_index(ja, mja, True)
@@ -428,47 +482,10 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                     cls._angularComponentsForDensity(b,lb,jb,mjb,indx_b,
                                                      a,la,ja,mja,indx_a)
         
-        integ_A = 0.0
-        ALPHA_  = cls.PARAMS_FORCE[dd_p.alpha]
-        for ir in range(len(cls._r)):
-            radial  = np.exp(( (2.0+ALPHA_) * (cls._r[ir] / cls._b_density)**2))
-            for ia in range(len(cls._ang)):
-                val  = cls._spatial_dens[ir, ia] 
-                val *= cls._weight_ang[ia] * cls._weight_r[ir]
-                integ_A +=  radial * val
-                
-                cls._spatial_dens_alp[ir,ia] = cls._spatial_dens[ir,ia] **ALPHA_
+        cls._spatial_dens_alp = np.power(cls._spatial_dens, 
+                                         cls.PARAMS_FORCE[dd_p.alpha])
         
-        integ_A *= (cls._b_density**3) / (2.0*((2.0 + ALPHA_)**1.5))
-        if cls.USING_LEBEDEV:
-            integ_A *= 4 * np.pi
-        else:
-            integ_A *= np.pi ## not checked
-        _= 0
-        
-        import matplotlib.pyplot as plt
-        #
-        # fig_ = plt.figure()
-        # for ia in range(0, len(cls._ang), cls._OMEGA):
-        #     lab = f'ang={cls._ang[ia][0]:4.2f}, {cls._ang[ia][1]:4.2f}'
-        #     plt.plot(cls._r, cls._spatial_dens[:, ia], label=lab)
-        #
-        # plt.legend()
-        # plt.show()
-        #
-        fig_ = plt.figure
-        off_diag = deepcopy(cls._density_matrix)
-        # for i in range(cls._sp_dim):
-        #     if off_diag[i,i] > 0.1:
-        #         off_diag[i,i] = 0
-        plt.imshow(off_diag)
-        plt.show()
-        # TODO:: Test the density
-        t_ = (time.time() - t_)
-        print( " [DONE] Spatial Density has been imported and evaluated. ",
-              f"({t_:5.3f}s) A={integ_A:9.5f}")
-                
-        
+        cls._testDensityIntegratingForMassNumber(t_0)
     
     @classmethod
     def _setUpDensityMatrices(cls, dim_, u0_mat, v0_mat):
@@ -489,14 +506,6 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         cls._density_matrix = np.matmul(V.conjugate(), np.transpose(V)) 
         cls._kappa_matrix   = np.matmul(V.conjugate(), np.transpose(U))
         
-        # print("Warning, copying 16O diagonal wf")
-        # cls._density_matrix = np.zeros((dim_, dim_))
-        # for i in range(dim_ // 2):
-        #     if i >= 8: 
-        #         continue
-        #     cls._density_matrix[i,i] = 1
-        #     cls._density_matrix[(dim_//2) + i,(dim_//2) + i] = 1
-        
         ## Set the sp_states in the file order
         for mt in (-1, 1):
             for sh_st in cls._sh_states:
@@ -504,6 +513,30 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
                 m_vals = [i for i in range(j, -j-1, -2)]
                 for m in m_vals:
                     cls._sp_states.append(QN_1body_jj(n, l, j, m, mt))
+                    
+        cls._isSphericalWF()
+    
+    @classmethod
+    def _isSphericalWF(cls):
+        """
+        Spherical wave functions are mj independent for the density matrices
+        """
+        if (cls._sp_dim == 0):
+            raise MatrixElementException("This internal method must be called after defining the density matrices")
+                
+        is_spherical = True
+        for a, st_a in enumerate(cls._sp_states):
+            for b in range(a, len(cls._sp_states)):
+                st_b = cls._sp_states[b]
+                
+                if st_a.m_t != st_b.m_t: continue
+                if not almostEqual(cls._density_matrix[b, a], 0.0, 1.0e-7):
+                    is_spherical *= st_a.m == st_b.m
+        
+        if not bool(is_spherical):
+            raise MatrixElementException("The wave function is NOT spherical.")
+        else:
+            print(" [TEST] Imported wf is spherically symmetric.")
         
     @classmethod
     def _readBinary(cls):
@@ -587,21 +620,37 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         
         b_length = cls.PARAMS_SHO.get(SHO_Parameters.b_length, 1.0)
         ## Use the b_length for the calculation as default.
-        if (dd_p.core in cls.PARAMS_FORCE):
+        if cls._has_core_b_lenght:
             ## In case of b_core explicitly given, use it for the w.f.
-            _b_core = cls.PARAMS_FORCE[dd_p.core].get(atrE.ForceArgs.DensDep.core_b_len)
-            if ( (_b_core != None) and (_b_core.replace('.', '').isnumeric()) ):
-                b_length = float(_b_core)
+            b_length = cls.PARAMS_CORE.get(atrE.ForceArgs.DensDep.core_b_len)
         cls._b_density = b_length
         
         ## Do the wave function setting for the density
         cls.setBasis2BFunctions(b_length)
 
-    def __checkInputArguments(self, bra, ket):
-        if not isinstance(bra, QN_2body_jj_J_Coupling):
-            raise MatrixElementException("<bra| is not <QN_2body_jj_J_Coupling>")
-        if not isinstance(ket, QN_2body_jj_J_Coupling):
-            raise MatrixElementException("|ket> is not <QN_2body_jj_J_Coupling>")
+    
+
+class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupled,
+                                            _Base_DensityDep_FromFile_Jscheme):
+    
+    """
+    Force for the D1S integrated over a real Mean field density from Taurus:
+        * final_wf.bin
+        * get from txt (easy)
+    Uses the same parameters as the D1S:
+        TODO: Might be necessary the Levedeb_ integration or some sort of 
+            importing for a very precise grid (i,e, Omega=20)
+        # Laguerre_ is also valid x4 points
+        
+        
+        # use J scheme to integrate directly over the j-m functions,
+    
+    """
+    COUPLING        = CouplingSchemeEnum.JJ
+    RECOUPLES_LS    = False
+    _BREAK_ISOSPIN  = True
+    
+    EXPLICIT_ANTISYMM = True
     
     def __init__(self, bra, ket, run_it=True):
         
@@ -623,7 +672,13 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         
         if not self.isNullMatrixElement and run_it: # always run it
             self._run()
-              
+    
+    def __checkInputArguments(self, bra, ket):
+        if not isinstance(bra, QN_2body_jj_J_Coupling):
+            raise MatrixElementException("<bra| is not <QN_2body_jj_J_Coupling>")
+        if not isinstance(ket, QN_2body_jj_J_Coupling):
+            raise MatrixElementException("|ket> is not <QN_2body_jj_J_Coupling>")
+      
     def _run(self):
         
         if self.isNullMatrixElement:
@@ -825,12 +880,23 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         return tuple()
 
 
-class DensityFiniteRange_JTScheme(TalmiGeneralizedTransformation,
-                                  _TwoBodyMatrixElement_JTCoupled):
+class DensityFiniteRange_JTScheme(_Base_DensityDep_FromFile_Jscheme,
+                                  TalmiGeneralizedTransformation):
     '''
     Density for finite range for D2 type interactions.
     Include the series of exchange operators as for D1 type interactions.
     '''
+    COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
+    EXPLICIT_ANTISYMM = False
+    RECOUPLES_LS      = True
+    
+    _BREAK_ISOSPIN  = False
+    
+    _R_DIM = 20
+    _A_DIM =  0
+    _OMEGA = 20
+    USING_LEBEDEV = True
+    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """ 
@@ -838,10 +904,234 @@ class DensityFiniteRange_JTScheme(TalmiGeneralizedTransformation,
         
         Modification to import Exchange operators in the Brink-Boeker form.
         """
-        cls = _standardSetUpForCentralWithExchangeOps(cls, **kwargs)        
+        
+        if dd_p.x0 in kwargs:
+            raise MatrixElementException("x0 is not valid in this interaction.")
+        
+        if dd_p.file in kwargs or dd_p.core in kwargs:
+            kwargs[dd_p.x0] = 0
+            kwargs[dd_p.constant] = 1.0
+            super(DensityFiniteRange_JTScheme, cls).setInteractionParameters(**kwargs)
+            
+            del cls.PARAMS_FORCE[dd_p.x0]
+        # has to be applied after
+        cls = _standardSetUpForCentralWithExchangeOps(cls, refresh_params=False,
+                                                      **kwargs)
+        
+        ## the radial integral for the gaussian includes a factor from mu_3
+        aux = (np.pi**0.5) * cls.PARAMS_FORCE[CentralMEParameters.mu_length]
+        cls.PARAMS_FORCE[CentralMEParameters.constant] /= (aux)**3 
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = []
-
     
+    
+    def __checkInputArguments(self, bra, ket):
+        if not isinstance(bra, QN_2body_jj_JT_Coupling):
+            raise MatrixElementException("<bra| is not <QN_2body_jj_J_Coupling>")
+        if not isinstance(ket, QN_2body_jj_JT_Coupling):
+            raise MatrixElementException("|ket> is not <QN_2body_jj_J_Coupling>")
+    
+    def __init__(self, bra, ket, run_it=True):
+        self.__checkInputArguments(bra, ket)
         
+        self.bra = bra
+        self.ket = ket
+        
+        self.J = bra.J
+        self.T = bra.T
+        
+        self.exchange_phase = None
+        self.exch_2bme = None
+        
+        self._nullConditionForSameOrbit()
+        if not self.isNullMatrixElement and run_it: # always run it
+            self._run()
+    
+    def _run(self):
+        if self.isNullMatrixElement:
+            return
+        else:
+            self._actualizeTheBasisFunctions()
+            
+            _TwoBodyMatrixElement_JTCoupled._run(self)
+    
+    def _validKet_relativeAngularMomentums(self):
+        return (self._l, )
+    
+    def _validKet_totalAngularMomentums(self):
+        return (self._L, )
+        
+    def _validKetTotalSpins(self):
+        return (self.S_bra, )
+    
+    def _validKetTotalAngularMomentums(self):
+        return (self.L_bra, )
+    
+    def _deltaConditionsForCOM_Iteration(self):
+        """
+        Spherical symmetry ensure central contribution,
+        Central contribution ensure  both l == l' and L == L', 
+        but for generalized Talmi, N is not necessarily N = N'
+        
+        Also check the antisymmetrization as in a central force
+        """
+        if (((self.S_bra + self.T + self._l) % 2 == 1) and 
+            ((self.S_ket + self.T + self._l_q) % 2 == 1)):      
+            return (self._l == self._l_q) and (self._L == self._L_q)
+        return False
+    
+    @classmethod
+    def setRadialIntegrationGrid(cls, R_dim):
+        """
+        Overwritable method for the integral variable
+        """
+        from scipy.special import roots_genlaguerre
+        
+        B_LEN  = cls.PARAMS_SHO.get(SHO_Parameters.b_length, 1.0)
+        ALPHA_ = cls.PARAMS_FORCE.get(dd_p.alpha,  1.0)
+        
+        xR, wR, sum_ = roots_genlaguerre(R_dim, 0.5, True)
+        cls._r =  B_LEN * np.sqrt(xR / (1.0 + ALPHA_)) # 
+        cls._weight_r = wR
+    
+    @classmethod
+    def _testDensityIntegratingForMassNumber(cls, t_start):
+        """
+        This test verify int(density) = A
+        """
+        integ_A = 0.0
+        ALPHA_  = cls.PARAMS_FORCE[dd_p.alpha]
+        for ir in range(len(cls._r)):
+            radial  = np.exp(( (ALPHA_+1) * (cls._r[ir] / cls._b_density)**2))
+            for ia in range(len(cls._ang)):
+                val  = cls._spatial_dens[ir, ia] 
+                val *= cls._weight_ang[ia] * cls._weight_r[ir]
+                integ_A +=  radial * val
+        
+        integ_A *= (cls._b_density**3) / (2.0*((1.0 + ALPHA_)**1.5))
+        if cls.USING_LEBEDEV:
+            integ_A *= 4 * np.pi
+        else:
+            integ_A *= np.pi ## not checked
+        
+        import matplotlib.pyplot as plt
+        
+        fig_ = plt.figure
+        off_diag = deepcopy(cls._density_matrix)
+        # for i in range(cls._sp_dim):
+        #     if off_diag[i,i] > 0.1:
+        #         off_diag[i,i] = 0
+        plt.imshow(off_diag)
+        plt.show()
+        # TODO:: Test the density
+        t_ = (time.time() - t_start)
+        print( " [DONE] Spatial Density has been imported and evaluated. ",
+              f"({t_:5.3f}s) A={integ_A:9.5f}")
+    
+    def totalRCoordinateTalmiIntegral(self, **kwargs):
+        """
+        Integral for the <NL | rho^alpha(R) | N'L'>
+        """
+        ## TEST: should result in identity for the gausian with mu=infinity
+        # if (self._N == self._N_q) and (self._L == self._L_q):
+        #     return self.PARAMS_SHO[SHO_Parameters.b_length] ** 3
+        # return 0.0
+        
+        ALPHA_ = self.PARAMS_FORCE[dd_p.alpha]
+        B_LEN_ = self.PARAMS_SHO[SHO_Parameters.b_length]
+
+        # In this integral you dont have radial functions to integrate, 
+        # then the factor is exp((1+alpha)r^2), being 1 from Talmi integral exp
+        
+        # Ignore the angular sum
+        radial  = np.power(self._r / B_LEN_, 2*self._q) * self._weight_r
+        radial *= self._spatial_dens_alp[:,0]
+        radial *= np.exp((ALPHA_ + 1) * np.power(self._r / B_LEN_, 2))
+        
+        me_val  = sum(radial) * (B_LEN_**3) 
+        me_val /= np.exp(gamma_half_int(2*self._q + 3))         
+        me_val /= (1.0 + ALPHA_)**1.5
+        
+        return me_val
+        
+        ## Quadrature Test for a gaussian   ================================= ##
+        #
+        # Using the same variable as the implemented for density,
+        #     int(du*u**(1/2)exp-u) * [(u/A+1)**q / exp( (X**2 - A)/(A+1))]
+        #
+        #     but for the quadrature, substitute r = b * (u / alpha + 1)**.5
+        # It is not necesssary to fix n=n' & l=l'
+        #
+        # Ignoring the quadrature, one can export the Talmi integral.
+        # return (B_LEN_**3) / ((1 + (B_LEN_/MU_LEN)**2)**(self._q + 1.5))
+        ## ================================================================== ##
+        
+        MU_LEN  = self.PARAMS_FORCE[CentralMEParameters.mu_length]
+        XX = B_LEN_ / MU_LEN
+        radial = np.power(self._r / B_LEN_ , 2*self._q) * self._weight_r
+        radial /= np.exp((self._r / B_LEN_)**2 * ((XX**2) - ALPHA_))
+        
+        me_val  = sum(radial) * (B_LEN_**3) 
+        me_val /= np.exp(gamma_half_int(2*self._q + 3))        
+        me_val /= (1.0 + ALPHA_)**(1.5)
+        
+        return me_val
+        
+    def _interactionConstantsForCOM_Iteration(self):
+        # no special internal c.o.m interaction constants for the Central ME
+        return 1
+    
+    def _globalInteractionCoefficient(self):
+        """
+            no special interaction constant for the Central ME.
+        In the case of D2, the constant is the factor (sqrt_pi*mu3)**-3
+        """
+        return self.PARAMS_FORCE.get(CentralMEParameters.constant)
+    
+    def centerOfMassMatrixElementEvaluation(self):
+        """ 
+        
+        """
+        return self._BrodyMoshinskyTransformation()
+    
+    
+    def _LScoupled_MatrixElement(self):
+        self._actualizeTheBasisFunctions()
+        
+        # Radial Part for Gaussian Integral
+        radial_energy = self.centerOfMassMatrixElementEvaluation()
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
+        
+        # Exchange Part
+        # W + P(S)* B - P(T)* H - P(T)*P(S)* M
+        _S_aux = (-1)**(self.S_bra + 1)
+        _T_aux = (-1)**(self.T)
+        _L_aux = (-1)**(self.T + self.S_bra + 1)
+        
+        exchange_energy = (
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner),
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)   * _S_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg) * _T_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)   * _L_aux
+        )
+        # Add up
+        prod_part = radial_energy * sum(exchange_energy)
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', radial=radial_energy, exch=exchange_energy, 
+                       exch_sum=sum(exchange_energy), val=prod_part)
+        
+        return prod_part
+    
+    
+class LaplacianDensityDependent_JScheme(DensityDependentForceFromFile_JScheme):
+    """
+    Evaluation of the pseudo-rearrangement from density profile differentiation
+    
+        V = t3 * 2 * alpha * rho^(alpha-1) * sqrt(Laplacian rho)
+    """
+    pass
+    

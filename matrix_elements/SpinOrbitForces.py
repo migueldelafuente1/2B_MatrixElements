@@ -6,7 +6,7 @@ Created on Mar 8, 2021
 import numpy as np
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters,\
-    BrinkBoekerParameters
+    BrinkBoekerParameters, PotentialForms
 from helpers.Enums import AttributeArgs, SHO_Parameters
 from helpers.Helpers import safe_racah, safe_clebsch_gordan, safe_3j_symbols,\
     safe_wigner_6j
@@ -59,6 +59,12 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
+            for attr in (CentralMEParameters.opt_cutoff,
+                         CentralMEParameters.opt_mu_2,
+                         CentralMEParameters.opt_mu_3):
+                if attr in kwargs:
+                    _map[attr] = (AttributeArgs.value, float)
+            
             kwargs = SpinOrbitForce._automaticParseInteractionParameters(_map, kwargs)
         
         super(SpinOrbitForce, cls).setInteractionParameters(*args, **kwargs)
@@ -209,9 +215,6 @@ class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
         # Radial Part for Gaussian Integral
         radial_energy = self.centerOfMassMatrixElementEvaluation()
         
-        if self.DEBUG_MODE:
-            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
-        
         # Exchange Part
         # W + P(S)* B - P(T)* H - P(T)*P(S)* M
         _S_aux = (-1)**(self.S_bra + 1)
@@ -224,7 +227,6 @@ class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
             self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg) * _T_aux,
             self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)   * _L_aux
         )
-        
         # Add up
         prod_part = radial_energy * sum(exchange_energy)
         
@@ -235,7 +237,7 @@ class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
         return prod_part
 
 
-class SpinOrbitSquaredFiniteRange_JTScheme(SpinOrbitFiniteRange_JTScheme):
+class Quadratic_SpinOrbit_JTScheme(SpinOrbitFiniteRange_JTScheme):
     
     """
     Interaction for   V(r) * (Exchange_terms) * (l*S)^2
@@ -244,13 +246,11 @@ class SpinOrbitSquaredFiniteRange_JTScheme(SpinOrbitFiniteRange_JTScheme):
     
      Inhereted methods ::
         def _validKet_relativeAngularMomentums(self):  l=l_q
-        
         def deltaConditionsForGlobalQN(self):          L_bra - Lket <= 1
-        
         def _deltaConditionsForCOM_Iteration(self):    (l + S + T, even)
-    
         def _totalSpinTensorMatrixElement(self):       (NOT USED)
     """
+    
     def _validKetTotalSpins(self):
         """ Differs from standard l*S,  when j decoupling include both S=S' """
         return (self.S_bra, )
@@ -269,18 +269,18 @@ class SpinOrbitSquaredFiniteRange_JTScheme(SpinOrbitFiniteRange_JTScheme):
     def _globalInteractionCoefficient(self):
         """ _globalInteractionCoefficient() * sum_p { I(p) * series_(p) } """
         phase   = (-1)**(self.L_bra + self.L_ket)
-        
+    
         factor = np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
     
         return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
-    
+        
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME
         ## l_q = l
         j_min = max( abs(self.S_bra - self._l), abs(self.J - self._L))
         j_max = min(     self.S_bra + self._l,      self.J + self._L)
-        
+    
         sum_ = 0.0
         for j in range(j_min, j_max +1):
             self._j_rel = j
@@ -290,10 +290,10 @@ class SpinOrbitSquaredFiniteRange_JTScheme(SpinOrbitFiniteRange_JTScheme):
             fac_2 = safe_wigner_6j(self._l_q, self.L_ket,  self._L, 
                                    self.J ,   self._j_rel, self.S_ket)
             if self.isNullValue(fac_2): continue
-            
+    
             factor = (2*j + 1) * fac_1 * fac_2
             sum_ += factor * self._spin_isospin_forCOM_Iteration()
-        
+    
         return sum_
     
     def _spin_isospin_forCOM_Iteration(self):

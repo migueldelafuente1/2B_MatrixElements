@@ -5,13 +5,14 @@ Created on Mar 12, 2021
 '''
 import numpy as np
 
-from helpers.Enums import PotentialForms
+from helpers.Enums import PotentialForms, CentralMEParameters
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
     safe_clebsch_gordan, _B_coeff_memo_accessor,\
     getStatesAndOccupationUpToLastOccupied, shellSHO_Notation,\
     getStatesAndOccupationOfFullNucleus
 from helpers.Log import XLog
 from . import SCIPY_INSTALLED
+from copy import deepcopy
 # SCIPY_INSTALLED = 1
 if SCIPY_INSTALLED:
     from scipy.special import gammaincc, gamma
@@ -28,7 +29,21 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     :b_param    SHO length parameter
     :mu_param   force proportional coefficient (by interaction definition)
     :n_power    auxiliary parameter for power dependent potentials
+
+    :kwargs are optional parameters defined in CentralParams
     """
+    
+    ## In case of CUTOFF :: The integral would have a filtering convolution.
+    ##     Connect with the propper new function and fix the constants:
+    if CentralMEParameters.opt_cutoff in kwargs:
+        kwargs2 = deepcopy(kwargs)
+        cutoff_len = kwargs[CentralMEParameters.opt_cutoff]
+        del kwargs2[CentralMEParameters.opt_cutoff]
+        
+        return integralsWithCutoff(p, potential, cutoff_len,  
+                                   b_param, mu_param, n_power, **kwargs2)
+    
+    # -------------------------------------------------------------------------
     
     if potential == PotentialForms.Gaussian:
         return (b_param**3) / (1 + 2*(b_param/mu_param)**2)**(p+1.5)
@@ -87,10 +102,68 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         
         return sum_
     
+    elif potential == PotentialForms.YukawaGauss_power:
+        sum_ = 0.
+        if not (CentralMEParameters.opt_mu_2   in kwargs and 
+                CentralMEParameters.opt_mu_3   in kwargs):
+            raise IntegralException("missing parameters in kwargs:", kwargs)
+        
+        raise IntegralException("TODO: implement me!")
+        return sum_
+    
+    elif potential == PotentialForms.Wood_Saxon:
+        sum_ = 0.
+        if not (CentralMEParameters.opt_mu_2   in kwargs and 
+                CentralMEParameters.opt_mu_3   in kwargs):
+            raise IntegralException("missing parameters in kwargs:", kwargs)
+        raise IntegralException("TODO: implement me!")
+        return sum_
+        
     else:
         raise IntegralException("Talmi integral [{}] is not defined, valid potentials: {}"
                         .format(potential, PotentialForms.members()))
 
+
+def integralsWithCutoff(p, potential, cutoff_len, b_param, mu_param, n_power, 
+                        **kwargs):
+    """
+    This method connects the Talmi integrals of order p for a certain potential
+    under a cuttoff function:
+        V(r) * (1 - exp(- cutoff_len*r^2)) = V(r) - V(r)*exp(- cutoff_len*r^2)
+    
+    NOTE: kwargs must not contain central argument names and/or cutoff.
+        in case of being called from talmiIntegral() will lead to a cycle.
+    NOTE: Some integrals could be not implemented.
+    """
+    
+    integral_1 = talmiIntegral(p, potential, b_param, mu_param, n_power, **kwargs)
+    integral_2 = 0.0
+    
+    if potential == PotentialForms.Gaussian:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.Exponential:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.Coulomb:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.Yukawa:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.Power:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.Gaussian_power:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.YukawaGauss_power:
+        raise IntegralException("TODO: implement me!")
+    
+    elif potential == PotentialForms.Wood_Saxon:
+        raise IntegralException("TODO: implement me!")
+    
+    return integral_1 - integral_2
 
 #if not 'roots_legendre' in globals():
 #from scipy.special import roots_legendre, roots_laguerre

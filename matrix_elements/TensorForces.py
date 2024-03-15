@@ -6,8 +6,8 @@ Created on Mar 8, 2021
 import numpy as np
 from sympy.physics.wigner import clebsch_gordan
 
-from helpers.Enums import BrinkBoekerParameters as BBparams, CouplingSchemeEnum,\
-    CentralMEParameters, SHO_Parameters, BrinkBoekerParameters, PotentialForms
+from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, \
+    BrinkBoekerParameters
 from helpers.Enums import AttributeArgs
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
@@ -57,6 +57,12 @@ class TensorForce(TalmiTransformation):#):
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
+            for attr in (CentralMEParameters.opt_cutoff,
+                         CentralMEParameters.opt_mu_2,
+                         CentralMEParameters.opt_mu_3):
+                if attr in kwargs:
+                    _map[attr] = (AttributeArgs.value, float)
+            
             kwargs = TensorForce._automaticParseInteractionParameters(_map, kwargs)
         
         super(TensorForce, cls).setInteractionParameters(*args, **kwargs)
@@ -281,9 +287,6 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
         # Radial Part for Gaussian Integral
         radial_energy = self.centerOfMassMatrixElementEvaluation()
         
-        if self.DEBUG_MODE:
-            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
-        
         # Exchange Part
         # W + P(S)* B - P(T)* H - P(T)*P(S)* M
         _S_aux = (-1)**(self.S_bra + 1)
@@ -305,4 +308,17 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
                        exch_sum=sum(exchange_energy), val=prod_part)
         
         return prod_part
+
+
+class TPE_Force_JTScheme(TensorS12_JTScheme):
     
+    """
+    Two-Pion-Exchange potential, from Nijmegen partial-wave analysis:
+    
+        S12   
+    
+    Includes an optional parameter for a cuttoff function 1 - exp(-cr^2)
+    That requires to change the Talmi integrals
+    """
+    
+    pass

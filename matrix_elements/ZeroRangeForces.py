@@ -5,7 +5,7 @@ Created on Oct 14, 2021
 '''
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException
-from helpers.Enums import CentralMEParameters, AttributeArgs, SHO_Parameters,\
+from helpers.Enums import AttributeArgs, SHO_Parameters,\
     SDIParameters
 from helpers.Log import XLog
 from helpers.Helpers import safe_3j_symbols, almostEqual
@@ -124,7 +124,7 @@ class SDI_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         self._value *= self.bra.norm() * self.ket.norm()
         
         if self._evaluateMSDI:
-            ## V_MSDI = V_SDI + B * <tau(1) · tau(2)> + C (only off-diagonal)
+            ## V_MSDI = V_SDI + B * <tau(1) ï¿½ tau(2)> + C (only off-diagonal)
             if self.T == 0:
                 self._value += self._msdi_T0 
             elif self.T == 1:

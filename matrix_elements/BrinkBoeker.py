@@ -204,13 +204,24 @@ class PotentialSeries_JTScheme(BrinkBoeker):
             potential = values.get(pot_key)
             cls.PARAMS_FORCE[i][pot_key] = potential
             for attr in (CentralMEParameters.mu_length, 
-                         CentralMEParameters.constant):
+                         CentralMEParameters.constant,):
                 ## set default geometric shape mu = Constant = 1 if not given.
                 cls.PARAMS_FORCE[i][attr]  = float(values.get(attr, 1))
+            for attr in (CentralMEParameters.opt_mu_2,
+                         CentralMEParameters.opt_mu_3,
+                         CentralMEParameters.opt_cutoff):
+                if attr in values:
+                    cls.PARAMS_FORCE[i][attr]  = float(values.get(attr))
             
-            if potential in (PotentialForms.Power, PotentialForms.Gaussian_power):
+            if potential in (PotentialForms.Power, 
+                             PotentialForms.Gaussian_power,
+                             PotentialForms.YukawaGauss_power):
                 cls.PARAMS_FORCE[i][CentralMEParameters.n_power] = \
                     int(values.get(CentralMEParameters.n_power, 0))
+            elif potential == PotentialForms.Wood_Saxon:
+                A = float(kwargs.get(SHO_Parameters.A_Mass, 1))
+                cls.PARAMS_FORCE[i][CentralMEParameters.opt_mu_2] *= (A**(1/3))
+                
             cls.numberGaussians += 1
         
         #cls.plotRadialPotential()
@@ -226,14 +237,25 @@ class PotentialSeries_JTScheme(BrinkBoeker):
         for p in range(cls._integrals_p_max + 1, 
                        cls._integrals_p_max + n_integrals +1):
             
-            for part in range(cls.numberGaussians): 
-                args = [
-                    cls.PARAMS_FORCE[part].get(CentralMEParameters.potential),
-                    cls.PARAMS_SHO.get(SHO_Parameters.b_length), # * np.sqrt(2), # 
-                    cls.PARAMS_FORCE[part].get(CentralMEParameters.mu_length),
-                    cls.PARAMS_FORCE[part].get(CentralMEParameters.n_power)
+            for part in range(cls.numberGaussians):
+                
+                arg_keys = [
+                    CentralMEParameters.potential, 
+                    SHO_Parameters.b_length,
+                    CentralMEParameters.mu_length,
+                    CentralMEParameters.n_power
                 ]
-                cls._talmiIntegrals[part].append(talmiIntegral(p, *args))
+                args = [ 
+                    cls.PARAMS_FORCE[part].get(arg_keys[0]), 
+                    cls.PARAMS_SHO        .get(arg_keys[1]),# * np.sqrt(2), # 
+                    cls.PARAMS_FORCE[part].get(arg_keys[2]), 
+                    cls.PARAMS_FORCE[part].get(arg_keys[3]),
+                ]
+                kwargs = map(lambda x: (x, cls.PARAMS_FORCE[part].get(x, None)), 
+                             CentralMEParameters.members(but=arg_keys))
+                kwargs = dict(filter(lambda x: x[1] != None, kwargs))
+                
+                cls._talmiIntegrals[part].append(talmiIntegral(p, *args, **kwargs))
                 
             cls._integrals_p_max += 1
     

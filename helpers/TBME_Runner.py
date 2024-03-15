@@ -298,6 +298,7 @@ The program will exclude it from the interaction file and will produce the .com 
                     raise TBME_RunnerException("SHO Parameters Incomplete, "
                             "b_length is required. Got".format(sho_params))
                 hbar_omega = 0
+                #A_mass     = int( (1.005 / b_length)**3 ) 
             else:
                 A_mass = int(A_mass)
                 hbar_omega = 41 / (A_mass**(1/3))

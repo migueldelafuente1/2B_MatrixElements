@@ -96,13 +96,19 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
             CentralMEParameters.potential : None,
             CentralMEParameters.mu_length : None,
             CentralMEParameters.constant  : 1,
-            CentralMEParameters.n_power   : 0
+            CentralMEParameters.n_power   : 0,
+            CentralMEParameters.opt_mu_2  : 1,
+            CentralMEParameters.opt_mu_3  : 1,
+            CentralMEParameters.opt_cutoff: 0,
         }
         
         for param, default in params_and_defaults.items():
 
             value = kwargs.get(param)
             if value is None:
+                if param.startswith('opt_'):
+                    continue
+                    ## Parameters for the 
                 if default is None:
                     raise MatrixElementException(
                         "Required parameter [{}]: got None".format(param))
@@ -123,6 +129,11 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
                 cls.PARAMS_SHO[param] = value
             else:
                 cls.PARAMS_FORCE[param] = value
+        
+        ## Wood-Saxon fixing of mu_2 = r0 * A^-1/3
+        if kwargs[CentralMEParameters.potential] == PotentialForms.Wood_Saxon:
+            A = 1
+            kwargs[CentralMEParameters.opt_mu_2] *= A**(1/3)
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = []
@@ -173,16 +184,26 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     @classmethod
     def _calculateIntegrals(cls, n_integrals =1):
         
-        args = [
-            cls.PARAMS_FORCE.get(CentralMEParameters.potential),
-            cls.PARAMS_SHO  .get(SHO_Parameters.b_length),
-            cls.PARAMS_FORCE.get(CentralMEParameters.mu_length),
-            cls.PARAMS_FORCE.get(CentralMEParameters.n_power),
+        arg_keys = [
+            CentralMEParameters.potential, 
+            SHO_Parameters.b_length,
+            CentralMEParameters.mu_length,
+            CentralMEParameters.n_power
         ]
+        
+        args = [ 
+            cls.PARAMS_FORCE.get(arg_keys[0]), 
+            cls.PARAMS_SHO  .get(arg_keys[1]),
+            cls.PARAMS_FORCE.get(arg_keys[2]), 
+            cls.PARAMS_FORCE.get(arg_keys[3]),
+        ]
+        kwargs = map(lambda x: (x, cls.PARAMS_FORCE.get(x, None)), 
+                     CentralMEParameters.members(but=arg_keys))
+        kwargs = dict(filter(lambda x: x[1] != None, kwargs))
         
         for p in range(cls._integrals_p_max + 1, cls._integrals_p_max + n_integrals +1):
             
-            cls._talmiIntegrals.append(talmiIntegral(p, *args))
+            cls._talmiIntegrals.append(talmiIntegral(p, *args, **kwargs))
             
             cls._integrals_p_max += 1
             
@@ -306,6 +327,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         return True when conditions are fulfilled.
         """
         raise MatrixElementException("Abstract Method, Implement me!")
+        return
     
     def _interactionSeries(self):
         """
@@ -763,6 +785,7 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
         Valid orbital Angular momentum L to L' (system (r1 + r2)/2 )
         """
         raise MatrixElementException("Abstract Method, implement me!")
+        return
     
     def totalRCoordinateTalmiIntegral(self, **kwargs):
         """
@@ -772,6 +795,7 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
         being b the oscillator length.
         """
         raise MatrixElementException("Abstract method, implement me!")
+        return
         
     def _interactionSeries(self):
         

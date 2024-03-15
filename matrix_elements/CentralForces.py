@@ -6,27 +6,15 @@ Created on Mar 10, 2021
 import numpy as np
 from sympy import S
 
-from helpers.Helpers import Constants, safe_wigner_6j,\
-    safe_3j_symbols, almostEqual, safe_clebsch_gordan,\
-    readAntoine
+from helpers.Helpers import Constants, safe_wigner_6j
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled, \
-    MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled,\
     _OneBodyMatrixElement_jjscheme, _standardSetUpForCentralWithExchangeOps
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, AttributeArgs,\
-    PotentialForms, SHO_Parameters, DensityDependentParameters,\
-    BrinkBoekerParameters
+    PotentialForms, SHO_Parameters, BrinkBoekerParameters
 from helpers.Log import XLog
-from helpers.integrals import _RadialDensityDependentFermi
-from helpers.WaveFunctions import QN_1body_radial, \
-    QN_2body_jj_J_Coupling, QN_1body_jj
-from helpers.mathFunctionsHelper import _buildAngularYCoeffsArray,\
-    _buildRadialFunctionsArray, angular_Y_KM_index, sphericalHarmonic,\
-    _angular_Y_KM_memo_accessor, _angular_Y_KM_me_memo
-from helpers import SCIPY_INSTALLED
-from copy import deepcopy, copy
 
 class CentralForce(TalmiTransformation):
     
@@ -56,8 +44,14 @@ class CentralForce(TalmiTransformation):
                 CentralMEParameters.mu_length : (AttributeArgs.value, float),
                 CentralMEParameters.n_power   : (AttributeArgs.value, int)
             }
-            kwargs = CentralForce._automaticParseInteractionParameters(_map, kwargs)
+            for attr in (CentralMEParameters.opt_cutoff,
+                         CentralMEParameters.opt_mu_2,
+                         CentralMEParameters.opt_mu_3):
+                if attr in kwargs:
+                    _map[attr] = (AttributeArgs.value, float)
             
+            kwargs = CentralForce._automaticParseInteractionParameters(_map, kwargs)
+        
         super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
         #cls.plotRadialPotential()
     
@@ -92,7 +86,6 @@ class CentralForce(TalmiTransformation):
         """
         if not self.deltaConditionsForGlobalQN():
             return 0
-        
         return self._BrodyMoshinskyTransformation()
     
     
@@ -377,7 +370,7 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
             
         return fact * self._kin_factor * nabla_1 * nabla_2
 
-class OrbitalMomentumSquared_JTScheme(CentralForce_JTScheme):
+class Quadratic_OrbitalMomentum_JTScheme(CentralForce_JTScheme):
     
     """
     Interaction for   V(r) * (Exchange_terms) * (l)^2
@@ -387,12 +380,13 @@ class OrbitalMomentumSquared_JTScheme(CentralForce_JTScheme):
      Inhereted methods ::
         def _validKetTotalSpins(self):                 S=S'
         def _validKet_relativeAngularMomentums(self):  l=l_q
-        
         def deltaConditionsForGlobalQN(self):          L_bra == Lket
-        
         def _deltaConditionsForCOM_Iteration(self):    (l + S + T, even)
     
     """
+    COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
+    
+    _BREAK_ISOSPIN = False
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
@@ -441,9 +435,6 @@ class OrbitalMomentumSquared_JTScheme(CentralForce_JTScheme):
         """    
         # Radial Part for Gaussian Integral
         radial_energy = self.centerOfMassMatrixElementEvaluation()
-        
-        if self.DEBUG_MODE:
-            XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
         
         # Exchange Part
         # W + P(S)* B - P(T)* H - P(T)*P(S)* M

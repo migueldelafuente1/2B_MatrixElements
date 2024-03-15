@@ -4,13 +4,14 @@ from .BrinkBoeker import BrinkBoeker, PotentialSeries_JTScheme
 from matrix_elements.TensorForces import TensorForce, TensorForce_JTScheme,\
     TensorS12_JTScheme
 from matrix_elements.CentralForces import CentralForce, CentralForce_JTScheme,\
-    CoulombForce, KineticTwoBody_JTScheme, OrbitalMomentumSquared_JTScheme
+    CoulombForce, KineticTwoBody_JTScheme, Quadratic_OrbitalMomentum_JTScheme
 from matrix_elements.DensityForces import \
-    DensityDependentForceFromFile_JScheme, DensityDependentForce_JTScheme
+    DensityDependentForceFromFile_JScheme, DensityDependentForce_JTScheme,\
+    DensityFiniteRange_JTScheme
     
 from matrix_elements.SpinOrbitForces import SpinOrbitForce, SpinOrbitForce_JTScheme, \
     ShortRangeSpinOrbit_JTScheme, SpinOrbitFiniteRange_JTScheme,\
-    SpinOrbitSquaredFiniteRange_JTScheme
+    Quadratic_SpinOrbit_JTScheme
 from matrix_elements.MatrixElement import _MatrixElementReader
 from matrix_elements.ZeroRangeForces import SDI_JTScheme
 from matrix_elements.SkyrmeForces import SkrymeBulk_JTScheme
@@ -37,12 +38,14 @@ def switchMatrixElementType(force, J_scheme=False):
         return CoulombForce
     elif force == ForceEnum.Kinetic_2Body:
         return KineticTwoBody_JTScheme
-    elif force == ForceEnum.OrbitalMomentumSquared:
-        return OrbitalMomentumSquared_JTScheme
+    elif force == ForceEnum.Quadratic_OrbitalMomentum:
+        return Quadratic_OrbitalMomentum_JTScheme
     elif force == ForceEnum.Density_Dependent:
         return DensityDependentForce_JTScheme
     elif force == ForceEnum.Density_Dependent_From_File:
         return DensityDependentForceFromFile_JScheme
+    elif force == ForceEnum.Density_FiniteRange:
+        return DensityFiniteRange_JTScheme
     elif force == ForceEnum.SDI:
         return SDI_JTScheme
     elif force == ForceEnum.Multipole_Delta:
@@ -56,8 +59,8 @@ def switchMatrixElementType(force, J_scheme=False):
         return ShortRangeSpinOrbit_JTScheme
     elif force == ForceEnum.SpinOrbitFiniteRange:
         return SpinOrbitFiniteRange_JTScheme
-    elif force == ForceEnum.SpinOrbitSquaredFiniteRange:
-        return SpinOrbitSquaredFiniteRange_JTScheme
+    elif force == ForceEnum.Quadratic_SpinOrbit:
+        return Quadratic_SpinOrbit_JTScheme
     elif force == ForceEnum.SkyrmeBulk:
         return SkrymeBulk_JTScheme
     

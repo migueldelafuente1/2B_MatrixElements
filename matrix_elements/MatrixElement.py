@@ -9,7 +9,7 @@ from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Couplin
     QN_1body_jj, _1Body_WaveFunction, _WaveFunction
 from helpers.Helpers import safe_wigner_9j
 from helpers.Enums import CouplingSchemeEnum, SHO_Parameters,\
-    BrinkBoekerParameters, AttributeArgs, CentralMEParameters
+    BrinkBoekerParameters, AttributeArgs, CentralMEParameters, PotentialForms
 from helpers.Log import XLog
 
 class MatrixElementException(BaseException):
@@ -57,6 +57,7 @@ class _OneBodyMatrixElement:
             CentralMEParameters.constant  : (AttributeArgs.value, float),
             CentralMEParameters.mu_length : (AttributeArgs.value, float),
             CentralMEParameters.n_power   : (AttributeArgs.value, int)
+            ...
             }
         :kwargs
         """
@@ -654,7 +655,7 @@ class _MatrixElementReader(_TwoBodyMatrixElement):
 #  COMMON METHODS AND FUNCTIONS FOR MATRIX ELEMENTS
 #===============================================================================
 
-def _standardSetUpForCentralWithExchangeOps(cls, **kwargs):
+def _standardSetUpForCentralWithExchangeOps(cls, refresh_params=True, **kwargs):
     """
     Process to set up Exchange operators and general central interactions.
     
@@ -673,18 +674,20 @@ def _standardSetUpForCentralWithExchangeOps(cls, **kwargs):
                 ** ommit it otherwise.
     """
     # Refresh the Force parameters
-    if cls.PARAMS_FORCE:
+    if cls.PARAMS_FORCE and refresh_params:
         cls.PARAMS_FORCE = {}
     
     _b = SHO_Parameters.b_length
     cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
-    
-    cls.PARAMS_FORCE = {}
-    
+        
     ## Exchange forms, if not pressent, all will be 0.0
     for param in BrinkBoekerParameters.members():
         exch_param = kwargs.get(param, {})
         cls.PARAMS_FORCE[param] = float(exch_param.get(AttributeArgs.value, 0.0))
+    for param in filter(lambda x: x.startswith('opt_'), 
+                        CentralMEParameters.members()):
+        if not param in kwargs: continue
+        cls.PARAMS_FORCE[param] = float(kwargs.get(param)[AttributeArgs.value])
     
     assert CentralMEParameters.potential in kwargs, "Argument [potential] is required."
     potential_ = kwargs[CentralMEParameters.potential][AttributeArgs.name]
@@ -694,7 +697,12 @@ def _standardSetUpForCentralWithExchangeOps(cls, **kwargs):
     if CentralMEParameters.n_power in kwargs:
         n_pow = kwargs[CentralMEParameters.n_power][AttributeArgs.value]
         cls.PARAMS_FORCE[CentralMEParameters.n_power] = int(n_pow)
-    
+        
+    ## Particular case for Wood-Saxon, A dependent
+    if potential_ == PotentialForms.Wood_Saxon:
+        A = float(kwargs.get(SHO_Parameters.A_Mass, 1))
+        cls.PARAMS_FORCE[CentralMEParameters.opt_mu_2] *= (A**(1/3))
+        
     if (CentralMEParameters.constant in kwargs.keys()):
         # print("[WARNING] Constant argument is not accepted for this matrix element, ",
         #       "if no permutation-operators was given, the constant value ",

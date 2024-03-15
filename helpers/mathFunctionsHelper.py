@@ -139,7 +139,7 @@ def sphericalHarmonic(K,M, angle=(0,0), theta_as_costh=True):
     leg_poly = assolegendre(K, M, angle[0])
     return C_lm * leg_poly 
 
-def _buildAngularYCoeffsArray(sh_states_list):
+def _buildAngularYCoeffsArray(sh_states_list, reset_file_test=True):
     """
     Introduces coupling angular coefficients for the introduced list of shell 
     states (with orbital L > 10 format).
@@ -152,7 +152,7 @@ def _buildAngularYCoeffsArray(sh_states_list):
     """
     global _angular_Y_KM_me_memo
     
-    f = open('test_.txt', 'w+')
+    f = open('test_.txt', 'w+' if reset_file_test else 'a+')
     
     already_done = set( list(_angular_Y_KM_me_memo.keys()) )
     K_max = 0
