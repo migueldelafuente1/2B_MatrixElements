@@ -13,15 +13,28 @@ from copy import deepcopy
 class Constants:
     HBAR      = 6.582119e-22    # MeV s
     HBAR_C    = 197.327053# << value in Taurus ## 197.326963      # MeV fm 
+    # HBAR_C    = 197.326963      # MeV fm (value in Taurus)
     
     M_PROTON  = 938.27208816      # MeV/c2
     M_NEUTRON = 939.56542052      # MeV/c2
-    M_NUCLEON = 931.494028      # MeV/c2
-    M_ELECTRON= 0.51099891      # MeV/c2
+    M_NUCLEON = 931.494028        # MeV/c2
+    M_ELECTRON= 0.51099891        # MeV/c2
     M_MEAN    = 938.91875434      # (m_Proton + m_Neutron) / 2
     
     ALPHA     = 7.297353e-3
     e_CHARGE  = 1.602176e-19    # C
+
+class ConstantsV18:
+    HBAR_C    = 197.32705  # MeV fm
+    
+    M_PROTON  = 938.27231  # MeV/c2
+    M_NEUTRON = 939.56563  # MeV/c2
+    M_PION_0  = 134.9739   # MeV/c2
+    M_PION_pm = 139.5675   # MeV/c2
+    
+    ALPHA     = 7.297353053e-3    
+    MAGMOM_PROTON  =  2.79285   # mu_0
+    MAGMOM_NEUTRON = -1.91304   # mu_0
 
 
 _LINE_1 = "\n====================================================================\n"

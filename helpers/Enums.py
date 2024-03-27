@@ -70,10 +70,14 @@ class ForceEnum(Enum):
     Quadratic_SpinOrbit  = 'Quadratic_SpinOrbit'
     Brink_Boeker    = 'Brink_Boeker'
     PotentialSeries = 'PotentialSeries'
+    YukawiansM3Y    = 'M3Y_yukawians'
     Density_Dependent    = 'Density_Dependent'
     Density_Dependent_From_File = 'Density_From_File'
     Density_FiniteRange  = 'DensityFiniteRange'
+    ElectromageticCentral     = 'ElectromageticCentral'
+    ElectromageticNonCentral  = 'ElectromageticNonCentral'
     Quadratic_OrbitalMomentum = 'Quadratic_OrbitalMomentum'
+    OTPEP_Tensor = "OTPEP_Tensor"
     Kinetic_2Body    = 'Kinetic_2Body'
     Multipole_Delta  = 'Multipole_Delta'
     Multipole_Moment = 'Multipole_Moment'
@@ -89,6 +93,7 @@ class PotentialForms(Enum):
     Power       = 'power'                   # (r/mu_)^n_power
     Gaussian_power = 'gaussian_power'       # exp(-(r/mu_)^2) / (r/mu_)^n_power
     Wood_Saxon  = 'wood_saxon'              # (r/mu_)^n_power /( 1 + exp((r-mu_2 * A^1/3)/mu_3) )
+    Exponential_power = 'exponential_power' # exp(-r/mu_) * (r/mu_)^n_power
     YukawaGauss_power = 'gauss_yukawa_power'# exp(-(r/mu_)-(r/mu_2)^2) / (r/mu_)^n_power
 
 #===============================================================================
@@ -163,23 +168,27 @@ class ForceFromFileParameters(Enum):
 ForceVariablesDict = {
     ForceEnum.Brink_Boeker    : BrinkBoekerParameters,
     ForceEnum.PotentialSeries : PotentialSeriesParameters,
+    ForceEnum.YukawiansM3Y    : BrinkBoekerParameters,
     ForceEnum.Central   : CentralWithExchangeParameters,    # CentralMEParameters DEP
     ForceEnum.Coulomb   : Enum,
     ForceEnum.Tensor    : CentralMEParameters,
     ForceEnum.TensorS12 : CentralWithExchangeParameters,
+    ForceEnum.OTPEP_Tensor : Enum, 
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.SpinOrbitFiniteRange: CentralWithExchangeParameters,
     ForceEnum.Quadratic_SpinOrbit : CentralWithExchangeParameters,
     ForceEnum.Density_Dependent   : DensityDependentParameters,
     ForceEnum.Density_Dependent_From_File: DensityDependentParameters,
-    ForceEnum.Density_FiniteRange : DensityAndExchangeParameters, 
+    ForceEnum.Density_FiniteRange        : DensityAndExchangeParameters, 
     ForceEnum.Quadratic_OrbitalMomentum  : CentralWithExchangeParameters,
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,
     ForceEnum.Multipole_Delta : MultipoleParameters,
     ForceEnum.Multipole_Moment: CentralMEParameters, 
+    ForceEnum.ElectromageticCentral     : Enum, 
+    ForceEnum.ElectromageticNonCentral  : Enum,
     ForceEnum.Force_From_File : ForceFromFileParameters,
 }
 

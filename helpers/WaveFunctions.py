@@ -81,6 +81,10 @@ class QN_1body_radial(_1Body_WaveFunction):
         return "(n:{},l:{},m:{}){}".format(self.n, self.l, self.m_l, lab_)
     
     @property
+    def parity(self):
+        return (-1)**(self.l)
+    
+    @property
     def shellState(self):
         return shellSHO_Notation(self.n, self.l)
 
@@ -160,7 +164,9 @@ class QN_1body_jj(_1Body_WaveFunction):
         lab_ = self._particleLabels[self.m_t]
         return "(n:{},l:{},j:{}/2){}".format(self.n, self.l, self.j, lab_)
     
-    
+    @property
+    def parity(self):
+        return (-1)**(self.l)
             
         
 

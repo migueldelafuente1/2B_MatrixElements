@@ -215,8 +215,15 @@ The program will exclude it from the interaction file and will produce the .com 
         T_breaking = []
         self._forces2ReadFromFile = False
         
-        for force in getattr(self.input_obj, _forcesAttr):
+        for force, force_list in getattr(self.input_obj, _forcesAttr).items():
             
+        # for force, force_list in getattr(self.input_obj, _forcesAttr).items():
+            # i = 0
+            if len(force_list) == 1:
+                force_str = [force, ]
+            else:
+                force_str = [force+str(i) for i in range(len(force_list))]
+                
             me = switchMatrixElementType(force)
             
             if me._BREAK_ISOSPIN: # cannot use property, m.e. not instanced
@@ -240,7 +247,8 @@ The program will exclude it from the interaction file and will produce the .com 
                 
                 if (CouplingSchemeEnum.T in f_scheme):
                     JT_schemeForces.append(force)
-                    self.interactionSchemes[force] = self._Scheme.JT
+                    for f_str in force_str:
+                        self.interactionSchemes[f_str] = self._Scheme.JT
                     if me._BREAK_ISOSPIN:
                         raise TBME_RunnerException(
                             "Error in force [{}] <class>:[{}] definition"
@@ -248,7 +256,8 @@ The program will exclude it from the interaction file and will produce the .com 
                             ", Isospin based (reduced) matrix elements breaks T.")
                 else:
                     J_schemeForces.append(force)
-                    self.interactionSchemes[force] = self._Scheme.J
+                    for f_str in force_str:
+                        self.interactionSchemes[f_str] = self._Scheme.J
         
         if self._com_correction:
             # append the K 2Body to the input force to compute (remove after)
@@ -672,14 +681,14 @@ The program will exclude it from the interaction file and will produce the .com 
                     self.tbme_class.resetInteractionParameters(also_SHO=True)
                     self.tbme_class.setInteractionParameters(**params, 
                                                              **sho_params)
-                    self._computeForValenceSpace(force)
+                    self._computeForValenceSpace(force_str)
                     if self._hamil_type == '3':
                         self._compute1BodyMatrixElements(force=force, kin=False)
                     
                     self.resultsByInteraction[force_str] = deepcopy(self.results)
                     times_[force_str] = round(time.time() - tic_, 4)
                     print(" Force [{}] m.e. calculated: [{}]s"
-                                .format(force, times_[force_str]))
+                                .format(force_str, times_[force_str]))
                 except BaseException:
                     trace = traceback.format_exc()
                     self._procedureToSkipBrokenInteraction(force_str, trace)
