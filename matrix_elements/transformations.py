@@ -4,7 +4,6 @@ Created on Mar 8, 2021
 @author: Miguel
 '''
 import numpy as np
-import pandas as pd
 
 from matrix_elements.MatrixElement import MatrixElementException,\
     _TwoBodyMatrixElement
@@ -21,7 +20,9 @@ from helpers.Log import XLog
 #===============================================================================
 # moved there due circular import (after angular_condition method)
 from helpers.Helpers import _B_coeff_memo_accessor
-from helpers import MATPLOTLIB_INSTALLED
+from helpers import MATPLOTLIB_INSTALLED, PANDAS_INSTALLED
+if PANDAS_INSTALLED:
+    import pandas as pd
 
 # B coefficients stored in Memory are not b_length normalized (divide by b**3)
 _B_Coefficient_Memo = {}
@@ -186,7 +187,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         
         arg_keys = [
             CentralMEParameters.potential, 
-            SHO_Parameters.b_length,
+            SHO_Parameters     .b_length,
             CentralMEParameters.mu_length,
             CentralMEParameters.n_power
         ]
@@ -394,6 +395,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         """
         Fill a table with calculated elements. (implement for other forces)
         """
+
         if not hasattr(self, '_debbugingTableDF'):
             columns = ['com_qqnn', 'com_constant', 'bmb_bra', 'bmb_ket', 'bmbs', 
                        *['p'+str(p) for p in range(max(self.rho_bra,self.rho_ket)+1)]]
