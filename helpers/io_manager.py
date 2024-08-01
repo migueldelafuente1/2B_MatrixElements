@@ -666,9 +666,11 @@ class TBME_Reader():
                     if ket in JT_block[bra]:
                         print("WARNING, while reading the file found repeated "
                               "matrix element block:", bra, ket)
-                    JT_block[bra][ket] = deepcopy(j_dict)
+                    JT_block[bra][ket] = {0 : deepcopy(j_dict),
+                                          1 : deepcopy(j_dict), }
                 else:
-                    JT_block[bra] = {ket : deepcopy(j_dict)}         
+                    JT_block[bra] = {ket : {0 : deepcopy(j_dict),
+                                            1 : deepcopy(j_dict)}, }        
             elif index > 0 and (not skip):
                 T = index - 1
                 
@@ -676,8 +678,8 @@ class TBME_Reader():
                 for i in range(j_max - j_min +1):
                     J = j_min + i
                     JT_block[bra][ket][T][J] = self.const * float(line[i])
-                
-            index = index + 1 if index < j_length else 0
+            
+            index = index + 1 if index < 2 else 0
         
         self._elements = JT_block
     

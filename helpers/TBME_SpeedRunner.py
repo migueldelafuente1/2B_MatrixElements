@@ -75,43 +75,48 @@ class TBME_SpeedRunner(TBME_Runner):
                     sortedForces = [*sortedForces, (force, force_list)]
                 
         for force, force_list in sortedForces:
-            if (len(force_list) > 1) or (force == ForceEnum.Force_From_File):
-                ## Verify forces do not repeat
+            ## read all list interaction and overwrite with a dummy class for ME
+            for i_par, params in enumerate(force_list):
+                force_str = force+str(i_par) if len(force_list) > 1 else force
+                
                 if force == ForceEnum.Force_From_File:
                     if not hasattr(self, '_twoBodyQuantumNumbersSorted'): 
                         # required to append the m.e. after reading TBMEReader
                         self._sortQQNNFromTheValenceSpace() 
-                    for i, params in enumerate(force_list):       
-                        force_str = force + str(i)
-                        ## read from file case 
-                        self._readMatrixElementsFromFile(force_str, **params)
+                    ## read from file case 
+                    self._readMatrixElementsFromFile(force_str, **params)
                     continue ## skip the rest of the steps
+                
+                Force_cls = switchMatrixElementType(force)
+                
+                if (i_par > 0):
+                    MasterForce_cls = switchMatrixElementType(force)
+                    class Force_cls(MasterForce_cls):
+                        pass
+                    
+                        
+                # if force == ForceEnum.Kinetic_2Body:
+                #     continue # jump the 2BodyCOM (otherwise it's appended to the 2b) 
+                
+                self.forces.append(deepcopy(Force_cls))
+                ## define interactions
+                self._allForcesAreLS *= self.forces[-1].RECOUPLES_LS
+                self.forcesDict[force_str] = len(self.forces) - 1
+                self.forces[-1].setInteractionParameters(**params, **sho_params)
+                
+                self.forcesIsNotExplAntisym.append(self.forces[-1].EXPLICIT_ANTISYMM)
+                
+                if self.forces[-1].COUPLING == CouplingSchemeEnum.JJ:
+                    self.forcesScheme.append(self._Scheme.J)
+                    dim_t = 6
                 else:
-                    raise TBME_SpdRunnerException("Cannot compute two times "
-                        "the same interaction: [{}] len={}".format(force, 
-                                                                   len(force_list)))
-            # if force == ForceEnum.Kinetic_2Body:
-            #     continue # jump the 2BodyCOM (otherwise it's appended to the 2b) 
-            
-            self.forces.append(switchMatrixElementType(force))
-            ## define interactions
-            self._allForcesAreLS *= self.forces[-1].RECOUPLES_LS
-            self.forcesDict[force] = len(self.forces) - 1
-            self.forces[-1].setInteractionParameters(**force_list[0], **sho_params)
-            
-            self.forcesIsNotExplAntisym.append(self.forces[-1].EXPLICIT_ANTISYMM)
-            
-            if self.forces[-1].COUPLING == CouplingSchemeEnum.JJ:
-                self.forcesScheme.append(self._Scheme.J)
-                dim_t = 6
-            else:
-                self.forcesScheme.append(self._Scheme.JT)
-                dim_t = 2
-            
-            self.me_instances.append([None]*dim_t)
-            self.valid_L_forKets.append([None]*dim_t)
-            self.valid_S_forKets.append([None]*dim_t)
-            self.forcesNorms.append([None]*dim_t)
+                    self.forcesScheme.append(self._Scheme.JT)
+                    dim_t = 2
+                
+                self.me_instances.append([None]*dim_t)
+                self.valid_L_forKets.append([None]*dim_t)
+                self.valid_S_forKets.append([None]*dim_t)
+                self.forcesNorms.append([None]*dim_t)
     
     def run(self):
         ## 
@@ -239,7 +244,7 @@ class TBME_SpeedRunner(TBME_Runner):
         self._phase_9j   = 1
         self._calculateCommonPhaseKet9j()
         
-        for _, f in self.forcesDict.items():
+        for _f_name, f in self.forcesDict.items():
             if self.forcesScheme[f] == self._Scheme.J:
                 self._instance_J_SchemeWF(f)
             else:

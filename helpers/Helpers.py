@@ -441,7 +441,6 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
     dict_1 = {}
     for bk, vals in dict_0.items():
         permuts = getAllPermutationsOf2Bstates(bk, l_ge_10,  not is_jt)
-        
         for i, item_ in enumerate(permuts):
             bk_perm, t_perm, phs = item_
             if phs == 0: continue ## redundant permutation
@@ -451,10 +450,15 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
             if is_jt:
                 dict_1[bk_perm] = {0: {}, 1:{}}
                 for T in (0,1):
-                    for J in vals:
-                        phs2 = phs * (-1)**(J + T)
+                    for J in vals[T]:
+                        phs2 = phs
+                        if i in (1,2, 5,6): ## double/non exchange has no J,T dep.
+                            phs2 = phs * (-1)**(J + T)
                         if not_in_:
-                            dict_1[bk_perm][T][J] = phs2 * vals[T][J]
+                            # try:
+                                dict_1[bk_perm][T][J] = phs2 * vals[T][J]
+                            # except KeyError as e_:
+                            #     _ = 0
                         else:
                             # Test if matches
                             assert abs(dict_1[bk_perm][T][J] 
