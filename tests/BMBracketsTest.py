@@ -281,6 +281,48 @@ class BrodyMoshinskyBracketsTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    # unittest.main()
+    
+    ##
+    ## TEST FOR 1 ELEMENT
+    ##
+    def _allPossibleQNforARho( rho, lambda_):
+    
+        for n1 in range(rho//2 +1):
+            for n2 in range(rho//2 - n1 +1):
+                for l1 in range(rho - 2*(n1 + n2) +1):
+    
+                    l2 = rho - 2*(n1 + n2) - l1
+    
+                    if not angular_condition(l1, l2, lambda_) or (l2 < 0):
+                        continue
+    
+                    yield (n1, l1, n2, l2)
+    
+    lambda_ = 4
+    a2 = (2, 14)
+    list_qn = [(2, 10, *a2), (0, 10, *a2), (5, 0, *a2)]
+    # list_qn = [(1, 8, 0, 2), (0, 10, 0, 10), (5,0,5,0)]
+    
+    for n1l1n2l2 in list_qn:
+        n1l1n2l2_prima = n1l1n2l2
+        rho = 2*(n1l1n2l2[0] + n1l1n2l2[2]) + n1l1n2l2[1] + n1l1n2l2[3]
+        
+        orthogonality = []
+        for nlNL in _allPossibleQNforARho(rho, lambda_):
+    
+            aux = BM_Bracket(*nlNL, *n1l1n2l2, lambda_) \
+                * BM_Bracket(*nlNL, *n1l1n2l2_prima, lambda_)
+            
+            
+            orthogonality.append(aux)
+        
+        _angular_cond_1 = angular_condition(n1l1n2l2[1], 
+                                            n1l1n2l2[3], lambda_)
+        _angular_cond_2 = angular_condition(n1l1n2l2_prima[1], 
+                                            n1l1n2l2_prima[3], lambda_)
+        _result   = sum(orthogonality)
+        
+        print(n1l1n2l2, rho, _result)
     
     
