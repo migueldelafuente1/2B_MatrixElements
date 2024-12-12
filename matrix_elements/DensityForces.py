@@ -431,15 +431,16 @@ class _Base_DensityDep_FromFile_Jscheme(DensityDependentForce_JTScheme):
         else:
             integ_A *= np.pi ## not checked
         
-        import matplotlib.pyplot as plt
-        
-        fig_ = plt.figure
-        off_diag = deepcopy(cls._density_matrix)
-        # for i in range(cls._sp_dim):
-        #     if off_diag[i,i] > 0.1:
-        #         off_diag[i,i] = 0
-        plt.imshow(off_diag)
-        plt.show()
+        if False: ## Verify the density-matrix
+            import matplotlib.pyplot as plt
+            
+            fig_ = plt.figure
+            off_diag = deepcopy(cls._density_matrix)
+            # for i in range(cls._sp_dim):
+            #     if off_diag[i,i] > 0.1:
+            #         off_diag[i,i] = 0
+            plt.imshow(off_diag)
+            plt.show()
         # TODO:: Test the density
         t_ = (time.time() - t_start)
         print( " [DONE] Spatial Density has been imported and evaluated. ",
@@ -919,8 +920,8 @@ class DensityFiniteRange_JTScheme(_Base_DensityDep_FromFile_Jscheme,
                                                       **kwargs)
         
         ## the radial integral for the gaussian includes a factor from mu_3
-        aux = (np.pi**0.5) * cls.PARAMS_FORCE[CentralMEParameters.mu_length]
-        cls.PARAMS_FORCE[CentralMEParameters.constant] /= (aux)**3 
+        # aux = (np.pi**0.5) * cls.PARAMS_FORCE[CentralMEParameters.mu_length]
+        # cls.PARAMS_FORCE[CentralMEParameters.constant] /= (aux)**3 
         
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = []
@@ -1015,21 +1016,29 @@ class DensityFiniteRange_JTScheme(_Base_DensityDep_FromFile_Jscheme,
         else:
             integ_A *= np.pi ## not checked
         
-        import matplotlib.pyplot as plt
-        
-        fig_ = plt.figure
-        off_diag = deepcopy(cls._density_matrix)
-        # for i in range(cls._sp_dim):
-        #     if off_diag[i,i] > 0.1:
-        #         off_diag[i,i] = 0
-        plt.imshow(off_diag)
-        plt.show()
+        if False: ## Show the density matrix
+            import matplotlib.pyplot as plt
+            fig_ = plt.figure
+            off_diag = deepcopy(cls._density_matrix)
+            # for i in range(cls._sp_dim):
+            #     if off_diag[i,i] > 0.1:
+            #         off_diag[i,i] = 0
+            plt.imshow(off_diag)
+            plt.show()
         # TODO:: Test the density
         t_ = (time.time() - t_start)
         print( " [DONE] Spatial Density has been imported and evaluated. ",
               f"({t_:5.3f}s) A={integ_A:9.5f}")
     
+    
     def totalRCoordinateTalmiIntegral(self, **kwargs):
+        """
+        TEST. with a gaussian
+        """
+        if ((self._N != self._N_q) or (self._L != self._L_q)): return 0.0
+        return 1.0
+    
+    def __totalRCoordinateTalmiIntegral(self, **kwargs):
         """
         Integral for the <NL | rho^alpha(R) | N'L'>
         """

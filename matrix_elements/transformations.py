@@ -10,7 +10,8 @@ from matrix_elements.MatrixElement import MatrixElementException,\
 from helpers.WaveFunctions import QN_2body_L_Coupling, QN_1body_radial
 
 from helpers.Enums import CouplingSchemeEnum, SHO_Parameters,\
-    CentralMEParameters, PotentialForms, OUTPUT_FOLDER
+    CentralMEParameters, CentralGeneralizedMEParameters, PotentialForms,\
+    OUTPUT_FOLDER
 
 from helpers.Helpers import angular_condition, fact
 from helpers.integrals import talmiIntegral
@@ -789,16 +790,72 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
         raise MatrixElementException("Abstract Method, implement me!")
         return
     
+    @classmethod
+    def _calculateIntegrals(cls, n_integrals =1, rel_coordinates=True):
+        """
+        :n_integrals     = 1     : number of integrals for the different  
+        :rel_coordinates = True  : relative or com coordinate integrals
+        """
+        arg_keys_rel = [
+            CentralGeneralizedMEParameters.potential, 
+            SHO_Parameters.b_length,
+            CentralGeneralizedMEParameters.mu_length,
+            CentralGeneralizedMEParameters.n_power,
+        ]
+        arg_keys_com = [
+            CentralGeneralizedMEParameters.potential_R, 
+            SHO_Parameters.b_length,
+            CentralGeneralizedMEParameters.mu_length_R,
+            CentralGeneralizedMEParameters.n_power_R
+        ]
+        args_to_use = arg_keys_rel if rel_coordinates else arg_keys_com
+        _but_args = arg_keys_rel + arg_keys_com
+        
+        args = [ 
+            cls.PARAMS_FORCE.get(args_to_use[0]), 
+            cls.PARAMS_SHO  .get(args_to_use[1]),
+            cls.PARAMS_FORCE.get(args_to_use[2]), 
+            cls.PARAMS_FORCE.get(args_to_use[3]),
+        ]
+        
+        if rel_coordinates:
+            kwargs = map(lambda x: (x, cls.PARAMS_FORCE.get(x, None)),
+                         CentralGeneralizedMEParameters.members(but=_but_args))
+            kwargs = dict(filter(lambda x: x[1] != None, kwargs))
+            
+            for p in range(cls._integrals_p_max + 1, cls._integrals_p_max + n_integrals +1):                
+                cls._talmiIntegrals.append(talmiIntegral(p, *args, **kwargs))
+                cls._integrals_p_max += 1
+        else:
+            kwargs = map(lambda x: (x, cls.PARAMS_FORCE.get(x, None)), 
+                         CentralGeneralizedMEParameters.members(but=_but_args))
+            kwargs = dict(filter(lambda x: x[1] != None, kwargs))
+            
+            for q in range(cls._integrals_q_max + 1, cls._integrals_q_max + n_integrals +1):                
+                cls._talmiIntegrals_R.append(talmiIntegral(q, *args, **kwargs))
+                cls._integrals_q_max += 1
+            
+    def talmiIntegral(self):
+        """ 
+        Get or update Talmi integrals for the calculations
+        """
+        if self._p > self._integrals_p_max:
+            self._calculateIntegrals(n_integrals = max(self.rho_bra, self.rho_ket, 1),
+                                     rel_coordinates=True)
+        return self._talmiIntegrals.__getitem__(self._p)
+    
     def totalRCoordinateTalmiIntegral(self, **kwargs):
         """
         Define the integral for the total system in powers of r^q:
-            I_q = 2*b^3/Gamma(p+3/2) * 
-                        integral ( (dR/b) (R/b)^{2p+2} e^{-(R/2)^2} U(R))
+            I_q = sqrt(2)*b^2/Gamma(p+3/2) * 
+                        integral ( dR (R/sqrt(2)b)^{2p+1} e^{-(R/b)^2 /2} U(R))
         being b the oscillator length.
         """
-        raise MatrixElementException("Abstract method, implement me!")
-        return
-        
+        if self._q > self._integrals_q_max:
+            self._calculateIntegrals(n_integrals = max(self.rho_bra, self.rho_ket, 1),
+                                     rel_coordinates=False)
+        return self._talmiIntegrals_R.__getitem__(self._q)
+    
     def _interactionSeries(self):
         
         sum_ = 0.0
@@ -849,6 +906,7 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
                 # TODO: comment when not debugging
                 if self.DEBUG_MODE:
                     XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q, 
+                               Nq=self._N_q, Lq=self._L_q,
                                bmbs=bmb_bra * bmb_ket, 
                                Bp=_b_coeff_p, Bq=_b_coeff_q, comCoeff=_com_coeff, 
                                aux=aux)
@@ -870,15 +928,12 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
         """
         
         sum_ = 0.0
-        if self.DEBUG_MODE:
-            XLog.write('talmi')
-        for p in range(max(self.rho_bra, self.rho_ket) +1):
-            if self.DEBUG_MODE:
-                XLog.write('talmi', p=p)
+        if self.DEBUG_MODE: XLog.write('talmi')
+        for p in range(max(self.rho_bra, self.rho_ket) +1):            
             self._p = p
             for q in range(max(self.rho_bra, self.rho_ket) +1):
-                if self.DEBUG_MODE:
-                    XLog.write('talmi', q=q)
+                if self.DEBUG_MODE: XLog.write('talmi', p=p, q=q)
+                
                 self._q = q
                 
                 # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
@@ -891,6 +946,7 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
                 if self.DEBUG_MODE:
                     XLog.write('talmi', series = series, Ip=Ip, Iq=Iq, val=product)
         
+        if self.DEBUG_MODE: XLog.write('talmi', final_sum=sum_)
         return self._globalInteractionCoefficient() * sum_
     
 

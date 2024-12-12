@@ -9,7 +9,8 @@ from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Couplin
     QN_1body_jj, _1Body_WaveFunction, _WaveFunction
 from helpers.Helpers import safe_wigner_9j
 from helpers.Enums import CouplingSchemeEnum, SHO_Parameters,\
-    BrinkBoekerParameters, AttributeArgs, CentralMEParameters, PotentialForms
+    BrinkBoekerParameters, AttributeArgs, CentralMEParameters, PotentialForms,\
+    CentralGeneralizedMEParameters
 from helpers.Log import XLog
 
 class MatrixElementException(BaseException):
@@ -655,11 +656,16 @@ class _MatrixElementReader(_TwoBodyMatrixElement):
 #  COMMON METHODS AND FUNCTIONS FOR MATRIX ELEMENTS
 #===============================================================================
 
-def _standardSetUpForCentralWithExchangeOps(cls, refresh_params=True, **kwargs):
+def _standardSetUpForCentralWithExchangeOps(cls, 
+                                            refresh_params=True, 
+                                            generalizedCentral=False,
+                                            **kwargs):
     """
     Process to set up Exchange operators and general central interactions.
     
     returns the class with the constant.
+    :generalizedCentral: It sets up two sets of parameters for R and r integrals
+                         Impoting is requires a different Enum for the setUp
     
     Protocol:
         0. Reset both sho parameters and force parameters of the class.
@@ -673,6 +679,8 @@ def _standardSetUpForCentralWithExchangeOps(cls, refresh_params=True, **kwargs):
                 assign to Wigner value if no BrinkBoekerParameters where given,
                 ** ommit it otherwise.
     """
+    
+    
     # Refresh the Force parameters
     if cls.PARAMS_FORCE and refresh_params:
         cls.PARAMS_FORCE = {}
@@ -722,5 +730,46 @@ def _standardSetUpForCentralWithExchangeOps(cls, refresh_params=True, **kwargs):
             cls.PARAMS_FORCE[CentralMEParameters.constant] = value_
             cls.PARAMS_FORCE[BrinkBoekerParameters.Wigner] = 1.0
     #cls.plotRadialPotential()
-    return cls
+    if generalizedCentral:
+        cls = _standardSetUpForCentralGeneralizedWithExchangeOps(cls, **kwargs)
     
+    return cls
+
+
+def _standardSetUpForCentralGeneralizedWithExchangeOps(cls, **kwargs):
+    """
+    Process to set up Exchange operators and general central interactions.
+    
+    returns the class with the constant.
+    
+    Protocol:
+        1. set up Force constants:
+            2.1. Parts for the radial potential (n_power, mu_length, potential)
+            2.2. Constants for the Exchange Operators ignored (set it in relative COM)
+            2.3 set CentralMEParameters.constant = 1.0 if not 
+    """
+    
+    _b = SHO_Parameters.b_length
+    if not _b in cls.PARAMS_SHO:
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+    
+    GENMEparm = CentralGeneralizedMEParameters
+    
+    assert CentralMEParameters.potential in kwargs, "Argument [potential] is required."
+    potential_ = kwargs[GENMEparm.potential_R][AttributeArgs.name]
+    cls.PARAMS_FORCE[GENMEparm.potential_R] = potential_.lower()
+    
+    constant_  = kwargs.get(GENMEparm.constant_R)
+    if not constant_:
+        cls.PARAMS_FORCE[GENMEparm.constant_R] = 1
+    else:
+        cls.PARAMS_FORCE[GENMEparm.constant_R] = float(constant_[AttributeArgs.value])
+    
+    mu_val = kwargs[GENMEparm.mu_length_R][AttributeArgs.value]
+    cls.PARAMS_FORCE[GENMEparm.mu_length_R] = float(mu_val)
+    
+    if GENMEparm.n_power_R in kwargs:
+        n_pow = kwargs[GENMEparm.n_power_R][AttributeArgs.value]
+        cls.PARAMS_FORCE[GENMEparm.n_power_R] = int(n_pow)
+    
+    return cls
