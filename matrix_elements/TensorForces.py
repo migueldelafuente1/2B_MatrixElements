@@ -7,15 +7,17 @@ import numpy as np
 from sympy.physics.wigner import clebsch_gordan
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, \
-    BrinkBoekerParameters
-from helpers.Enums import AttributeArgs
+    BrinkBoekerParameters, SHO_Parameters, PotentialForms, AttributeArgs
+from helpers.Helpers import ConstantsV18
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    MatrixElementException, _standardSetUpForCentralWithExchangeOps
+    MatrixElementException, _standardSetUpForCentralWithExchangeOps,\
+    _TwoBodyMatrixElement_JCoupled
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Helpers import safe_racah, safe_wigner_6j
 from helpers.WaveFunctions import QN_2body_LS_Coupling
 from helpers.Log import XLog
+from helpers.integrals import talmiIntegral
 
 class TensorForce(TalmiTransformation):#):
     
@@ -310,15 +312,131 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
         return prod_part
 
 
-class TPE_Force_JTScheme(TensorS12_JTScheme):
+class ElectromagneticNonCentral_JScheme(TensorForce, _TwoBodyMatrixElement_JCoupled):
+    """
+    TODO: Terms from the Argone potential for the Magnetic-Moment.
+    constants dependent on the pp - pn - nn chanels
+    
+    Not setteable
+    
+    Components non-central terms dependent on sigma*sigma, S_ij, L*S, L*A
+    """
+    
+    pass
+
+class OPE_TPE_Force_JTScheme(TensorForce_JTScheme):
     
     """
     Two-Pion-Exchange potential, from Nijmegen partial-wave analysis:
     
-        S12   
+        C * S12 * (1 + 3(r/mu) + 3(r/mu)^2) * Y(r/b) * (cutoff)
     
     Includes an optional parameter for a cuttoff function 1 - exp(-cr^2)
     That requires to change the Talmi integrals
     """
     
-    pass
+    PARAMS_FORCE = {
+        -1: { # 'pp'
+            },
+        0 : { # 'pn'
+            },
+        1 : { # 'nn'
+            },
+        CentralMEParameters.opt_cutoff : 0.6900655593423541, #1 / (2.1**0.5),
+        }
+    
+    FACTOR_Fpp =  0.27386127875   # sqrt(0.075)
+    FACTOR_Fnn = -0.27386127875
+    FACTOR_Fc  =  0.27386127875
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        
+        ## TODO. define the SHO and the constants (to avoid recalculating)
+        cls.PARAMS_SHO[SHO_Parameters.b_length] = None
+        
+        scaling_0pm = (ConstantsV18.M_PION_0 / ConstantsV18.M_PION_pm)**2
+        
+        const_pp = (cls.FACTOR_Fpp**2) * scaling_0pm * ConstantsV18.M_PION_0 / 3
+        const_nn = (cls.FACTOR_Fnn**2) * scaling_0pm * ConstantsV18.M_PION_0 / 3
+        const_pn1= 2 * (cls.FACTOR_Fc**2) * ConstantsV18.M_PION_pm / 3
+        const_pn0= cls.FACTOR_Fpp * cls.FACTOR_Fnn * (scaling_0pm * 
+                                                      ConstantsV18.M_PION_0 / 3)
+        
+        ## lengths for the code has to be for r/mu, not as in the article
+        mu_pp = (ConstantsV18.HBAR_C / ConstantsV18.M_PION_0)
+        mu_pn = (ConstantsV18.HBAR_C / ConstantsV18.M_PION_pm)
+        
+        cls.PARAMS_FORCE = {
+            -1: { # 'pp'
+                 CentralMEParameters.constant : const_pp, 
+                 CentralMEParameters.mu_length: mu_pp,
+                },
+            0 : { # 'pn'
+                 CentralMEParameters.constant : (const_pn0, const_pn1), 
+                 CentralMEParameters.mu_length: (mu_pp, mu_pn),
+                },
+            1 : { # 'nn'
+                 CentralMEParameters.constant : const_nn, 
+                 CentralMEParameters.mu_length: mu_pp,
+                },
+            CentralMEParameters.opt_cutoff : 0.6900655593423541, #1 / (2.1**0.5),
+        }
+        
+    
+    @classmethod
+    def _calculateIntegrals(cls, n_integrals =1):
+        
+        arg_keys = [
+            CentralMEParameters.potential, 
+            SHO_Parameters.b_length,
+            CentralMEParameters.mu_length,
+            CentralMEParameters.n_power
+        ]
+        
+        args = [ 
+            cls.PARAMS_FORCE.get(arg_keys[0]), 
+            cls.PARAMS_SHO  .get(arg_keys[1]),
+            cls.PARAMS_FORCE.get(arg_keys[2]), 
+            cls.PARAMS_FORCE.get(arg_keys[3]),
+        ]
+        kwargs = map(lambda x: (x, cls.PARAMS_FORCE.get(x, None)), 
+                     CentralMEParameters.members(but=arg_keys))
+        kwargs = dict(filter(lambda x: x[1] != None, kwargs))
+        
+        for p in range(cls._integrals_p_max + 1, cls._integrals_p_max + n_integrals +1):
+            
+            args[3] = 0
+            
+            I1 = talmiIntegral(p, *args, **kwargs)
+            
+            args[0] = PotentialForms.YukawaGauss_power
+            args[3] = 1
+            kwargs[CentralMEParameters.opt_mu_2] = 0.0
+            I2 = talmiIntegral(p, *args, **kwargs)
+            
+            args[3] = 2
+            I3 = talmiIntegral(p, *args, **kwargs)
+            kwargs[CentralMEParameters.opt_mu_2] = 0.0
+            cls._talmiIntegrals.append(talmiIntegral(p, *args, **kwargs))
+            
+            cls._integrals_p_max += 1
+    
+    
+    def _deltaConditionsForCOM_Iteration(self):
+        """ For the antisymmetrization_ of the wave functions. """
+        if (((self.S_bra + 1 + self._l) % 2 == 1) and 
+            ((self.S_ket + 1 + self._l_q) % 2 == 1)):
+                return True
+        return False
+    
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        """
+        return self.centerOfMassMatrixElementEvaluation()
+    
+    def _run(self):
+        ## First method that runs antisymmetrization_ by exchange the quantum
+        ## numbers (X2 time), change 2* _series_coefficient
+        return _TwoBodyMatrixElement_JTCoupled._run(self)

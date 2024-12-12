@@ -13,24 +13,82 @@
 	<Valence_Space>
 		<Q_Number sp_state='001' sp_energy=''/>
 		
-		<Q_Number sp_state='101' sp_energy=''/>
 		<Q_Number sp_state='103' sp_energy=''/>
+		<Q_Number sp_state='101' sp_energy=''/>
+
+		<!--		
+		<Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='203' sp_energy=''/>
+		<Q_Number sp_state='10001' sp_energy=''/>
 		
-		<!--Q_Number sp_state='205' sp_energy=''/-->
-		<!--Q_Number sp_state='1003' sp_energy=''/-->
-		<!--Q_Number sp_state='203' sp_energy=''/-->
-		<!--Q_Number sp_state='307' sp_energy=''/-->
+		<Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='305' sp_energy=''/>
+		<Q_Number sp_state='10103' sp_energy=''/>
+		<Q_Number sp_state='10101' sp_energy=''/>
+
+		<Q_Number sp_state='409' sp_energy=''/>
+		<Q_Number sp_state='407' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='10203' sp_energy=''/>
+		<Q_Number sp_state='20001' sp_energy=''/>
 		
-		<!--Q_Number sp_state='1103' sp_energy=''/-->
-		<!--Q_Number sp_state='305' sp_energy=''/-->
-		<!--Q_Number sp_state='1101' sp_energy=''/-->
-		<!--Q_Number sp_state='409' sp_energy=''/-->
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
 		
-		<!--Q_Number sp_state='1205' sp_energy=''/-->
-		<!--Q_Number sp_state='407' sp_energy=''/-->
-		<!--Q_Number sp_state='2001' sp_energy=''/-->
-		<!--Q_Number sp_state='1203' sp_energy=''/-->
-		<!--Q_Number sp_state='511' sp_energy=''/-->
+		<Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		
+		<Q_Number sp_state='715'   sp_energy=''/>
+		<Q_Number sp_state='713'   sp_energy=''/>
+		<Q_Number sp_state='10511' sp_energy=''/>
+		<Q_Number sp_state='10509' sp_energy=''/>
+		<Q_Number sp_state='20307' sp_energy=''/>
+		<Q_Number sp_state='20305' sp_energy=''/>
+		<Q_Number sp_state='30103' sp_energy=''/>
+		<Q_Number sp_state='30101' sp_energy=''/>
+		
+		<Q_Number sp_state='817'   sp_energy=''/>
+		<Q_Number sp_state='815'   sp_energy=''/>
+		<Q_Number sp_state='10613' sp_energy=''/>
+		<Q_Number sp_state='10611' sp_energy=''/>
+		<Q_Number sp_state='20409' sp_energy=''/>
+		<Q_Number sp_state='20407' sp_energy=''/>
+		<Q_Number sp_state='30205' sp_energy=''/>
+		<Q_Number sp_state='30203' sp_energy=''/>
+		<Q_Number sp_state='40001' sp_energy=''/>
+		
+		<Q_Number sp_state='919'   sp_energy=''/>
+		<Q_Number sp_state='917'   sp_energy=''/>
+		<Q_Number sp_state='10715'   sp_energy=''/>
+		<Q_Number sp_state='10713'   sp_energy=''/>
+		<Q_Number sp_state='20511'   sp_energy=''/>
+		<Q_Number sp_state='20509'   sp_energy=''/>
+		<Q_Number sp_state='30307'   sp_energy=''/>
+		<Q_Number sp_state='30305'   sp_energy=''/>
+		<Q_Number sp_state='40103'   sp_energy=''/>
+		<Q_Number sp_state='40101'   sp_energy=''/>
+		
+		<Q_Number sp_state='1021'   sp_energy=''/>
+		<Q_Number sp_state='1019'   sp_energy=''/>
+		<Q_Number sp_state='10817'   sp_energy=''/>
+		<Q_Number sp_state='10815'   sp_energy=''/>
+		<Q_Number sp_state='20613'   sp_energy=''/>
+		<Q_Number sp_state='20611'   sp_energy=''/>
+		<Q_Number sp_state='30409'   sp_energy=''/>
+		<Q_Number sp_state='30407'   sp_energy=''/>
+		<Q_Number sp_state='40205'   sp_energy=''/>
+		<Q_Number sp_state='40203'   sp_energy=''/>
+		<Q_Number sp_state='50001'   sp_energy=''/-->
+		
 	</Valence_Space>
 	<Core>
 		<protons>50</protons>

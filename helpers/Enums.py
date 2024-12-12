@@ -84,6 +84,7 @@ class ForceEnum(Enum):
     SkyrmeBulk = 'SkyrmeBulk'
     TensorS12  = 'TensorS12'
     Force_From_File = 'Force_From_File'
+    CentralGeneralized = 'CentralGeneralized'
 
 class PotentialForms(Enum):
     Gaussian    = 'gaussian'                # exp(-(r/mu_)^2)
@@ -128,7 +129,13 @@ class CentralWithExchangeParameters(CentralMEParameters, BrinkBoekerParameters):
 #     Majorana  = 'Majorana'
 #     Bartlett  = 'Bartlett'
 #     Heisenberg= 'Heisenberg'
-    
+
+class CentralGeneralizedMEParameters(CentralMEParameters):
+    potential_R = 'potential_R'
+    constant_R  = 'constant_R'
+    mu_length_R = 'mu_length_R'
+    n_power_R   = 'n_power_R'
+
 class PotentialSeriesParameters(Enum):
     part    = 'part'
 
@@ -190,6 +197,7 @@ ForceVariablesDict = {
     ForceEnum.ElectromageticCentral     : Enum, 
     ForceEnum.ElectromageticNonCentral  : Enum,
     ForceEnum.Force_From_File : ForceFromFileParameters,
+    ForceEnum.CentralGeneralized : CentralGeneralizedMEParameters,
 }
 
 ForcesWithRepeatedParametersList = [

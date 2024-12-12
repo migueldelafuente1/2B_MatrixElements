@@ -1,0 +1,253 @@
+<input>
+	<Interaction_Title name="M3Y P2 (PRC 68 014316, 2003)- Fermi Density" details=""/>
+	<Output_Parameters>
+		<Output_Filename>M3Y_P2_MZ3</Output_Filename>
+		<Hamil_Type>4</Hamil_Type>
+		<COM_correction>1</COM_correction>
+	</Output_Parameters>
+	<SHO_Parameters>
+		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
+			   are not required parameters, define values only for explicit 
+			   setting.
+			-->
+		<A_mass>16</A_mass>
+		<Z>8</Z>
+		<hbar_omega units='MeV'/>
+		<b_length units='fm'>1.60</b_length>
+	</SHO_Parameters>
+	<Core>
+		<innert_core protons='0' neutrons ='0' name=''/>
+		<energy value='0.0' units='MeV'/>
+	</Core>
+	<Valence_Space l_great_than_10='True'>
+		<Q_Number sp_state='001' sp_energy=''/>
+		
+		<Q_Number sp_state='103' sp_energy=''/>
+		<Q_Number sp_state='101' sp_energy=''/>
+
+		<!--		
+		<Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='203' sp_energy=''/>
+		<Q_Number sp_state='10001' sp_energy=''/>
+		
+		<Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='305' sp_energy=''/>
+		<Q_Number sp_state='10103' sp_energy=''/>
+		<Q_Number sp_state='10101' sp_energy=''/>
+
+		<Q_Number sp_state='409' sp_energy=''/>
+		<Q_Number sp_state='407' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='10203' sp_energy=''/>
+		<Q_Number sp_state='20001' sp_energy=''/>
+		
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
+		
+		<Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		
+		<Q_Number sp_state='715'   sp_energy=''/>
+		<Q_Number sp_state='713'   sp_energy=''/>
+		<Q_Number sp_state='10511' sp_energy=''/>
+		<Q_Number sp_state='10509' sp_energy=''/>
+		<Q_Number sp_state='20307' sp_energy=''/>
+		<Q_Number sp_state='20305' sp_energy=''/>
+		<Q_Number sp_state='30103' sp_energy=''/>
+		<Q_Number sp_state='30101' sp_energy=''/>
+		
+		<Q_Number sp_state='817'   sp_energy=''/>
+		<Q_Number sp_state='815'   sp_energy=''/>
+		<Q_Number sp_state='10613' sp_energy=''/>
+		<Q_Number sp_state='10611' sp_energy=''/>
+		<Q_Number sp_state='20409' sp_energy=''/>
+		<Q_Number sp_state='20407' sp_energy=''/>
+		<Q_Number sp_state='30205' sp_energy=''/>
+		<Q_Number sp_state='30203' sp_energy=''/>
+		<Q_Number sp_state='40001' sp_energy=''/>
+		
+		<Q_Number sp_state='919'   sp_energy=''/>
+		<Q_Number sp_state='917'   sp_energy=''/>
+		<Q_Number sp_state='10715'   sp_energy=''/>
+		<Q_Number sp_state='10713'   sp_energy=''/>
+		<Q_Number sp_state='20511'   sp_energy=''/>
+		<Q_Number sp_state='20509'   sp_energy=''/>
+		<Q_Number sp_state='30307'   sp_energy=''/>
+		<Q_Number sp_state='30305'   sp_energy=''/>
+		<Q_Number sp_state='40103'   sp_energy=''/>
+		<Q_Number sp_state='40101'   sp_energy=''/>
+		
+		<Q_Number sp_state='1021'   sp_energy=''/>
+		<Q_Number sp_state='1019'   sp_energy=''/>
+		<Q_Number sp_state='10817'   sp_energy=''/>
+		<Q_Number sp_state='10815'   sp_energy=''/>
+		<Q_Number sp_state='20613'   sp_energy=''/>
+		<Q_Number sp_state='20611'   sp_energy=''/>
+		<Q_Number sp_state='30409'   sp_energy=''/>
+		<Q_Number sp_state='30407'   sp_energy=''/>
+		<Q_Number sp_state='40205'   sp_energy=''/>
+		<Q_Number sp_state='40203'   sp_energy=''/>
+		<Q_Number sp_state='50001'   sp_energy=''/-->
+		
+		<!-- valence space -->
+	</Valence_Space>
+	<Force_Parameters>
+		<M3Y_yukawians active='True'>
+			<!-- Yukawians from force: M3Y-P0 >
+			<mu_length	 part_1='0.25'	 	 part_2='0.40'	 	 part_3='1.414'/>
+			<Wigner	 	 part_1='35360.00'	 part_2='-9100.00'	 part_3='13.95'/>
+			<Bartlett	 part_1='15264.00'	 part_2='-3888.00'	 part_3='-27.90'/>
+			<Heisenberg	 part_1='-10262.00'	 part_2='1812.00'	 part_3='27.90'/>
+			<Majorana	 part_1='15506.00'	 part_2='-7200.00'	 part_3='-55.80'/-->
+			<!-- Yukawians from force: M3Y-P1 >
+			<mu_length	 part_1='0.25'	 	 part_2='0.40'	 	 part_3='1.414'/>
+			<Wigner	 part_1='29001.75'	 part_2='-9100.00'	 part_3='13.95'/>
+			<Bartlett	 part_1='14638.75'	 part_2='-3888.00'	 part_3='-27.90'/>
+			<Heisenberg	 part_1='-10887.25'	 part_2='1812.00'	 part_3='27.90'/>
+			<Majorana	 part_1='9147.75'	 part_2='-7200.00'	 part_3='-55.80'/-->
+			<!-- Yukawians from force: M3Y-P2 -->
+			<mu_length	 part_1='4.0'	 	 part_2='2.5'	part_3='0.707213579'/>
+			<Wigner	 part_1='6007.00'	     part_2='-5196.00'	 part_3='13.95'/>
+			<Bartlett	 part_1='13753.00'	 part_2='-4896.00'	 part_3='-27.90'/>
+			<Heisenberg	 part_1='-17647.00'	 part_2='2124.00'	 part_3='27.90'/>
+			<Majorana	 part_1='22207.00'	 part_2='-9096.00'	 part_3='-55.80'/>
+		</M3Y_yukawians>
+		<!-- Tensor Force.
+				Standard non central force S_12 parameterized with exponential, 
+				gaussian, power term, yukawa or coulomb potential functions 
+				f(r; mu, n), central term and exchange operators:
+					V(r)= f(r; mu, n) * (W + P(S)* B - P(T)* H - P(T)*P(S)* M)
+				Spatial (Majorana), spin (Bartlett) and isospin (Heisenberg)
+				-->
+		<TensorS12 active='False'>
+		<!-- Yukawians from force: M3Y-P0 part 1 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value=' 0.40'	/>
+			<Wigner	 value='-852.00'	/>
+			<Bartlett	 value='-852.00'	/>
+			<Heisenberg	 value='-1340.00'	/>
+			<Majorana	 value='-1340.00'	/>
+			<n_power	 value='0'	/>
+		</TensorS12>
+		<TensorS12 active='False'>
+			<!-- Yukawians from force: M3Y-P0 part 2 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value=' 0.70'	/>
+			<Wigner	 value='-15.30'	/>
+			<Bartlett	 value='-15.30'	/>
+			<Heisenberg	 value='-46.50'	/>
+			<Majorana	 value='-46.50'	/>
+			<n_power	 value='0'	/>
+		</TensorS12>
+		<TensorS12 active='True'>
+			<!-- Yukawians from force: M3Y-P2 part 1 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value='2.5'	/>
+			<Wigner	 value='-102.24'	/>
+			<Bartlett	 value='-102.24'	/>
+			<Heisenberg	 value='-160.80'	/>
+			<Majorana	 value='-160.80'	/>
+			<n_power	 value='0'	/>
+		</TensorS12>
+		<TensorS12 active='True'>
+			<!-- Yukawians from force: M3Y-P2 part 2 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value='1.428571429'	/>
+			<Wigner	 value='-1.84'	/>
+			<Bartlett	 value='-1.84'	/>
+			<Heisenberg	 value='-5.58'	/>
+			<Majorana	 value='-5.58'	/>
+			<n_power	 value='0'	/>
+		</TensorS12>
+		<!-- Spin-Orbit Finite Range with Exchange Operators
+				Standard non central force l*S parameterized with exponential, 
+				gaussian, power term, yukawa or coulomb potential functions 
+				f(r; mu, n), central term and exchange operators:
+					V(r)= f(r; mu, n) * (W + P(S)* B - P(T)* H - P(T)*P(S)* M)
+				Spatial (Majorana), spin (Bartlett) and isospin (Heisenberg)
+				-->
+		<SpinOrbitFiniteRange active='False'>
+			<!-- Yukawians from force: M3Y-P0 part 1 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value=' 0.25'	/>
+			<Wigner	 value='-6998.00'	/>
+			<Bartlett	 value='-6998.00'	/>
+			<Heisenberg	 value='-3204.00'	/>
+			<Majorana	 value='-3204.00'	/>
+			<n_power	 value='0'	/>
+		</SpinOrbitFiniteRange>
+		<SpinOrbitFiniteRange active='False'>
+			<!-- Yukawians from force: M3Y-P0 part 2 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value=' 0.40'	/>
+			<Wigner	 value='-969.00'	/>
+			<Bartlett	 value='-969.00'	/>
+			<Heisenberg	 value='295.00'	/>
+			<Majorana	 value='295.00'	/>
+			<n_power	 value='0'	/>
+		</SpinOrbitFiniteRange>
+		<SpinOrbitFiniteRange active='True'>
+			<!-- Yukawians from force: M3Y-P2 part 1 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value='2.5'	/>
+			<Wigner	 	 value='-12596.40'	/>
+			<Bartlett	 value='-12596.40'	/>
+			<Heisenberg	 value='-5767.20'	/>
+			<Majorana	 value='-5767.20'	/>
+			<n_power	 value='0'	/>
+		</SpinOrbitFiniteRange>
+		<SpinOrbitFiniteRange active='True'>
+			<!-- Yukawians from force: M3Y-P2 part 2 -->
+			<potential	 name='yukawa'	/>
+			<mu_length	 value='1.428571429'	/>
+			<Wigner	 	 value='-1744.20'	/>
+			<Bartlett	 value='-1744.20'	/>
+			<Heisenberg	 value='531.00'	/>
+			<Majorana	 value='531.00'	/>
+			<n_power	 value='0'	/>
+		</SpinOrbitFiniteRange>
+		<Coulomb active='False'>
+			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
+		</Coulomb>
+		<Kinetic_2Body active='False'>
+			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
+		</Kinetic_2Body>
+		<Density_Dependent active='True'>
+			<!-- Density dependent Force based on Fermi density for the nucleus,
+				parametrization from Gogny D1S:
+					t0 * (1 + x0*P_s) * rho^alpha(r1 + r-2 / 2) * delta(r1 - r2)
+				M3Y P2
+				-->
+			<constant value='1320'  	units='MeV*fm^-4'/>
+			<alpha    value='0.333333'/>
+			<x0		  value='0.72576'/>
+			<!-- M3Y P1   >
+			<constant value='1212'  	units='MeV*fm^-4'/>
+			<alpha    value='0.333333'/>
+			<x0		  value='0.09834'/-->
+			<!--  core     protons='0' neutrons ='0' core_b_len='1.5953'/ -->
+		</Density_Dependent>
+		<Density_From_File active='False'>
+			<!-- Density dependent Force based on Fermi density for the nucleus,
+				parametrization from Gogny D1S:
+					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)
+				alpha fixed (=1/3), x0 fixed (=1)
+				1390.6
+				-->
+			<constant value='1390.6'  	units='MeV*fm^-4'/>
+			<alpha    value='0.33333'/>
+			<x0		  value='1'/>
+			<file name='results/32Mg_wf.txt' />
+			<core protons='12' neutrons ='20' core_b_len='1.89'/>
+		</Density_From_File>
+	</Force_Parameters>
+</input>

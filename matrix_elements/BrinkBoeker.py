@@ -48,6 +48,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Gaussian
         #cls.plotRadialPotential()
         
+        cls.numberGaussians  = 2
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = ([], [])
     
@@ -103,7 +104,7 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         """
         for p in range(cls._integrals_p_max + 1, 
                        cls._integrals_p_max + n_integrals +1):
-            for part in (0, 1): 
+            for part in range(cls.numberGaussians): 
                 args = [
                     cls.PARAMS_FORCE.get(CentralMEParameters.potential),
                     cls.PARAMS_SHO.get(SHO_Parameters.b_length), # * np.sqrt(2), # 
@@ -138,14 +139,11 @@ class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
         """
         aux_sum = 0.0
         # Sum of gaussians and projection operators
-        for i in range(2):
+        for i in range(self.numberGaussians):
             self._part = i
             
             # Radial Part for Gaussian Integral
             radial_energy = self.centerOfMassMatrixElementEvaluation()
-            
-            if self.DEBUG_MODE:
-                XLog.write('BB', mu=self.PARAMS_FORCE[i][CentralMEParameters.mu_length])
             
             # Exchange Part
             # W + P(S)* B - P(T)* H - P(T)*P(S)* M
@@ -282,3 +280,40 @@ class PotentialSeries_JTScheme(BrinkBoeker):
                 XLog.write('BB', radial=radial_energy, val=prod_part)
         
         return aux_sum 
+
+
+class YukawiansM3Y_JTScheme(BrinkBoeker):
+    
+    """
+    The gaussian_ series are useful to mimic non analytically integrable
+    potentials, this interaction is an extension of the Brink_Boeker for 
+    indeterminate number of Wigner terms.
+    """
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Talmi Integrals. 
+        """
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b = SHO_Parameters.b_length
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+                
+        cls.numberGaussians = 3
+        for i in range(cls.numberGaussians):
+            part_i = '{}_{}'.format(PotentialSeriesParameters.part, i+1)
+            
+            cls.PARAMS_FORCE[i] = {}
+            
+            for param in bb_p.members():
+                cls.PARAMS_FORCE[i][param] = float(kwargs[param].get(part_i))
+        
+        cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Yukawa
+                
+        #cls.plotRadialPotential()
+        cls._integrals_p_max = -1
+        cls._talmiIntegrals  = tuple(([] for _ in range(cls.numberGaussians)))
+    
