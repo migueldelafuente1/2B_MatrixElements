@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="B1, +LS+Coul" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_Mg32</Output_Filename>
+		<Output_Filename>D1S_MZ5</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>
@@ -13,17 +13,7 @@
 		<A_mass>22</A_mass>
 		<Z>12</Z>
 		<hbar_omega units='MeV'/>
-		<b_length units='fm'>1.89</b_length>
-		<!--   
-			20	1.81 1.98
-			22	1.83 1.94
-			24	1.83 1.92
-			26	1.79 1.95
-			28	1.80 1.94
-			30	1.86 1.98
-			32	1.89 2.01 
-			34	1.89 2.05
-		-->
+		<b_length units='fm'>1.9</b_length>
 	</SHO_Parameters>
 	<Core>
 		<innert_core protons='0' neutrons ='0' name=''/>
@@ -34,8 +24,7 @@
 		
 		<Q_Number sp_state='103' sp_energy=''/>
 		<Q_Number sp_state='101' sp_energy=''/>
-
-		<!--		
+	
 		<Q_Number sp_state='205' sp_energy=''/>
 		<Q_Number sp_state='203' sp_energy=''/>
 		<Q_Number sp_state='10001' sp_energy=''/>
@@ -58,6 +47,7 @@
 		<Q_Number sp_state='20103' sp_energy=''/>
 		<Q_Number sp_state='20101' sp_energy=''/>
 		
+		<!--	
 		<Q_Number sp_state='613' sp_energy=''/>
 		<Q_Number sp_state='611' sp_energy=''/>
 		<Q_Number sp_state='10409' sp_energy=''/>
@@ -123,24 +113,7 @@
 			<options ignorelines='1' constant='7.921' l_ge_10='True'/>
 			<!--scheme name='J'/-->
 		</Force_From_File>
-		<Force_From_File active='False'>
-			<!-- Import an interaction already saved -->
-			<file name='savedBeq1Hamils/void.2b'/>
-			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
-		</Force_From_File>
-		<Force_From_File active='False'>
-			<!-- Import an interaction already saved -->
-			<file name='results/onlyDD_GDD_scalar.2b'/>
-			<options ignorelines='1' constant='0.75' l_ge_10='True'/>
-			<!--scheme name='J'/-->
-		</Force_From_File>
-		<Force_From_File active='False'>
-			<!-- Import an interaction already saved -->
-			<file name='results/D1S_vs_scalar.2b'/>
-			<options ignorelines='1' constant='1.0' l_ge_10='True'/>
-			<!--scheme name='J'/-->
-		</Force_From_File>
-		<Brink_Boeker active='False'>
+		<Brink_Boeker active='True'>
 		    <!-- Brink-Boeker force: D1S, Wls=130 t0=1390.6 -->
 			<mu_length 	part_1='0.7' 		part_2='1.2' 		units='fm'/>
 			<Wigner		part_1='-1720.3' 	part_2='103.639' 	units='MeV'/>
@@ -160,13 +133,10 @@
 			<Heisenberg part_1='0.0' 		part_2='0.0' 		units='MeV'/>
 			<Majorana	part_1='-206.05'	part_2='-68.39'		units='MeV'/-->
 		</Brink_Boeker>
-		<Coulomb active='False'>
+		<Coulomb active='True'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
-		<Kinetic_2Body active='False'>
-			<!-- Kinetic 2 body operator (p1*p2), cannot be fixed -->
-		</Kinetic_2Body>
-		<SpinOrbitShortRange active='False'>
+		<SpinOrbitShortRange active='True'>
 			<!-- Spin Orbit from the Short Range approximation Force.
 				Approximation V(r)[(p)^* x \delta(r)p]*S parameterized with 
 				constant interaction potential functions 
@@ -176,18 +146,7 @@
 			<mu_length	value='1.0' 	units='fm'/>
 			<n_power  	value='0'/>
 		</SpinOrbitShortRange>
-		<Density_Dependent active='False'>
-			<!-- Density dependent Force based on Fermi density for the nucleus,
-				parametrization from Gogny D1S:
-					t0 * (1 + x0*P_s) * rho^alpha(r1 + r-2 / 2) * delta(r1 - r2)
-				<constant value='1390.6'  	units='MeV*fm^-4'/>
-				-->
-			<constant value='1700.0'  	units='MeV*fm^-4'/>
-			<alpha    value='0.333333'/>
-			<x0		  value='1'/>
-			<!--  core     protons='0' neutrons ='0' core_b_len='1.5953'/ -->
-		</Density_Dependent>
-		<Density_From_File active='True'>
+		<Density_From_File active='False'>
 			<!-- Density dependent Force based on Fermi density for the nucleus,
 				parametrization from Gogny D1S:
 					t0 * (1 + x0*P_s) * rho^alpha(r1 + r2 / 2) * delta(r1 - r2)

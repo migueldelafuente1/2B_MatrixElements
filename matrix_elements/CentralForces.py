@@ -548,9 +548,7 @@ class CentralGeneralizedForce(TalmiGeneralizedTransformation):
         exchanged the matrix element)"""
         valid_lST = (((self.S_bra + self.T + self._l) % 2 == 1) and 
                      ((self.S_ket + self.T + self._l_q) % 2 == 1))
-        valid_LST = True
-        # valid_LST = (((self.S_bra + self.T + self._L) % 2 == 1) and 
-        #              ((self.S_ket + self.T + self._L_q) % 2 == 1))
+        valid_LST = False
         if valid_lST or valid_LST:
             return True
         return False

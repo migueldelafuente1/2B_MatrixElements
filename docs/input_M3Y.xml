@@ -110,13 +110,13 @@
 			<Majorana	 part_1='15506.00'	 part_2='-7200.00'	 part_3='-55.80'/-->
 			<!-- Yukawians from force: M3Y-P1 >
 			<mu_length	 part_1='0.25'	 	 part_2='0.40'	 	 part_3='1.414'/>
-			<Wigner	 part_1='29001.75'	 part_2='-9100.00'	 part_3='13.95'/>
+			<Wigner	     part_1='29001.75'	 part_2='-9100.00'	 part_3='13.95'/>
 			<Bartlett	 part_1='14638.75'	 part_2='-3888.00'	 part_3='-27.90'/>
 			<Heisenberg	 part_1='-10887.25'	 part_2='1812.00'	 part_3='27.90'/>
 			<Majorana	 part_1='9147.75'	 part_2='-7200.00'	 part_3='-55.80'/-->
 			<!-- Yukawians from force: M3Y-P2 -->
-			<mu_length	 part_1='4.0'	 	 part_2='2.5'	part_3='0.707213579'/>
-			<Wigner	 part_1='6007.00'	     part_2='-5196.00'	 part_3='13.95'/>
+			<mu_length	 part_1='0.25'	 	 part_2='0.40'	     part_3='1.414'/>
+			<Wigner	     part_1='6007.00'	 part_2='-5196.00'	 part_3='13.95'/>
 			<Bartlett	 part_1='13753.00'	 part_2='-4896.00'	 part_3='-27.90'/>
 			<Heisenberg	 part_1='-17647.00'	 part_2='2124.00'	 part_3='27.90'/>
 			<Majorana	 part_1='22207.00'	 part_2='-9096.00'	 part_3='-55.80'/>
@@ -132,40 +132,40 @@
 		<!-- Yukawians from force: M3Y-P0 part 1 -->
 			<potential	 name='yukawa'	/>
 			<mu_length	 value=' 0.40'	/>
-			<Wigner	 value='-852.00'	/>
+			<Wigner	 	 value='-852.00'	/>
 			<Bartlett	 value='-852.00'	/>
-			<Heisenberg	 value='-1340.00'	/>
-			<Majorana	 value='-1340.00'	/>
+			<Heisenberg	 value=' 1340.00'	/>
+			<Majorana	 value=' 1340.00'	/>
 			<n_power	 value='0'	/>
 		</TensorS12>
 		<TensorS12 active='False'>
 			<!-- Yukawians from force: M3Y-P0 part 2 -->
 			<potential	 name='yukawa'	/>
 			<mu_length	 value=' 0.70'	/>
-			<Wigner	 value='-15.30'	/>
+			<Wigner	 	 value='-15.30'	/>
 			<Bartlett	 value='-15.30'	/>
-			<Heisenberg	 value='-46.50'	/>
-			<Majorana	 value='-46.50'	/>
+			<Heisenberg	 value=' 46.50'	/>
+			<Majorana	 value=' 46.50'	/>
 			<n_power	 value='0'	/>
 		</TensorS12>
 		<TensorS12 active='True'>
 			<!-- Yukawians from force: M3Y-P2 part 1 -->
 			<potential	 name='yukawa'	/>
-			<mu_length	 value='2.5'	/>
-			<Wigner	 value='-102.24'	/>
+			<mu_length	 value='0.4'	/>
+			<Wigner	 	 value='-102.24'	/>
 			<Bartlett	 value='-102.24'	/>
-			<Heisenberg	 value='-160.80'	/>
-			<Majorana	 value='-160.80'	/>
+			<Heisenberg	 value=' 160.80'	/>
+			<Majorana	 value=' 160.80'	/>
 			<n_power	 value='0'	/>
 		</TensorS12>
 		<TensorS12 active='True'>
 			<!-- Yukawians from force: M3Y-P2 part 2 -->
 			<potential	 name='yukawa'	/>
-			<mu_length	 value='1.428571429'	/>
-			<Wigner	 value='-1.84'	/>
+			<mu_length	 value='0.70'	/>
+			<Wigner	 	 value='-1.84'	/>
 			<Bartlett	 value='-1.84'	/>
-			<Heisenberg	 value='-5.58'	/>
-			<Majorana	 value='-5.58'	/>
+			<Heisenberg	 value=' 5.58'	/>
+			<Majorana	 value=' 5.58'	/>
 			<n_power	 value='0'	/>
 		</TensorS12>
 		<!-- Spin-Orbit Finite Range with Exchange Operators
@@ -179,39 +179,39 @@
 			<!-- Yukawians from force: M3Y-P0 part 1 -->
 			<potential	 name='yukawa'	/>
 			<mu_length	 value=' 0.25'	/>
-			<Wigner	 value='-6998.00'	/>
+			<Wigner	 	 value='-6998.00'	/>
 			<Bartlett	 value='-6998.00'	/>
-			<Heisenberg	 value='-3204.00'	/>
-			<Majorana	 value='-3204.00'	/>
+			<Heisenberg	 value=' 3204.00'	/>
+			<Majorana	 value=' 3204.00'	/>
 			<n_power	 value='0'	/>
 		</SpinOrbitFiniteRange>
 		<SpinOrbitFiniteRange active='False'>
 			<!-- Yukawians from force: M3Y-P0 part 2 -->
 			<potential	 name='yukawa'	/>
 			<mu_length	 value=' 0.40'	/>
-			<Wigner	 value='-969.00'	/>
+			<Wigner	 	 value='-969.00'	/>
 			<Bartlett	 value='-969.00'	/>
-			<Heisenberg	 value='295.00'	/>
-			<Majorana	 value='295.00'	/>
+			<Heisenberg	 value='-295.00'	/>
+			<Majorana	 value='-295.00'	/>
 			<n_power	 value='0'	/>
 		</SpinOrbitFiniteRange>
 		<SpinOrbitFiniteRange active='True'>
 			<!-- Yukawians from force: M3Y-P2 part 1 -->
 			<potential	 name='yukawa'	/>
-			<mu_length	 value='2.5'	/>
+			<mu_length	 value='0.25'	/>
 			<Wigner	 	 value='-12596.40'	/>
-			<Bartlett	 value='-12596.40'	/>
-			<Heisenberg	 value='-5767.20'	/>
+			<Bartlett	 value=' 12596.40'	/>
+			<Heisenberg	 value=' 5767.20'	/>
 			<Majorana	 value='-5767.20'	/>
 			<n_power	 value='0'	/>
 		</SpinOrbitFiniteRange>
 		<SpinOrbitFiniteRange active='True'>
 			<!-- Yukawians from force: M3Y-P2 part 2 -->
 			<potential	 name='yukawa'	/>
-			<mu_length	 value='1.428571429'	/>
+			<mu_length	 value='0.40'	/>
 			<Wigner	 	 value='-1744.20'	/>
-			<Bartlett	 value='-1744.20'	/>
-			<Heisenberg	 value='531.00'	/>
+			<Bartlett	 value=' 1744.20'	/>
+			<Heisenberg	 value='-531.00'	/>
 			<Majorana	 value='531.00'	/>
 			<n_power	 value='0'	/>
 		</SpinOrbitFiniteRange>

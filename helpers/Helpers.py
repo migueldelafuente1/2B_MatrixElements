@@ -464,7 +464,7 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
                             assert abs(dict_1[bk_perm][T][J] 
                                        - phs2 * vals[T][J]) < 1.0e-6,\
                                        "[ERROR]: values of:{} does not match "\
-                                       "\with previous:{}".format(bk_perm, bk)
+                                       "/with previous:{}".format(bk_perm, bk)
             else:
                 dict_1[bk_perm] = dict([(J, dict()) for J in vals])
                 for J in vals:
@@ -480,7 +480,7 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
                             assert abs(dict_1[bk_perm][J][T] 
                                    - phs2 * vals[J][t_perm[T]]) < 1.0e-6,\
                                        "[ERROR]: values of:{} does not match "\
-                                       "\with previous:{}".format(bk_perm, bk)
+                                       "/with previous:{}".format(bk_perm, bk)
     
     # 2 sort in the order of bra (sorting_order) and apply the phs-changes
     dict_2 = {}
