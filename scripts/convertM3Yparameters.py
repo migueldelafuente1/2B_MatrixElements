@@ -7,17 +7,17 @@ import numpy as np
 
 ## Matrix to pass from Bartlett, Majorana ... to P[TS]
 CONV_MATRIX = [
-    [1, -1, -1, -1],  # 1
-    [1,  1, -1,  1],  # Heisenberg
-    [1, -1,  1,  1],  # Bartlett
-    [1,  1,  1, -1],  # Majorana
+    [1,  1, -1, -1],  # 1
+    [1, -1, -1,  1],  # -Heisenberg
+    [1,  1,  1,  1],  # Bartlett
+    [1, -1,  1, -1],  # -Majorana
 ]
 CONV_MATRIX = np.array(CONV_MATRIX) * 0.25
 
 ## Matrix to pass from P[TS] (article ) to Bartlett, Majorana ... (inverse)
 CONV_INV_MATRIX = [
     [ 1,  1,  1,  1],  # P 00 = SO
-    [-1,  1, -1,  1],  # P 10 = SE
+    [ 1, -1,  1, -1],  # P 10 = SE
     [-1, -1,  1,  1],  # P 01 = TE
     [-1,  1,  1, -1],  # P 11 = TO
 ]
@@ -129,7 +129,7 @@ if __name__ == '__main__':
         [-1096,-30.9], # TE
         [ 0.40,  0.70] # 1/mu 
     ]
-    print("P2 - M3Y parametrization")
+    print("P0 - M3Y parametrization")
     print_xml_elements(par_p0, par_p0_LS, par_p0_T)
     print()
     
