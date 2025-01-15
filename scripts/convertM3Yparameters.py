@@ -49,7 +49,7 @@ def print_xml_elements(params_c, params_ls, params_t):
         
         part_ls[part], part_t[part] = {}, {}
         for j, elem in enumerate(('Wigner', 'Heisenberg', 'Bartlett', 'Majorana', 'mu_length')):
-            sgn = -1 if elem=='Heisenberg' else 1
+            sgn=1 #sgn = -1 if elem=='Heisenberg' else 1
             if i == 0:
                 part_c[elem] = {part: sgn*vals_c[j], }
             else:
