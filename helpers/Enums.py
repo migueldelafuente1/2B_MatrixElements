@@ -92,10 +92,10 @@ class PotentialForms(Enum):
     Coulomb     = 'coulomb'                 # mu_/r
     Yukawa      = 'yukawa'                  # exp(-r/mu_) / (r/mu_)
     Power       = 'power'                   # (r/mu_)^n_power
-    Gaussian_power = 'gaussian_power'       # exp(-(r/mu_)^2) / (r/mu_)^n_power
+    Gaussian_power = 'gaussian_power'       # exp(-(r/mu_)^2) * (r/mu_)^n_power
     Wood_Saxon  = 'wood_saxon'              # (r/mu_)^n_power /( 1 + exp((r-mu_2 * A^1/3)/mu_3) )
     Exponential_power = 'exponential_power' # exp(-r/mu_) * (r/mu_)^n_power
-    YukawaGauss_power = 'gauss_yukawa_power'# exp(-(r/mu_)-(r/mu_2)^2) / (r/mu_)^n_power
+    YukawaGauss_power = 'gauss_yukawa_power'# exp(-(r/mu_)-(r/mu_2)^2) * (r/mu_)^n_power
 
 #===============================================================================
 # FORCE PARAMETERS DEFINITIONS

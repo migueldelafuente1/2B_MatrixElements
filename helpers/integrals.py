@@ -52,11 +52,14 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         return (b_param**2) * np.exp(fact(p) - gamma_half_int(2*p + 3)) / (2**.5)
     
     elif potential == PotentialForms.Gaussian_power:
-        aux = gamma_half_int(2*p + 3 - n_power) - gamma_half_int(2*p + 3)
+        ## checked (16/1/25) NOTE: n_power = -3, -5 ,... lead to undefined Gamma
+        if n_power < -2: assert n_power % 2 == 0, "n_power < 0 must be -1 or even!"
+        
+        aux = gamma_half_int(2*p + 3 + n_power) - gamma_half_int(2*p + 3)
         aux = (b_param**3) * np.exp(aux)
         
         x = (2**0.5) * b_param / mu_param
-        return aux / ((x**n_power) * ((1 + x**2)**(p + 1.5 - (n_power/2))))
+        return aux * (x**n_power) / ((1 + x**2)**(p + 1.5 + (n_power/2)))
     
     elif potential == PotentialForms.Power:
         if n_power == 0:
@@ -66,21 +69,31 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         return np.exp(aux + ((n_power + 3)*np.log(b_param)))
     
     elif potential == PotentialForms.Yukawa:
-        sum_ = 0.
-        cte_k = b_param / ((2**0.5) * mu_param)
-        cte_k_log = np.log(cte_k)
+        sum_ = 0.       
         
-        for k in range(0, 2*p + 1 +1):
-            aux  = fact(2*p + 1) - fact(k) - fact(2*p + 1 - k)            
-            aux += (2*p + 1 - k) * cte_k_log
-            aux += gamma_half_int(k + 1) ## normalization of gammaincc_
-            aux  = np.exp(aux)
+        cte_bm = b_param / (2 * mu_param)
+        N = 2*p + 1
+        for k in range(N +1):
+            aux = gamma_half_int(N + 1 - k) - fact(k) - fact(N - k)
+            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc((N + 1 - k)/2, cte_bm**2)
             
-            sum_ += (-1)**(2*p + 1 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
-            
-        #sum_ *= mu_param * (b_param**2) / np.exp(0.5 * ((b_param/mu_param)**2)) 
-        sum_ *= mu_param * (b_param**2) / np.exp(cte_k**2) 
-        sum_ /= np.exp(gamma_half_int(2*p + 3)) * (2**0.5)
+            sum_ += aux
+        
+        aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
+        aux *= mu_param * (b_param**2) / (2**(p + 1.5))
+        sum_ *= aux
+        
+        # for k in range(0, 2*p + 1 +1):
+        #     aux  = fact(2*p + 1) - fact(k) - fact(2*p + 1 - k)            
+        #     aux += (2*p + 1 - k) * cte_k_log
+        #     aux += gamma_half_int(k + 1) ## normalization of gammaincc_
+        #     aux  = np.exp(aux)
+        #
+        #     sum_ += (-1)**(2*p + 1 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
+        #
+        # #sum_ *= mu_param * (b_param**2) / np.exp(0.5 * ((b_param/mu_param)**2)) 
+        # sum_ *= mu_param * (b_param**2) / np.exp(cte_k**2) 
+        # sum_ /= np.exp(gamma_half_int(2*p + 3)) * (2**0.5)
         
         return sum_
     
