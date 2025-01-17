@@ -194,10 +194,12 @@ class PotentialSeries_JTScheme(BrinkBoeker):
         pot_key = CentralMEParameters.potential
         
         cls.numberGaussians = 0
+        i=-1
         for param, values in kwargs.items():
             if not param.startswith(part):
                 continue
-            i = int(param.split(part)[1])
+            # i = int(param.split(part)[1])
+            i += 1
             cls.PARAMS_FORCE[i] = {}
             potential = values.get(pot_key)
             cls.PARAMS_FORCE[i][pot_key] = potential

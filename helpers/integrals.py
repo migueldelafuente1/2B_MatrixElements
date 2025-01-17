@@ -52,7 +52,8 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         return (b_param**2) * np.exp(fact(p) - gamma_half_int(2*p + 3)) / (2**.5)
     
     elif potential == PotentialForms.Gaussian_power:
-        ## checked (16/1/25) NOTE: n_power = -3, -5 ,... lead to undefined Gamma
+        ## checked (16/1/25), compared with numerical integration. (Lag.ass.quadr.)
+        ## NOTE: n_power = -3, -5 ,... lead to undefined Gamma
         if n_power < -2: assert n_power % 2 == 0, "n_power < 0 must be -1 or even!"
         
         aux = gamma_half_int(2*p + 3 + n_power) - gamma_half_int(2*p + 3)
