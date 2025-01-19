@@ -49,7 +49,8 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         return (b_param**3) / (1 + 2*(b_param/mu_param)**2)**(p+1.5)
     
     elif potential == PotentialForms.Coulomb:
-        return (b_param**2) * np.exp(fact(p) - gamma_half_int(2*p + 3)) / (2**.5)
+        return (b_param**2) * mu_param * np.exp(fact(p) - gamma_half_int(2*p + 3))\
+                / (2**.5)
     
     elif potential == PotentialForms.Gaussian_power:
         ## checked (16/1/25), compared with numerical integration. (Lag.ass.quadr.)
@@ -72,47 +73,50 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     elif potential == PotentialForms.Yukawa:
         sum_ = 0.       
         
-        cte_bm = b_param / (2 * mu_param)
+        cte_bm = b_param / ((2**0.5) * mu_param)
         N = 2*p + 1
         for k in range(N +1):
-            aux = gamma_half_int(N + 1 - k) - fact(k) - fact(N - k)
-            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc((N + 1 - k)/2, cte_bm**2)
+            aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
+            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + 1 - k/2, cte_bm**2)
             
             sum_ += aux
         
         aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
-        aux *= mu_param * (b_param**2) / (2**(p + 1.5))
+        aux *= mu_param * (b_param**2) / (2**0.5)
         sum_ *= aux
         
-        # for k in range(0, 2*p + 1 +1):
-        #     aux  = fact(2*p + 1) - fact(k) - fact(2*p + 1 - k)            
-        #     aux += (2*p + 1 - k) * cte_k_log
-        #     aux += gamma_half_int(k + 1) ## normalization of gammaincc_
-        #     aux  = np.exp(aux)
-        #
-        #     sum_ += (-1)**(2*p + 1 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
-        #
-        # #sum_ *= mu_param * (b_param**2) / np.exp(0.5 * ((b_param/mu_param)**2)) 
-        # sum_ *= mu_param * (b_param**2) / np.exp(cte_k**2) 
-        # sum_ /= np.exp(gamma_half_int(2*p + 3)) * (2**0.5)
-        
         return sum_
+        
+        # sum_ = 0.       
+        #
+        # cte_bm = b_param / (2*mu_param)
+        # N = 2*p + 1
+        # for k in range(N +1):
+        #     aux = gamma_half_int(N + 1 - k) - fact(k) - fact(N - k)
+        #     aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc((N + 1 - k)/2, cte_bm**2)
+        #
+        #     sum_ += aux
+        #
+        # aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
+        # aux *= mu_param * (b_param**2) / (2**(p + 1.5))
+        # sum_ *= aux
+        #
+        # return sum_
     
     elif potential == PotentialForms.Exponential:
-        sum_ = 0.
-        cte_k = b_param / ((2**0.5) * mu_param)
-        cte_k_log = np.log(cte_k)
+        sum_ = 0.       
         
-        for k in range(2*p + 2 +1):
-            aux  = fact(2*p + 2) - fact(k) - fact(2*p + 2 - k)            
-            aux += (2*p + 2 - k) * cte_k
-            aux += gamma_half_int(k + 1) ## normalization of gammaincc_
-            aux  = np.exp(aux)
+        cte_bm = b_param / (2 * mu_param)
+        N = 2*p + 2
+        for k in range(N +1):
+            aux = gamma_half_int(N + 1 - 2*k) - fact(k) - fact(N - k)
+            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + 2.5 - k, cte_bm**2)
             
-            sum_ += (-1)**(2*p + 2 - k) * aux * gammaincc((k + 1)/2, cte_k**2)
-            
-        sum_ *= (b_param**3) / np.exp(0.5 * ((b_param/mu_param)**2)) 
-        sum_ /= np.exp(gamma_half_int(2*p + 3))
+            sum_ += aux
+        
+        aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
+        aux *= (b_param**3) / (2**(p + 1.5))
+        sum_ *= aux
         
         return sum_
     
