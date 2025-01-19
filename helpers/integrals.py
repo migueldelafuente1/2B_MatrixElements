@@ -86,36 +86,20 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         sum_ *= aux
         
         return sum_
-        
-        # sum_ = 0.       
-        #
-        # cte_bm = b_param / (2*mu_param)
-        # N = 2*p + 1
-        # for k in range(N +1):
-        #     aux = gamma_half_int(N + 1 - k) - fact(k) - fact(N - k)
-        #     aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc((N + 1 - k)/2, cte_bm**2)
-        #
-        #     sum_ += aux
-        #
-        # aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
-        # aux *= mu_param * (b_param**2) / (2**(p + 1.5))
-        # sum_ *= aux
-        #
-        # return sum_
     
     elif potential == PotentialForms.Exponential:
         sum_ = 0.       
         
-        cte_bm = b_param / (2 * mu_param)
+        cte_bm = b_param / ((2**0.5) * mu_param)
         N = 2*p + 2
         for k in range(N +1):
-            aux = gamma_half_int(N + 1 - 2*k) - fact(k) - fact(N - k)
-            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + 2.5 - k, cte_bm**2)
+            aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
+            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + (3 - k)/2, cte_bm**2)
             
             sum_ += aux
         
         aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
-        aux *= (b_param**3) / (2**(p + 1.5))
+        aux *= (b_param**3)
         sum_ *= aux
         
         return sum_
