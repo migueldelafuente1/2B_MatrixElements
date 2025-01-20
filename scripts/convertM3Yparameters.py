@@ -72,12 +72,44 @@ def print_xml_elements(params_c, params_ls, params_t):
         for i in range(3):
             part  = f'part_{i+1}'
             if elem == 'mu_length':
-                line += f"part_{i+1}='{part_c[elem][part]:6.6f}' "
+                line += f"part_{i+1}='{part_c[elem][part]:6.4f}' "
             else:
-                line += f"part_{i+1}='{part_c[elem][part]:6.2f}' "
+                line += f"part_{i+1}='{part_c[elem][part]:6.6f}' "
         line += '/>'
         print(line)
     print('\t\t</M3Y_yukawians>')
+    
+    #===========================================================================
+    # # Extension for the new combined Tensor LS yukawian matrix elements
+    print("\t\t<M3Y_tensor active='True'>")
+    print(f"\t\t\t<!-- Yukawians from force M3Y - Tensor S12 -->")
+    for elem in ( 'mu_length', 'Wigner', 'Bartlett', 'Heisenberg', 'Majorana'):
+        line = f"\t\t\t<{elem: <11}"
+        for i in range(2):
+            part  = f'part_{i+1}'
+            if elem == 'mu_length':
+                line += f"part_{i+1}='{part_t[part][elem]['value']:6.4f}' "
+            else:
+                line += f"part_{i+1}='{part_t[part][elem]['value']:6.6f}' "
+        line += '/>'
+        print(line)
+    print('\t\t</M3Y_tensor>')
+    print("\t\t<M3Y_SpinOrbit active='True'>")
+    print(f"\t\t\t<!-- Yukawians from force M3Y - Spin-Orbit -->")
+    for elem in ( 'mu_length', 'Wigner', 'Bartlett', 'Heisenberg', 'Majorana'):
+        line = f"\t\t\t<{elem: <11}"
+        for i in range(2):
+            part  = f'part_{i+1}'
+            if elem == 'mu_length':
+                line += f"part_{i+1}='{part_ls[part][elem]['value']:6.4f}' "
+            else:
+                line += f"part_{i+1}='{part_ls[part][elem]['value']:6.6f}' "
+        line += '/>'
+        print(line)
+    print('\t\t</M3Y_SpinOrbit>')
+    
+    #===========================================================================
+    
     for i in range(2):
         print("\t\t<TensorS12 active='True'>")
         part  = f'part_{i+1}'

@@ -109,42 +109,22 @@
 			<Heisenberg part_1='-4411.75' part_2='531.00' part_3='  6.98' />
 			<Majorana   part_1='5551.75' part_2='-2274.00' part_3='-13.95' />
 		</M3Y_yukawians>
-		<TensorS12 active='True'>
-			<!-- Yukawians from force M3Y - tensor : part_1 -->
-			<potential   name='yukawa'/>
-			<mu_length   value='0.400000'/>
-			<Wigner      value='-25.56'/>
-			<Bartlett    value='-25.56'/>
-			<Heisenberg  value='-40.20'/>
-			<Majorana    value='-40.20'/>
-		</TensorS12>
-		<TensorS12 active='True'>
-			<!-- Yukawians from force M3Y - tensor : part_2 -->
-			<potential   name='yukawa'/>
-			<mu_length   value='0.700000'/>
-			<Wigner      value=' -0.46'/>
-			<Bartlett    value=' -0.46'/>
-			<Heisenberg  value=' -1.40'/>
-			<Majorana    value=' -1.40'/>
-		</TensorS12>
-		<SpinOrbitFiniteRange active='True'>
-			<!-- Yukawians from force M3Y - LS : part_1 -->
-			<potential   name='yukawa'/>
-			<mu_length   value='0.250000'/>
-			<Wigner      value='-3149.10'/>
-			<Bartlett    value='-3149.10'/>
-			<Heisenberg  value='-1441.80'/>
-			<Majorana    value='-1441.80'/>
-		</SpinOrbitFiniteRange>
-		<SpinOrbitFiniteRange active='True'>
-			<!-- Yukawians from force M3Y - LS : part_2 -->
-			<potential   name='yukawa'/>
-			<mu_length   value='0.400000'/>
-			<Wigner      value='-436.05'/>
-			<Bartlett    value='-436.05'/>
-			<Heisenberg  value='132.75'/>
-			<Majorana    value='132.75'/>
-		</SpinOrbitFiniteRange>
+		<M3Y_tensor active='True'>
+			<!-- Yukawians from force M3Y - Central -->
+			<mu_length  part_1='0.250000' part_2='0.400000' part_3='1.414000' />
+			<Wigner     part_1='1501.75' part_2='-1299.00' part_3='  3.49' />
+			<Bartlett   part_1='3438.25' part_2='-1224.00' part_3=' -6.98' />
+			<Heisenberg part_1='-4411.75' part_2='531.00' part_3='  6.98' />
+			<Majorana   part_1='5551.75' part_2='-2274.00' part_3='-13.95' />
+		</M3Y_tensor>
+		<M3Y_SpinOrbit active='True'>
+			<!-- Yukawians from force M3Y - Central -->
+			<mu_length  part_1='0.250000' part_2='0.400000' part_3='1.414000' />
+			<Wigner     part_1='1501.75' part_2='-1299.00' part_3='  3.49' />
+			<Bartlett   part_1='3438.25' part_2='-1224.00' part_3=' -6.98' />
+			<Heisenberg part_1='-4411.75' part_2='531.00' part_3='  6.98' />
+			<Majorana   part_1='5551.75' part_2='-2274.00' part_3='-13.95' />
+		</M3Y_SpinOrbit>
 		<Coulomb active='True'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>

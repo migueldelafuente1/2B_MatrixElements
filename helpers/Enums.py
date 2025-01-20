@@ -71,6 +71,8 @@ class ForceEnum(Enum):
     Brink_Boeker    = 'Brink_Boeker'
     PotentialSeries = 'PotentialSeries'
     YukawiansM3Y    = 'M3Y_yukawians'
+    M3YTensor       = 'M3Y_tensor'
+    M3YSpinOrbit    = 'M3Y_SpinOrbit'
     Density_Dependent    = 'Density_Dependent'
     Density_Dependent_From_File = 'Density_From_File'
     Density_FiniteRange  = 'DensityFiniteRange'
@@ -176,6 +178,8 @@ ForceVariablesDict = {
     ForceEnum.Brink_Boeker    : BrinkBoekerParameters,
     ForceEnum.PotentialSeries : PotentialSeriesParameters,
     ForceEnum.YukawiansM3Y    : BrinkBoekerParameters,
+    ForceEnum.M3YTensor       : BrinkBoekerParameters,
+    ForceEnum.M3YSpinOrbit    : BrinkBoekerParameters,
     ForceEnum.Central   : CentralWithExchangeParameters,    # CentralMEParameters DEP
     ForceEnum.Coulomb   : Enum,
     ForceEnum.Tensor    : CentralMEParameters,

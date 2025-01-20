@@ -3,6 +3,7 @@ Created on Feb 23, 2021
 
 @author: Miguel
 '''
+import numpy as np
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled
 from matrix_elements.transformations import TalmiTransformation
@@ -14,6 +15,8 @@ from helpers.Enums import SHO_Parameters
 from helpers.integrals import talmiIntegral
 
 from helpers.Log import XLog
+from helpers.Helpers import safe_wigner_6j, safe_clebsch_gordan
+from sympy.physics.wigner import clebsch_gordan
 
 class BrinkBoeker(_TwoBodyMatrixElement_JTCoupled, TalmiTransformation):
     
@@ -319,3 +322,204 @@ class YukawiansM3Y_JTScheme(BrinkBoeker):
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = tuple(([] for _ in range(cls.numberGaussians)))
     
+class YukawiansM3Y_tensor_JTScheme(BrinkBoeker):
+    """
+    Introduced to speed up the tensor term.
+    """
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Talmi Integrals. 
+        """
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b = SHO_Parameters.b_length
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+                
+        cls.numberGaussians = 2
+        for i in range(cls.numberGaussians):
+            part_i = '{}_{}'.format(PotentialSeriesParameters.part, i+1)
+            
+            cls.PARAMS_FORCE[i] = {}
+            
+            for param in bb_p.members():
+                cls.PARAMS_FORCE[i][param] = float(kwargs[param].get(part_i))
+        
+        cls.PARAMS_FORCE[CentralMEParameters.potential] = PotentialForms.Yukawa
+                
+        #cls.plotRadialPotential()
+        cls._integrals_p_max = -1
+        cls._talmiIntegrals  = tuple(([] for _ in range(cls.numberGaussians)))
+    
+    def deltaConditionsForGlobalQN(self):
+        """ 
+        Define if non null requirements on LS coupled J Matrix Element, 
+        before doing the center of mass decomposition.
+        
+        NOTE: Redundant if run from JJ -> LS recoupling
+        """
+        if (abs(self.L_bra - self.L_ket) > 2):
+            return False
+        return True
+    
+    def _validKetTotalSpins(self):
+        """ 
+        Return ket states <tuple> of the total spin, for tensor force impose 
+        S = S' = 1, return nothing to skip the bracket spin S=0
+        """
+        if self.S_bra == 0:
+            return []
+        return (1, )
+    
+    def _validKet_relativeAngularMomentums(self):
+        """  Tensor interaction only allows l'=l and l +- 2 """
+        if self._l > 1:
+            return (self._l - 2, self._l, self._l + 2)
+        else:
+            return (self._l, self._l + 2)
+    
+    def _validKetTotalAngularMomentums(self):
+        """ 
+        Return ket states <tuple> of the total angular momentum, depending of 
+        the Force.
+        
+        OJO: Moshinsky, lambda' = lambda, lambda +-1, lambda +-2!!! as condition
+        in the C_Tensor, due rank 2 tensor coupling
+        """
+        _L_min = max(0, self.L_bra - 2)
+        _L_max =        self.L_bra + 2
+        gen_ = (l_q for l_q in range(_L_min, _L_max +1))
+        return tuple(gen_)
+    
+    def _totalSpinTensorMatrixElement(self):
+        """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 """
+        if (self.S_bra == 0) or (self.S_ket == 0):
+            return True, 0.0
+        return False, 4.47213595499958 ## = np.sqrt(20)
+    
+    def centerOfMassMatrixElementEvaluation(self):
+        """ 
+        Radial Brody-Moshinsky transformation, implementation for a
+        non central tensor force.
+        """
+        # the spin matrix element is 0 unless S=S'=1
+        skip, spin_me = self._totalSpinTensorMatrixElement()
+        if skip:
+            return 0
+        
+        if self._part == 0:
+            self._com_me1_stored = 0
+            
+            factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
+                                self.S_ket, self.L_ket, 2)
+            if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
+                return 0
+            phase   = (-1)**(self.S_bra + self.J + self.L_ket + self.L_bra)
+            ## NOTE: the last L_bra should be from the ket since the W
+            factor *= phase * 3.8832518251113983 #* np.sqrt(2*self.J + 1) 
+            ## 3.8832 = _sqrt(24*pi / 5)
+            factor *= ((2*self.L_bra + 1)*(2*self.L_ket + 1))**0.5
+    
+            self._com_me1_stored = factor * spin_me * phase
+        
+        return self._com_me1_stored * self._BrodyMoshinskyTransformation()
+    
+    def _interactionConstantsForCOM_Iteration(self):
+        
+        if self._part == 0:
+            self._com_me2_stored = 0
+            factor = safe_wigner_6j(self._L, self._l,    self.L_bra,
+                                    2,       self.L_ket, self._l_q)
+            if self.isNullValue(factor):
+                return 0
+            phase   = (-1)**(self._L + self._l)
+            factor *= safe_clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0)
+            factor *= np.sqrt((2*self._l + 1))
+            
+            ## 0.6307 =  sqrt(5 / 4*pi)
+            self._com_me2_stored = phase * factor * 0.6307831305050401
+        return self._com_me2_stored
+
+class YukawiansM3Y_SpinOrbit_JTScheme(YukawiansM3Y_tensor_JTScheme):
+    """
+    Introduced to speed up the Spin-Orbit term.
+    """
+    
+    def _validKet_relativeAngularMomentums(self):
+        """  Spin orbit interaction only allows l'==l"""
+        return (self._l, )
+    
+    def deltaConditionsForGlobalQN(self):
+        """ 
+        Define if non null requirements on LS coupled J Matrix Element, 
+        before doing the center of mass decomposition.
+        
+        NOTE: Redundant if run from JJ -> LS recoupling
+        """
+        if (abs(self.L_bra - self.L_ket) > 1) :
+            return False
+        return True
+    
+    def _validKetTotalAngularMomentums(self):
+        """ 
+        Return ket states <tuple> of the total angular momentum, depending of 
+        the Force.
+        
+        OJO: Moshinski, lambda' = lambda, lambda +- 1!!! as condition
+        in the C_LS
+        """
+        _L_min = max(0, self.L_bra - 1)
+        _L_max =        self.L_bra + 1
+        gen_ = (l_q for l_q in range(_L_min, _L_max +1))
+        return tuple(gen_)
+    
+    
+    def _totalSpinTensorMatrixElement(self):
+        """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 """
+        if (self.S_bra != self.S_ket) or (self.S_bra == 0):
+            return True, 0.0
+        return False, 2.449489742783178 ## = np.sqrt(6)
+    
+    def centerOfMassMatrixElementEvaluation(self):
+        """ 
+        Radial Brody-Moshinsky transformation, implementation for a
+        non central tensor force.
+        """
+        skip, spin_me = self._totalSpinTensorMatrixElement()
+        if skip:
+            return 0
+        
+        if self._part == 0:
+            self._com_me1_stored = 0
+            
+            factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
+                                    self.S_ket, self.L_ket,      1)
+            if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
+                return 0
+            
+            phase   = (-1)**(self.rho_bra + self.J)
+            factor *= np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
+            
+            self._com_me1_stored = factor * spin_me * phase
+        
+        return self._com_me1_stored * self._BrodyMoshinskyTransformation()
+    
+    def _interactionConstantsForCOM_Iteration(self):
+        
+        if self._part == 0:
+            self._com_me2_stored = 0
+            
+            # no special internal c.o.m interaction constants for the Central ME
+            factor = safe_wigner_6j(self._l,    self.L_bra, self._L, 
+                                    self.L_ket, self._l_q,         1)
+            if self.isNullValue(factor):
+                return 0
+            
+            factor *= np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
+            self._com_me2_stored = factor
+        
+        return self._com_me2_stored
+

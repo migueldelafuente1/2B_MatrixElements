@@ -4,11 +4,10 @@ Created on Mar 8, 2021
 @author: Miguel
 '''
 import numpy as np
-from sympy.physics.wigner import clebsch_gordan
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, \
     BrinkBoekerParameters, SHO_Parameters, PotentialForms, AttributeArgs
-from helpers.Helpers import ConstantsV18
+from helpers.Helpers import ConstantsV18, safe_clebsch_gordan
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException, _standardSetUpForCentralWithExchangeOps,\
@@ -125,16 +124,17 @@ class TensorForce(TalmiTransformation):#):
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
         
-        return factor * spin_me * self._BrodyMoshinskyTransformation()
-    
-    def _globalInteractionCoefficient(self):
         # no special interaction constant for the Central ME
         # phase = (-1)**(1 + self.rho_bra - self.J)
-        phase = (-1)**(self.S_bra + self.L_ket  - self.L_bra - self.J)
+        phase   = (-1)**(self.S_bra + self.L_ket  - self.L_bra - self.J)
         ## TODO: last phase must be the one (commented is fine/ 1st version))
-        factor = np.sqrt(8*(2*self.L_bra + 1)*(2*self.L_ket + 1))
+        factor *= np.sqrt(8*(2*self.L_bra + 1)*(2*self.L_ket + 1))
         
-        return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
+        return factor * spin_me * phase * self._BrodyMoshinskyTransformation()
+    
+    def _globalInteractionCoefficient(self):
+        
+        return self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):
@@ -145,7 +145,7 @@ class TensorForce(TalmiTransformation):#):
         if self.isNullValue(factor):
             return 0
         
-        factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
+        factor *= safe_clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0)
         phase = (-1)**(self._L - self._l_q)
         ## TODO: phase must be uncommented (commented is fine, 1st version)
         
@@ -275,7 +275,7 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
         if self.isNullValue(factor):
             return 0
         phase   = (-1)**(self._L + self._l)
-        factor *= float(clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0))
+        factor *= safe_clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0)
         factor *= np.sqrt((2*self._l + 1))
         
         return phase * factor * 0.6307831305050401  # _sqrt(5 / 4*pi)

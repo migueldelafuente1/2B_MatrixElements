@@ -124,16 +124,15 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
         
-        aux = factor * spin_me * self._BrodyMoshinskyTransformation()
+        phase   = (-1)**(self.rho_bra + self.J)
+        factor *= np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
+        
+        aux = factor * spin_me * phase * self._BrodyMoshinskyTransformation()
         return  aux
     
     def _globalInteractionCoefficient(self):
-        
-        phase   = (-1)**(self.rho_bra + self.J)
-        
-        factor = np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
-    
-        return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
+        # no special interaction constant for the Spin-Orbit
+        return self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
     
     def _interactionConstantsForCOM_Iteration(self):

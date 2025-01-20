@@ -18,7 +18,8 @@ from .ZeroRangeForces import SDI_JTScheme
 from .SkyrmeForces import SkrymeBulk_JTScheme
 from .MultipoleForces import MultipoleDelta_JTScheme,\
     MultipoleMoment_JTScheme
-from .BrinkBoeker import YukawiansM3Y_JTScheme
+from .BrinkBoeker import YukawiansM3Y_JTScheme, YukawiansM3Y_tensor_JTScheme, \
+    YukawiansM3Y_SpinOrbit_JTScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -37,6 +38,10 @@ def switchMatrixElementType(force, J_scheme=False):
         return PotentialSeries_JTScheme
     elif force == ForceEnum.YukawiansM3Y:
         return YukawiansM3Y_JTScheme
+    elif force == ForceEnum.M3YTensor:
+        return YukawiansM3Y_tensor_JTScheme
+    elif force == ForceEnum.M3YSpinOrbit:
+        return YukawiansM3Y_SpinOrbit_JTScheme
     
     ## CENTRALS: 
     
