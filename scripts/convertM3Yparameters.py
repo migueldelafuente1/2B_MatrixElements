@@ -118,7 +118,7 @@ def print_xml_elements(params_c, params_ls, params_t):
             line = f"\t\t\t<{elem: <11} "
             for k, val in part_t[part][elem].items():
                 if elem != 'potential': 
-                    val = f"{val:6.6f}" if elem == 'mu_length' else f"{val:6.2f}"
+                    val = f"{val:6.4f}" if elem == 'mu_length' else f"{val:6.6f}"
                 line += f"{k}='{val}'"
             line += '/>'
             print(line)
@@ -131,7 +131,7 @@ def print_xml_elements(params_c, params_ls, params_t):
             line = f"\t\t\t<{elem: <11} "
             for k, val in part_ls[part][elem].items():
                 if elem != 'potential': 
-                    val = f"{val:6.6f}" if elem == 'mu_length' else f"{val:6.2f}"
+                    val = f"{val:6.4f}" if elem == 'mu_length' else f"{val:6.6f}"
                 line += f"{k}='{val}'"
             line += '/>'
             print(line)

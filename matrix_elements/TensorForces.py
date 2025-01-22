@@ -284,8 +284,6 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
-        # return self.centerOfMassMatrixElementEvaluation()
-    
         # Radial Part for Gaussian Integral
         radial_energy = self.centerOfMassMatrixElementEvaluation()
         

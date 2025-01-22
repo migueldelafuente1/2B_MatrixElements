@@ -118,15 +118,15 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         skip, spin_me = self._totalSpinTensorMatrixElement()
         if skip:
             return 0
-        
+    
         factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
                                 self.S_ket, self.L_ket,      1)
         if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
             return 0
-        
+    
         phase   = (-1)**(self.rho_bra + self.J)
         factor *= np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
-        
+    
         aux = factor * spin_me * phase * self._BrodyMoshinskyTransformation()
         return  aux
     
@@ -134,16 +134,16 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
         # no special interaction constant for the Spin-Orbit
         return self.PARAMS_FORCE.get(CentralMEParameters.constant)
     
-    
     def _interactionConstantsForCOM_Iteration(self):
-        # no special internal c.o.m interaction constants for the Central ME
+        """ Common Matrix element in the (nlNL,n'l') Moshinsky series"""
         factor = safe_wigner_6j(self._l,    self.L_bra, self._L, 
                                 self.L_ket, self._l_q,         1)
         if self.isNullValue(factor):
             return 0
-    
-        return factor * np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
-
+        
+        factor *= np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
+        return factor
+        
 
 
 class SpinOrbitForce_JTScheme(_TwoBodyMatrixElement_JTCoupled, SpinOrbitForce):

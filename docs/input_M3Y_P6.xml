@@ -1,0 +1,132 @@
+<input>
+	<Interaction_Title name="M3Y P2 (PRC 68 014316, 2003)- Fermi Density" details=""/>
+	<Output_Parameters>
+		<Output_Filename>M3Y_P6_MZ4</Output_Filename>
+		<Hamil_Type>4</Hamil_Type>
+		<COM_correction>1</COM_correction>
+	</Output_Parameters>
+	<SHO_Parameters>
+		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
+			   are not required parameters, define values only for explicit 
+			   setting.
+			-->
+		<A_mass>16</A_mass>
+		<Z>8</Z>
+		<hbar_omega units='MeV'/>
+		<b_length units='fm'>1.595338057</b_length>
+	</SHO_Parameters>
+	<Core>
+		<innert_core protons='0' neutrons ='0' name=''/>
+		<energy value='0.0' units='MeV'/>
+	</Core>
+	<Valence_Space l_great_than_10='True'>
+		<Q_Number sp_state='001' sp_energy=''/>
+		
+		<Q_Number sp_state='103' sp_energy=''/>
+		<Q_Number sp_state='101' sp_energy=''/>
+
+		<Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='203' sp_energy=''/>
+		<Q_Number sp_state='10001' sp_energy=''/>
+		
+		<Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='305' sp_energy=''/>
+		<Q_Number sp_state='10103' sp_energy=''/>
+		<Q_Number sp_state='10101' sp_energy=''/>
+
+		<Q_Number sp_state='409' sp_energy=''/>
+		<Q_Number sp_state='407' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='10203' sp_energy=''/>
+		<Q_Number sp_state='20001' sp_energy=''/>
+		
+		<!--
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
+		
+		<Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		
+		<Q_Number sp_state='715'   sp_energy=''/>
+		<Q_Number sp_state='713'   sp_energy=''/>
+		<Q_Number sp_state='10511' sp_energy=''/>
+		<Q_Number sp_state='10509' sp_energy=''/>
+		<Q_Number sp_state='20307' sp_energy=''/>
+		<Q_Number sp_state='20305' sp_energy=''/>
+		<Q_Number sp_state='30103' sp_energy=''/>
+		<Q_Number sp_state='30101' sp_energy=''/>
+		
+		<Q_Number sp_state='817'   sp_energy=''/>
+		<Q_Number sp_state='815'   sp_energy=''/>
+		<Q_Number sp_state='10613' sp_energy=''/>
+		<Q_Number sp_state='10611' sp_energy=''/>
+		<Q_Number sp_state='20409' sp_energy=''/>
+		<Q_Number sp_state='20407' sp_energy=''/>
+		<Q_Number sp_state='30205' sp_energy=''/>
+		<Q_Number sp_state='30203' sp_energy=''/>
+		<Q_Number sp_state='40001' sp_energy=''/>
+		
+		<Q_Number sp_state='919'   sp_energy=''/>
+		<Q_Number sp_state='917'   sp_energy=''/>
+		<Q_Number sp_state='10715'   sp_energy=''/>
+		<Q_Number sp_state='10713'   sp_energy=''/>
+		<Q_Number sp_state='20511'   sp_energy=''/>
+		<Q_Number sp_state='20509'   sp_energy=''/>
+		<Q_Number sp_state='30307'   sp_energy=''/>
+		<Q_Number sp_state='30305'   sp_energy=''/>
+		<Q_Number sp_state='40103'   sp_energy=''/>
+		<Q_Number sp_state='40101'   sp_energy=''/>
+		
+		<Q_Number sp_state='1021'   sp_energy=''/>
+		<Q_Number sp_state='1019'   sp_energy=''/>
+		<Q_Number sp_state='10817'   sp_energy=''/>
+		<Q_Number sp_state='10815'   sp_energy=''/>
+		<Q_Number sp_state='20613'   sp_energy=''/>
+		<Q_Number sp_state='20611'   sp_energy=''/>
+		<Q_Number sp_state='30409'   sp_energy=''/>
+		<Q_Number sp_state='30407'   sp_energy=''/>
+		<Q_Number sp_state='40205'   sp_energy=''/>
+		<Q_Number sp_state='40203'   sp_energy=''/>
+		<Q_Number sp_state='50001'   sp_energy=''/-->
+		
+		<!-- valence space -->
+	</Valence_Space>
+	<Force_Parameters>
+		<M3Y_yukawians active='True'>
+			<!-- Yukawians from force M3Y - Central -->
+			<mu_length  part_1='0.2500' part_2='0.4000' part_3='1.4140' />
+			<Wigner     part_1='7741.250000' part_2='-2079.000000' part_3='3.487750' />
+			<Bartlett   part_1='2722.250000' part_2='-1012.000000' part_3='-6.975250' />
+			<Heisenberg part_1='-3868.250000' part_2='475.000000' part_3='6.975250' />
+			<Majorana   part_1='1878.750000' part_2='-1978.000000' part_3='-13.950750' />
+		</M3Y_yukawians>
+		<M3Y_tensor active='True'>
+			<!-- Yukawians from force M3Y - Tensor S12 -->
+			<mu_length  part_1='0.4000' part_2='0.7000' />
+			<Wigner     part_1='-213.000000' part_2='-3.825000' />
+			<Bartlett   part_1='-213.000000' part_2='-3.825000' />
+			<Heisenberg part_1='-335.000000' part_2='-11.625000' />
+			<Majorana   part_1='-335.000000' part_2='-11.625000' />
+		</M3Y_tensor>
+		<M3Y_SpinOrbit active='True'>
+			<!-- Yukawians from force M3Y - Spin-Orbit -->
+			<mu_length  part_1='0.2500' part_2='0.4000' />
+			<Wigner     part_1='-3848.900000' part_2='-532.950000' />
+			<Bartlett   part_1='-3848.900000' part_2='-532.950000' />
+			<Heisenberg part_1='-1762.200000' part_2='162.250000' />
+			<Majorana   part_1='-1762.200000' part_2='162.250000' />
+		</M3Y_SpinOrbit>
+		<Coulomb active='True'>
+			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
+		</Coulomb>
+	</Force_Parameters>
+</input>
