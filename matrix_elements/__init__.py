@@ -14,7 +14,7 @@ from .SpinOrbitForces import SpinOrbitForce,\
     SpinOrbitForce_JTScheme, ShortRangeSpinOrbit_JTScheme, \
     SpinOrbitFiniteRange_JTScheme, Quadratic_SpinOrbit_JTScheme
 from .MatrixElement import _MatrixElementReader
-from .ZeroRangeForces import SDI_JTScheme
+from .ZeroRangeForces import SDI_JTScheme, Delta_JTScheme
 from .SkyrmeForces import SkrymeBulk_JTScheme
 from .MultipoleForces import MultipoleDelta_JTScheme,\
     MultipoleMoment_JTScheme
@@ -63,6 +63,8 @@ def switchMatrixElementType(force, J_scheme=False):
         return DensityFiniteRange_JTScheme
     elif force == ForceEnum.SDI:
         return SDI_JTScheme
+    elif force == ForceEnum.Delta:
+        return Delta_JTScheme
     elif force == ForceEnum.Multipole_Delta:
         return MultipoleDelta_JTScheme
     elif force == ForceEnum.Multipole_Moment:

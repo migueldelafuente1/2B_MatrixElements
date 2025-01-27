@@ -61,6 +61,7 @@ class CoreParameters(Enum):
         
 class ForceEnum(Enum):
     SDI = 'SDI'
+    Delta   = 'Delta'
     Central = 'Central'
     Coulomb = 'Coulomb'
     Tensor  = 'Tensor'
@@ -92,6 +93,7 @@ class PotentialForms(Enum):
     Gaussian    = 'gaussian'                # exp(-(r/mu_)^2)
     Exponential = 'exponential'             # exp(-r/mu_)
     Coulomb     = 'coulomb'                 # mu_/r
+    Delta       = 'delta'                   # delta(r)/r^2
     Yukawa      = 'yukawa'                  # exp(-r/mu_) / (r/mu_)
     Power       = 'power'                   # (r/mu_)^n_power
     Gaussian_power = 'gaussian_power'       # exp(-(r/mu_)^2) * (r/mu_)^n_power
@@ -196,6 +198,7 @@ ForceVariablesDict = {
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
     ForceEnum.SDI           : SDIParameters,
+    ForceEnum.Delta         : BrinkBoekerParameters,
     ForceEnum.Multipole_Delta : MultipoleParameters,
     ForceEnum.Multipole_Moment: CentralMEParameters, 
     ForceEnum.ElectromageticCentral     : Enum, 

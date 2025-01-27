@@ -3,13 +3,16 @@ Created on Oct 14, 2021
 
 @author: Miguel
 '''
+import numpy as np
+
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    MatrixElementException
+    MatrixElementException, _standardSetUpForCentralWithExchangeOps
 from helpers.Enums import AttributeArgs, SHO_Parameters,\
-    SDIParameters
+    SDIParameters, CentralMEParameters, BrinkBoekerParameters
 from helpers.Log import XLog
 from helpers.Helpers import safe_3j_symbols, almostEqual
-from helpers.WaveFunctions import QN_2body_jj_JT_Coupling
+from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_1body_radial
+from helpers.integrals import _RadialIntegralsLS
 
 _SDI_Attributes = AttributeArgs.ForceArgs.SDI
 
@@ -165,4 +168,120 @@ class SDI_JTScheme(_TwoBodyMatrixElement_JTCoupled):
     
     def _validKetTotalAngularMomentums(self):
         return tuple()
+
+
+class Delta_JTScheme(_TwoBodyMatrixElement_JTCoupled):
     
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """ 
+        Implement the parameters for the Tensor interaction calculation. 
+        
+        Modification to import Exchange operators in the Brink-Boeker form.
+        """
+        # Refresh the Force parameters
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        _b = SHO_Parameters.b_length
+        cls.PARAMS_SHO[_b] = float(kwargs.get(_b))
+        
+        for param in BrinkBoekerParameters.members():
+            exch_param = kwargs.get(param, {})
+            cls.PARAMS_FORCE[param] = float(exch_param.get(AttributeArgs.value, 0.0))
+    
+    def _run(self):
+        ## First method that runs antisymmetrization_ by exchange the quantum
+        ## numbers (X2 time), change 2* _series_coefficient
+        return _TwoBodyMatrixElement_JTCoupled._run(self)
+    
+    def _validKetTotalSpins(self):
+        """ For Central Interaction, <S |Vc| S'> != 0 only if  S=S' """
+        return (self.S_bra, )
+    
+    def _validKetTotalAngularMomentums(self):
+        """ For Central Interaction, <L |Vc| L'> != 0 only if  L=L' """
+        return (self.L_bra, )
+    
+    def _getQRadialNumbers(self):
+        """ Auxiliary method to exchange the quantum numbers 
+        returns: 
+            bra_l1, bra_l2, ket_l1, ket_l2, <tuple>(bra1, bra2, ket1, ket2)
+        """
+        l1, l2      = self.ket.l1, self.ket.l2
+        l1_q, l2_q  = self.bra.l1, self.bra.l2
+        
+        qn_cc1 = QN_1body_radial(self.bra.n1, self.bra.l1) # conjugated
+        qn_cc2 = QN_1body_radial(self.bra.n2, self.bra.l2) # conjugated
+        qn_3   = QN_1body_radial(self.ket.n1, self.ket.l1)
+        qn_4   = QN_1body_radial(self.ket.n2, self.ket.l2)
+            
+        return l1_q, l2_q, l1, l2, (qn_cc1, qn_cc2, qn_3, qn_4)
+    
+    
+    def _radialAngularPart_MatrixElement(self):
+        """
+        Delta matrix element, this should match with the density dependent 
+        matrix elements considering alpha = 0.
+        """
+        
+        b = self.PARAMS_SHO.get(SHO_Parameters.b_length)
+        
+        l1_q, l2_q, l1, l2, qqnn = self._getQRadialNumbers()
+        qn_cc1, qn_cc2, qn_3, qn_4 = qqnn
+        
+        if ((self.L_bra % 2 != (l1_q + l2_q) % 2) or
+            (self.L_ket % 2 != (l1   + l2  ) % 2)): return 0.0
+        
+        factor = np.sqrt( (2*l1 + 1) * (2*l2 + 1) * (2*l1_q + 1) * (2*l2_q + 1))
+        factor /= 4 * np.pi
+        
+        ang_aux  = (  safe_3j_symbols(l1_q, self.L_bra, l2_q, 0,0,0)
+                    * safe_3j_symbols(  l1, self.L_ket,   l2, 0,0,0))
+        ang_aux *= factor
+        
+        rad = 0
+        if not self.isNullValue(ang_aux):
+            rad = _RadialIntegralsLS.integral(3, qn_cc1, qn_cc2, qn_3, qn_4, b)
+            rad /= b**4
+        
+        if self.DEBUG_MODE: 
+            XLog.write('radAng', rad=rad, ang=ang_aux, value= ang_aux * rad)
+        
+        return ang_aux * rad
+    
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        
+        (1-st without exchange)    return self.centerOfMassMatrixElementEvaluation()
+        """
+        # Radial Part for Gaussian Integral
+        me_energy = self._radialAngularPart_MatrixElement()
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB')
+        
+        # Exchange Part
+        # W + P(S)* B - P(T)* H - P(T)*P(S)* M
+        _S_aux = (-1)**(self.S_bra + 1)
+        _T_aux = (-1)**(self.T)
+        _L_aux = (-1)**(self.T + self.S_bra + 1)
+        
+        exchange_energy = (
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner),
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)   * _S_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Heisenberg) * _T_aux,
+            self.PARAMS_FORCE.get(BrinkBoekerParameters.Majorana)   * _L_aux
+        )
+        
+        # Add up
+        antisym   = (1 - ((-1)**(self.T + self.S_ket)))
+        prod_part = antisym * me_energy * sum(exchange_energy)
+        #           ^-- factor 2 for the antisymmetrization_ (L,S independent)
+        
+        if self.DEBUG_MODE:
+            XLog.write('BB', radialAng=me_energy, exch=exchange_energy, antisym=antisym, 
+                       exch_sum=sum(exchange_energy), val=prod_part)
+        
+        return prod_part

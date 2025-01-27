@@ -51,6 +51,9 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     elif potential == PotentialForms.Coulomb:
         return (b_param**2) * mu_param * np.exp(fact(p) - gamma_half_int(2*p + 3))\
                 / (2**.5)
+    elif potential == PotentialForms.Delta:
+        if p != 0: return 0
+        return np.sqrt(2 / np.pi)  ## it is independent of b length
     
     elif potential == PotentialForms.Gaussian_power:
         ## checked (16/1/25), compared with numerical integration. (Lag.ass.quadr.)
@@ -903,10 +906,11 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
                 bra_b = self._B_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
                 
                 No2 = (p + p_q) + ((l1 + l2 + l1_q + l2_q)//2)
-                I_1 = self._r_dependentIntegral(No2)
-                if self.DEBUG_MODE:
-                    XLog.write("Ip_q", pq=p_q, bra_B=bra_b, N=No2, I_1=I_1,
-                               type_int=type_integral)
+                if type_integral != 3:
+                    I_1 = self._r_dependentIntegral(No2)
+                    if self.DEBUG_MODE:
+                        XLog.write("Ip_q", pq=p_q, bra_B=bra_b, N=No2, I_1=I_1,
+                                   type_int=type_integral)
                 
                 if   type_integral == 1:
                     bra_d = self._D_coeff(n1_q, l1_q, n2_q, l2_q, p_q)
@@ -933,7 +937,6 @@ class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
             XLog.write("R_int", sum=sum_, norm=norm_fact, value=norm_fact*sum_)
             
         return  norm_fact * sum_
-
 
 
 class _RadialDensityDependentFermi(_RadialTwoBodyDecoupled):

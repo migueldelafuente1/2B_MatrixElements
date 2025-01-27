@@ -156,7 +156,7 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         
         fact *= safe_3j_symbols(self.bra.l1, self.L_bra, self.bra.l2, 0, 0, 0)
         fact *= safe_3j_symbols(self.ket.l1, self.L_ket, self.ket.l2, 0, 0, 0)
-        fact *= self.PARAMS_FORCE[DensityDependentParameters.constant]/(4*np.pi)
+        fact /= 4*np.pi
         
         if self.isNullValue(fact):
             return 0.0
@@ -184,13 +184,17 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
         )
         if self.DEBUG_MODE:
             _RadialDensityDependentFermi.DEBUG_MODE = True
+            XLog.write('radAng', ang=fact, 
+                       antisym=(1 - ((-1)**(self.T + self.S_ket))) )
             
         _RadialDensityDependentFermi._DENSITY_APROX = False
         _RadialDensityDependentFermi._R_DIM = self._R_DIM
             
         radial = _RadialDensityDependentFermi.integral(*args)
         
-        return fact * radial
+        if self.DEBUG_MODE: XLog.write('radAng', rad=radial)
+        
+        return fact * radial * self.PARAMS_FORCE[DensityDependentParameters.constant]
 
 
 class _Base_DensityDep_FromFile_Jscheme(DensityDependentForce_JTScheme):
