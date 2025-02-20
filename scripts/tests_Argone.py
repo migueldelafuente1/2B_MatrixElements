@@ -106,7 +106,7 @@ def __exportTalmiIntegrals(force, talmiInts, b_len):
 if __name__ == '__main__':
     
     __TEST_CASE = 1
-    
+    global ORDER_GEN_LAGUERRE
     if __TEST_CASE == 1:
         ## Visualize the interaction without constants, seeing the radial and
         ## angular constants.
@@ -116,6 +116,7 @@ if __name__ == '__main__':
         b_len = 1.50
         MZMin = 0
         MZMax = 4
+        ORDER_GEN_LAGUERRE = 348
         
         Inter_._SWITCH_OFF_CONSTANTS = True
         for term in Inter_._SWITCH_OFF_TERMS.keys():
