@@ -4,9 +4,9 @@ Created on Mar 10, 2021
 @author: Miguel
 """
 import numpy as np
-from sympy import S
 
-from helpers.Helpers import Constants, safe_wigner_6j
+from helpers.Helpers import Constants, safe_wigner_6j, _LINE_2,\
+    prettyPrintDictionary
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled, \
@@ -198,6 +198,13 @@ class CoulombForce(CentralForce, _TwoBodyMatrixElement_JCoupled):
         kwargs[CentralMEParameters.constant]  = cls.COULOMB_CONST
         kwargs[CentralMEParameters.mu_length] = 1
         kwargs[CentralMEParameters.n_power]   = 0
+        
+        print(_LINE_2,"  Default constants for [Coulomb] interaction:")
+        print(f"     * constant  : {kwargs[CentralMEParameters.potential]}")
+        print(f"     * potential : {kwargs[CentralMEParameters.constant]:5.3f}")
+        print(f"     * mu_length : {kwargs[CentralMEParameters.mu_length]:5.3f}")
+        print(f"     * n_power   : {kwargs[CentralMEParameters.n_power]}")
+        print(_LINE_2)
         
         super(CentralForce, cls).setInteractionParameters(*args, **kwargs)
     

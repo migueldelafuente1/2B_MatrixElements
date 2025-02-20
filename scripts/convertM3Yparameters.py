@@ -4,6 +4,7 @@ Created on 30 dic 2024
 @author: delafuente
 '''
 import numpy as np
+from helpers.Helpers import prettyPrintDictionary
 
 ## Matrix to pass from P[TS] to Bartlett, Majorana ... (order of the outcomming operator)
 CONV_MATRIX = [
@@ -137,7 +138,37 @@ def print_xml_elements(params_c, params_ls, params_t):
             print(line)
         print('\t\t</SpinOrbitFiniteRange>')
         
-        
+    #--------------------------------------------------------------------------
+    printAsDictionary(part_c,  0, name='central')
+    printAsDictionary(part_ls, 1, name='spinOrb')
+    printAsDictionary(part_t,  1, name='tensor')
+
+def printAsDictionary(part, type_, name=''):
+    delim = '    '
+    # print(f'{name}=','{')
+    print(f'"{name}":','{')
+    if type_ == 1:
+        new_dict = {}
+        for k, dict_ in part.items():
+            for k_part, val in dict_.items():
+                if k_part == 'potential': continue
+                val = val['value']
+                if k_part in new_dict:
+                    new_dict[k_part][k] = val
+                else:
+                    new_dict[k_part] = {k: val, }
+        part = new_dict
+            
+    for k_part, dicts_ in part.items():
+        vals_ = ''
+        for k, val in dicts_.items():
+            # vals_ += f'"{k}": "{val:7.4f}", '
+            k = int(k.replace('part_', ''))
+            vals_ += f'{k}: {val:7.4f}, '
+        # print(f"{delim}'{k_part}': {{{vals_}}},")
+        print(f"{delim}'{k_part}': {{{vals_}}},")
+    print('},')
+    
 if __name__ == '__main__':
     
     # M3Y - P2

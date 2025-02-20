@@ -242,7 +242,7 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     
     
     def _B_coefficient(self, b_param=None, com_qqnn=False):
-        """ _Memorization Pattern for B coefficients. """
+        """ _Memorization Pattern for B coefficients. B coeffs. are never zero"""
         
         if not b_param:
             b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
@@ -264,7 +264,8 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     
     def _B_coefficient_evaluation(self, n, l, n_q, l_q, p):
         """ 
-        SHO normalization coefficients for WF, not b_length dependent 
+        SHO normalization coefficients for WF, not b_length dependent .
+        NOTE:: B coeffs. are never zero
         """
         # parity condition
         if(((l + l_q)%2)!=0):
@@ -764,6 +765,160 @@ class TalmiTransformation(_TalmiTransformation_SecureIter):
             plt.savefig("central_potential.pdf")
         plt.show()
     
+
+class TalmiMultiInteractionTransformation(TalmiTransformation):
+    '''
+    Multi-evaluated interactions evaluates the Talmi method for very expensive 
+    matrix elements, specially the different components between Tz channels and 
+    interaction mechanisms in the first-principles interactions. Such as Argone-18
+    
+    The new Moshinsky expansion requires the generalization of some "final" methods
+    
+        _LScoupled_MatrixElement:
+            centerOfMassMatrixElement
+                _deltaConditionsGlobalQN
+                _totalSpinTensorMatrixElements (for )
+                _BrodyMoshinskyTransformation:
+                    (XXX) _talmiIntegral (moved to the end cause it is not shared for 
+                                        all the integrals)
+                    _interactionSeries:
+                        (XXX) _valid_ket_relativeAngularMomentum
+                        (XXX) _deltaconditionsForCOMIteration
+                        (XXX) _interactionConstantsforCOM_iteration
+                        
+                        ** introduce term for individual term-integral evaluation
+                            (overwrite explicitly)::
+                            _matrixElementCompoundEvaluation()
+                            
+    '''
+    
+    def _BrodyMoshinskyTransformation(self):
+        """
+        ##  WARNING: This method is final. Do not overwrite!!
+        
+        Sum over valid p-Talmi integrals range (Energy + Ang. momentum + parity 
+        conservation laws). Call implemented Talmi Coefficients for 
+        Brody-Moshinsky transformation
+        """
+        
+        sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('talmi')
+        for p in range(max(self.rho_bra, self.rho_ket) +1):
+            if self.DEBUG_MODE:
+                XLog.write('talmi', p=p)
+            self._p = p
+            # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
+            series = 2 * self._interactionSeries()
+            product = series
+            sum_ += product
+            # sum_ += self._interactionSeries() * self.talmiIntegral()
+            
+            if self.DEBUG_MODE:
+                XLog.write('talmi', series = series, val=product)
+        return sum_ ## * self._globalInteractionCoefficient() !
+    
+    def talmiIntegral(self):
+        """ 
+        Get or update Talmi integrals for the calculations
+        """
+        raise MatrixElementException("This class do not accept direct evaluation"
+                                     " of a general Talmi integral")
+    
+    def _globalInteractionCoefficient(self):
+        """ 
+        Final method !!!     Final method !!!     Final method !!!
+        Do not overwrite it since different integrals cannot
+        have a common (non-COM dependent) factor.
+        """
+        raise MatrixElementException("Excluded method for this class, avoid the"
+                                     " implementation of a common constant for "
+                                     "relative-COM variables for this class!")
+        return None
+        
+    def _interactionConstantsForCOM_Iteration(self):
+        """
+        The class has many interactions with different coefficients regarding the
+        interaction type (lS, many central potentials, etc). The selection-evaluation
+        of constants should happen at the final matrix element (I_p^i) step.
+            see and design inside self._matrixElementCompoundEvaluation()
+        """
+        raise MatrixElementException("Excluded method for this class, avoid the"
+                                     " implementation of a common constant for "
+                                     "relative-COM variables for this class!")
+        return None
+    
+    def _interactionSeries(self):
+        
+        sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('intSer')
+        
+        for qqnn_bra in self._validCOM_qqnn('bra'):
+            
+            self._n, self._l, self._N, self._L = qqnn_bra
+            
+            bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, 
+                                 self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, 
+                                 self.L_bra)
+            if self.isNullValue(bmb_bra):
+                continue
+            if self.DEBUG_MODE:
+                XLog.write('intSer', nlNL=qqnn_bra)
+            
+            for l_q in self._validKet_relativeAngularMomentums():
+                self._l_q = l_q
+                
+                self._n_q  = self._n
+                self._n_q += (self.rho_ket - self.rho_bra + self._l  - self._l_q) // 2
+                
+                if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
+                    continue
+                
+                bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, 
+                                     self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
+                                     self.L_ket)
+                if self.isNullValue(bmb_ket):
+                    continue
+                
+                _b_coeff = self._B_coefficient(self.PARAMS_SHO.get(SHO_Parameters.b_length))
+                #_com_coeff = self._interactionConstantsForCOM_Iteration()
+                m_elems = self._matrixElementCompoundEvaluation()
+                
+                aux =  bmb_bra * bmb_ket * _b_coeff * m_elems
+                sum_ += aux
+                
+                # TODO: comment when not debugging
+                if self.DEBUG_MODE:
+                    XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q, 
+                               bmbs=bmb_bra * bmb_ket, 
+                               B=_b_coeff, m_elems=m_elems, aux=aux)
+        if self.DEBUG_MODE:
+            XLog.write('intSer', value=sum_)
+        return sum_
+    
+    def _validKet_relativeAngularMomentums(self):
+        """ 
+        Evaluate the l relative for all possible central-spinOrbit-tensor,
+        with maximum delta-l range = 2 from tensor interactions.
+        
+        Select the valid relative l' case for each interaction.
+        
+        """
+        return (l for l in range(max(0, self._l-2), self._l+2 +1))
+    
+    def _matrixElementCompoundEvaluation(self):
+        """
+        Combination of the matrix element for the different modes and channels
+        
+        i.e. compound decompossition in relative j 
+        """
+        raise MatrixElementException("Abstract method. Implement me!")
+
+
+#===============================================================================
+# r + R integration derived matrix elements
+#===============================================================================
 
 class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
     

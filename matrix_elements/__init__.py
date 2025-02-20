@@ -1,14 +1,12 @@
 from helpers.Enums import ForceEnum
 
 from .BrinkBoeker import BrinkBoeker, PotentialSeries_JTScheme
-from .TensorForces import TensorForce, TensorForce_JTScheme,\
-    TensorS12_JTScheme, OPE_TPE_Force_JTScheme, ElectromagneticNonCentral_JScheme
+from .TensorForces import TensorForce, TensorForce_JTScheme, TensorS12_JTScheme
 from .CentralForces import CentralForce, CentralForce_JTScheme,\
     CoulombForce, KineticTwoBody_JTScheme, Quadratic_OrbitalMomentum_JTScheme,\
-    ElectromagneticCentral_JScheme, CentralGeneralizedForce_JTScheme
-from .DensityForces import \
-    DensityDependentForceFromFile_JScheme, DensityDependentForce_JTScheme,\
-    DensityFiniteRange_JTScheme
+    CentralGeneralizedForce_JTScheme
+from .DensityForces import DensityDependentForceFromFile_JScheme, \
+    DensityDependentForce_JTScheme, DensityFiniteRange_JTScheme
     
 from .SpinOrbitForces import SpinOrbitForce,\
     SpinOrbitForce_JTScheme, ShortRangeSpinOrbit_JTScheme, \
@@ -16,10 +14,11 @@ from .SpinOrbitForces import SpinOrbitForce,\
 from .MatrixElement import _MatrixElementReader
 from .ZeroRangeForces import SDI_JTScheme, Delta_JTScheme
 from .SkyrmeForces import SkrymeBulk_JTScheme
-from .MultipoleForces import MultipoleDelta_JTScheme,\
-    MultipoleMoment_JTScheme
+from .MultipoleForces import MultipoleDelta_JTScheme, MultipoleMoment_JTScheme
 from .BrinkBoeker import YukawiansM3Y_JTScheme, YukawiansM3Y_tensor_JTScheme, \
     YukawiansM3Y_SpinOrbit_JTScheme
+from matrix_elements.ArgonePotential import NucleonAv18TermsInteraction_JTScheme,\
+    NucleonAv14TermsInteraction_JTScheme, ElectromagneticAv18TermsInteraction_JScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -49,8 +48,6 @@ def switchMatrixElementType(force, J_scheme=False):
         return CentralForce_JTScheme
     elif force == ForceEnum.Coulomb:
         return CoulombForce
-    elif force == ForceEnum.ElectromageticCentral:
-        return ElectromagneticCentral_JScheme
     elif force == ForceEnum.Kinetic_2Body:
         return KineticTwoBody_JTScheme
     elif force == ForceEnum.Quadratic_OrbitalMomentum:
@@ -91,10 +88,15 @@ def switchMatrixElementType(force, J_scheme=False):
         return TensorForce_JTScheme
     elif force == ForceEnum.TensorS12:
         return TensorS12_JTScheme
-    elif force == ForceEnum.OTPEP_Tensor:
-        return OPE_TPE_Force_JTScheme
-    elif force == ForceEnum.ElectromageticNonCentral:
-        return ElectromagneticNonCentral_JScheme
+    
+    ## OTHERS
+    
+    elif force == ForceEnum.Argone14NuclearTerms:
+        return NucleonAv14TermsInteraction_JTScheme
+    elif force == ForceEnum.Argone18NuclearTerms:
+        return NucleonAv18TermsInteraction_JTScheme
+    elif force == ForceEnum.Argone18Electromagetic:
+        return ElectromagneticAv18TermsInteraction_JScheme
     
     if force == ForceEnum.Force_From_File:
         return _MatrixElementReader

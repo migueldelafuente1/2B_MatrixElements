@@ -258,7 +258,12 @@ class QN_2body_L_Coupling(_ParticleWaveFunction):
     
     COUPLING = CouplingSchemeEnum.L
     
-    def __init__(self, sp_state_1, sp_state_2, L, ML=0):
+    def __init__(self, sp_state_1, sp_state_2, L, ML=None):
+        
+        if ML == None:
+            ML = (sp_state_1.m_l + sp_state_1.m_l)
+        else:
+            assert ML == (sp_state_1.m_l + sp_state_1.m_l), "unconsistent M for WF."
         
         self.__checkQNArguments(sp_state_1, sp_state_2, L, ML)
         
@@ -275,7 +280,6 @@ class QN_2body_L_Coupling(_ParticleWaveFunction):
         self.S  = 0
         
         self.ML = ML
-    
     
     def __checkQNArguments(self, sp_1, sp_2, L, ML):
         
@@ -399,7 +403,16 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
                 CouplingSchemeEnum.T)
     
     # j1 and j2 are fractions and they are defined as 2*j
-    def __init__(self, sp_state_jj_1, sp_state_jj_2, J,T, M=0, MT=0):
+    def __init__(self, sp_state_jj_1, sp_state_jj_2, J,T, M=None, MT=None):
+        
+        if M == None:
+            M = (sp_state_jj_1.m + sp_state_jj_2.m) // 2
+        else:
+            assert M == (sp_state_jj_1.m + sp_state_jj_2.m) // 2, "unconsistent M for WF."
+        if MT == None:
+            MT = (sp_state_jj_1.m_t + sp_state_jj_2.m_t) // 2
+        else:
+            assert MT == (sp_state_jj_1.m_t + sp_state_jj_2.m_t) // 2, "unconsistent MT for WF."
         
         self._checkQNArguments(sp_state_jj_1, sp_state_jj_2, J,T, M, MT)
         
@@ -560,7 +573,12 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
     COUPLING = CouplingSchemeEnum.JJ
     
     # j1 and j2 are fractions and they are defined as 2*j
-    def __init__(self, sp_state_jj_1, sp_state_jj_2, J, M=0):
+    def __init__(self, sp_state_jj_1, sp_state_jj_2, J, M=None):
+        
+        if M == None:
+            M = (sp_state_jj_1.m + sp_state_jj_2.m) // 2
+        else:
+            assert M == (sp_state_jj_1.m + sp_state_jj_2.m) // 2, "unconsistent M for WF."
         
         self._checkQNArguments(sp_state_jj_1, sp_state_jj_2, J, M)
         
@@ -577,6 +595,8 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
         
         self.J  = J        
         self.M  = M
+        
+        self.MT = self.isospin_3rdComponent
     
     def _checkQNArguments(self, sp_1, sp_2, J, M):
         

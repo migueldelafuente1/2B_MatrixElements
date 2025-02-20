@@ -6,7 +6,6 @@ Created on Apr 4, 2022
 ## ensures parent folder importing both Windows/Linux
 import os
 import sys
-from xml import etree
 
 sys.path.insert(1, os.path.realpath(os.path.pardir))
 

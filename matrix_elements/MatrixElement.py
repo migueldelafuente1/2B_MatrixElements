@@ -284,12 +284,14 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         
         self.__checkInputArguments(bra, ket)
         
-        self.bra : QN_1body_jj = bra
-        self.ket : QN_1body_jj = ket
+        self.bra : QN_2body_jj_J_Coupling = bra
+        self.ket : QN_2body_jj_J_Coupling = ket
         
         self.J = bra.J
         self.exchange_phase = None
         self.exch_2bme = None
+        ## Implicit MT to distinguish pp/pn/nn
+        self.MT = self.bra.MT
         
         if (bra.J != ket.J):
             print("Bra J [{}]doesn't match with ket's J [{}]".format(bra.J, ket.J))
@@ -311,6 +313,8 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
             raise MatrixElementException("<bra| is not <QN_2body_jj_J_Coupling>")
         if not isinstance(ket, QN_2body_jj_J_Coupling):
             raise MatrixElementException("|ket> is not <QN_2body_jj_J_Coupling>")
+        if ket.MT != bra.MT:
+            raise MatrixElementException(f"bra-ket states change the particle label <MT={bra.MT}|{ket.MT}>")
         
         ## Wave functions do not change the number of protons or neutrons_
         if bra.isospin_3rdComponent != ket.isospin_3rdComponent:
@@ -551,16 +555,17 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
         
         self.__checkInputArguments(bra, ket)
         
-        self.bra = bra
-        self.ket = ket
+        self.bra : QN_2body_jj_JT_Coupling = bra
+        self.ket : QN_2body_jj_JT_Coupling = ket
         
         self.J = bra.J
         self.T = bra.T
+        self.MT= bra.MT
         
         self.exchange_phase = None
         self.exch_2bme = None
         
-        if (bra.J != ket.J) or (bra.T != ket.T):
+        if (bra.J != ket.J) or (bra.T != ket.T) or (bra.MT != ket.MT):
             print("Bra JT [{}]doesn't match with ket's JT [{}]"
                   .format(bra.J, bra.T, ket.J, ket.T))
             self._value = 0.0

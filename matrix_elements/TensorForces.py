@@ -292,7 +292,6 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
         _S_aux = (-1)**(self.S_bra + 1)
         _T_aux = (-1)**(self.T)
         _L_aux = (-1)**(self.T + self.S_bra + 1)
-        
         exchange_energy = (
             self.PARAMS_FORCE.get(BrinkBoekerParameters.Wigner),
             self.PARAMS_FORCE.get(BrinkBoekerParameters.Bartlett)   * _S_aux,

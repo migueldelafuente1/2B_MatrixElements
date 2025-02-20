@@ -9,13 +9,13 @@ from helpers.Enums import PotentialForms, CentralMEParameters
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
     safe_clebsch_gordan, _B_coeff_memo_accessor,\
     getStatesAndOccupationUpToLastOccupied, shellSHO_Notation,\
-    getStatesAndOccupationOfFullNucleus
+    getStatesAndOccupationOfFullNucleus, getGeneralizedLaguerreRootsWeights
 from helpers.Log import XLog
 from . import SCIPY_INSTALLED
 from copy import deepcopy
 # SCIPY_INSTALLED = 1
 if SCIPY_INSTALLED:
-    from scipy.special import gammaincc, gamma
+    from scipy.special import gammaincc
     from scipy.special import roots_laguerre, roots_genlaguerre, roots_legendre
 
 
@@ -109,19 +109,44 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     
     elif potential == PotentialForms.YukawaGauss_power:
         sum_ = 0.
+        mu_2 = kwargs.get(CentralMEParameters.opt_mu_2, mu_param)
+        mu_3 = kwargs.get(CentralMEParameters.opt_mu_3, mu_param)
+        
+        A = 1 + 2 * (b_param / mu_2)**2
+        B = (2**0.5) * b_param / mu_param
+        C = B / (2 * np.sqrt(A))
+        
+        N = 2*p + 1 + n_power
+        for k in range(N +1):
+            aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
+            aux = np.exp(aux) * ((-C)**k) * gammaincc(p + 1 + (N - k)/2, C**2)
+            
+            sum_ += aux
+        
+        aux  = np.exp(fact(N) - gamma_half_int(2*p + 3) + C**2 - ((N+1)/2)*np.log(A))
+        aux *= 2 * (b_param**3) * np.power(2**0.5 * b_param / mu_3 ,N) / B
+        sum_ *= aux
+                
+        return sum_
+    
+    elif potential == PotentialForms.Wood_Saxon:
+
         if not (CentralMEParameters.opt_mu_2   in kwargs and 
                 CentralMEParameters.opt_mu_3   in kwargs):
             raise IntegralException("missing parameters in kwargs:", kwargs)
         
-        raise IntegralException("TODO: implement me!")
-        return sum_
-    
-    elif potential == PotentialForms.Wood_Saxon:
-        sum_ = 0.
-        if not (CentralMEParameters.opt_mu_2   in kwargs and 
-                CentralMEParameters.opt_mu_3   in kwargs):
-            raise IntegralException("missing parameters in kwargs:", kwargs)
-        raise IntegralException("TODO: implement me!")
+        aux  = b_param**3 / np.exp(gamma_half_int(2*p + 3))
+        if n_power>0: 
+            aux *= ((np.sqrt(2) * b_param/ mu_param)**n_power)
+        
+        ## Laguerre Integral for the potential
+        a  = kwargs.get(CentralMEParameters.opt_mu_2) 
+        r0 = kwargs.get(CentralMEParameters.opt_mu_3)
+        A, B  = np.sqrt(2) * b_param / a, r0 / a 
+        x, w  = getGeneralizedLaguerreRootsWeights(2*p + 1 + n_power)
+        f     = 1.0 / (1.0 + np.exp((A*np.sqrt(x)) - B))
+        sum_ = sum(w * f)
+        
         return sum_
         
     else:

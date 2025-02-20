@@ -26,7 +26,7 @@ class Enum(object):
         return result
         
 #===============================================================================
-#  DEFINED ENUMERATIONS
+#  DEFINED ENUMERATIONS 
 #===============================================================================
 
 class InputParts(Enum):
@@ -77,17 +77,17 @@ class ForceEnum(Enum):
     Density_Dependent    = 'Density_Dependent'
     Density_Dependent_From_File = 'Density_From_File'
     Density_FiniteRange  = 'DensityFiniteRange'
-    ElectromageticCentral     = 'ElectromageticCentral'
-    ElectromageticNonCentral  = 'ElectromageticNonCentral'
     Quadratic_OrbitalMomentum = 'Quadratic_OrbitalMomentum'
-    OTPEP_Tensor = "OTPEP_Tensor"
     Kinetic_2Body    = 'Kinetic_2Body'
     Multipole_Delta  = 'Multipole_Delta'
     Multipole_Moment = 'Multipole_Moment'
     SkyrmeBulk = 'SkyrmeBulk'
     TensorS12  = 'TensorS12'
     Force_From_File = 'Force_From_File'
-    CentralGeneralized = 'CentralGeneralized'
+    CentralGeneralized   = 'CentralGeneralized'
+    Argone14NuclearTerms = 'Argone14NuclearTerms'
+    Argone18NuclearTerms = 'Argone18NuclearTerms'
+    Argone18Electromagetic = 'Argone18Electromagetic'
 
 class PotentialForms(Enum):
     Gaussian    = 'gaussian'                # exp(-(r/mu_)^2)
@@ -186,7 +186,6 @@ ForceVariablesDict = {
     ForceEnum.Coulomb   : Enum,
     ForceEnum.Tensor    : CentralMEParameters,
     ForceEnum.TensorS12 : CentralWithExchangeParameters,
-    ForceEnum.OTPEP_Tensor : Enum, 
     ForceEnum.SpinOrbit : CentralMEParameters,
     ForceEnum.SpinOrbitShortRange : CentralMEParameters,
     ForceEnum.SpinOrbitFiniteRange: CentralWithExchangeParameters,
@@ -201,10 +200,11 @@ ForceVariablesDict = {
     ForceEnum.Delta         : BrinkBoekerParameters,
     ForceEnum.Multipole_Delta : MultipoleParameters,
     ForceEnum.Multipole_Moment: CentralMEParameters, 
-    ForceEnum.ElectromageticCentral     : Enum, 
-    ForceEnum.ElectromageticNonCentral  : Enum,
     ForceEnum.Force_From_File : ForceFromFileParameters,
     ForceEnum.CentralGeneralized : CentralGeneralizedMEParameters,
+    ForceEnum.Argone18NuclearTerms : Enum,
+    ForceEnum.Argone14NuclearTerms : Enum,
+    ForceEnum.Argone18Electromagetic: Enum,
 }
 
 ForcesWithRepeatedParametersList = [

@@ -11,30 +11,31 @@ from copy import deepcopy
 #===============================================================================
 
 class Constants:
-    HBAR      = 6.582119e-22    # MeV s
+    HBAR      = 6.582119e-22   # MeV s
     HBAR_C    = 197.327053# << value in Taurus ## 197.326963      # MeV fm 
-    # HBAR_C    = 197.326963      # MeV fm (value in Taurus)
+    # HBAR_C    = 197.326963   # MeV fm (value in Taurus)
     
-    M_PROTON  = 938.27208816      # MeV/c2
-    M_NEUTRON = 939.56542052      # MeV/c2
-    M_NUCLEON = 931.494028        # MeV/c2
-    M_ELECTRON= 0.51099891        # MeV/c2
-    M_MEAN    = 938.91875434      # (m_Proton + m_Neutron) / 2
+    M_PROTON  = 938.27208816   # MeV/c2
+    M_NEUTRON = 939.56542052   # MeV/c2
+    M_NUCLEON = 931.494028     # MeV/c2
+    M_ELECTRON= 0.51099891     # MeV/c2
+    M_MEAN    = 938.91875434   # (m_Proton + m_Neutron) / 2
     
     ALPHA     = 7.297353e-3
-    e_CHARGE  = 1.602176e-19    # C
+    e_CHARGE  = 1.602176e-19   # C
+    NUCL_MAGNETON = 3.125e-14  # MeV / T
 
 class ConstantsV18:
-    HBAR_C    = 197.32705  # MeV fm
+    HBAR_C    = 197.32705      # MeV fm
     
-    M_PROTON  = 938.27231  # MeV/c2
-    M_NEUTRON = 939.56563  # MeV/c2
-    M_PION_0  = 134.9739   # MeV/c2
-    M_PION_pm = 139.5675   # MeV/c2
+    M_PROTON  = 938.27231      # MeV/c2
+    M_NEUTRON = 939.56563      # MeV/c2
+    M_PION_0  = 134.9739       # MeV/c2
+    M_PION_pm = 139.5675       # MeV/c2
     
     ALPHA     = 7.297353053e-3    
-    MAGMOM_PROTON  =  2.79285   # mu_0
-    MAGMOM_NEUTRON = -1.91304   # mu_0
+    MAGMOM_PROTON  =   2.79285 * Constants.NUCL_MAGNETON
+    MAGMOM_NEUTRON =  -1.91304 * Constants.NUCL_MAGNETON
 
 
 _LINE_1 = "\n====================================================================\n"
@@ -45,6 +46,9 @@ _LINE_2 = "\n-------------------------------------------------------------------
 #===============================================================================
 
 import numpy as np
+from helpers import SCIPY_INSTALLED
+if SCIPY_INSTALLED:
+    from scipy.special import roots_genlaguerre
 
 _fact = []
 _double_fact = []
@@ -87,10 +91,10 @@ def double_fact_build(max_order_fact):
         
     # !! logarithm values for the factorial !!
 
-fact_build(200)
-double_fact_build(200)
+fact_build(300)
+double_fact_build(300)
 
-    
+
 def gamma_half_int_build(max_order_fact):
     """ Gamma n over 2: [G(1/2), G(2/2), G(3/2), ...]"""
     global _gamma_half_int
@@ -111,7 +115,7 @@ def gamma_half_int_build(max_order_fact):
     #_FACTORIAL_DIM = max_order_fact
     # !! logarithm values for the factorial !!
 
-gamma_half_int_build(100)
+gamma_half_int_build(150)
 
 
 def fact(i):
@@ -138,6 +142,46 @@ def gamma_half_int(i):
     if (i <= 0):
         raise ValueError("Gamma Function G(n/2) need n >= 1, got: {}".format(i))
     return _gamma_half_int[i - 1]
+
+ORDER_GEN_LAGUERRE = 350 #359
+_genLaguerre_roots_weights = [
+    {}, # roots,
+    {}  # weights
+]
+
+def getGeneralizedLaguerreRootsWeights(_2alpha, order=ORDER_GEN_LAGUERRE):
+    """
+    get the roots and weights of the 2*alpha up to the largest order
+    """
+    global _genLaguerre_roots_weights
+    return (_genLaguerre_roots_weights[0][_2alpha], 
+            _genLaguerre_roots_weights[1][_2alpha])
+
+def genLaguerreQuadraturesbuild(alphaOver2):
+    global ORDER_GEN_LAGUERRE
+    for alpha in range(0, alphaOver2):
+        x, w = roots_genlaguerre(ORDER_GEN_LAGUERRE, alpha/2, mu=False)
+        _genLaguerre_roots_weights[0][alpha] = x
+        _genLaguerre_roots_weights[1][alpha] = w
+    
+if SCIPY_INSTALLED:
+    genLaguerreQuadraturesbuild(200)
+
+
+def polynomialProduct(poly1, poly2):
+    """
+    returns the coefficients for (poly1 * poly2), reading the input/output 
+    polynomials as: [a0, a1, a2, ...] = a0 + a1*x + a2*x^2 + ...
+    """
+    
+    assert poly1.__len__() > 0 and poly2.__len__() > 0, "give at least a order 1 polynomial"
+    coeffs = [0,]*(len(poly1)+len(poly2)-1)
+
+    for i in range(len(poly1)):
+        for j in range(len(poly2)):
+            k = i+j            
+            coeffs[k] += poly1[i]*poly2[j]
+    return coeffs
 
 #===============================================================================
 #%%     sympy angular momentum fucntions
@@ -393,7 +437,12 @@ def prettyPrintDictionary(dictionary, level=0, delimiter=' . '):
             prettyPrintDictionary(val, level + 1, delimiter)
             print(header+'}')
         else:
-            print(header+str(k)+':'+str(val))
+            key_ = f"{str(k): >12}:\t"
+            if isinstance(val, float): 
+                val_ = f"{val: >12.6f}" if abs(val) > 1e-3 else f"{val: >12.4e}"
+                print(header+key_+val_)
+            else:
+                print(header+key_+str(val))
 
 
 #------------------------------------------------------------------------------ 
