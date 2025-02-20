@@ -1,5 +1,8 @@
 
 import os, shutil
+import sys
+sys.path.insert(1, os.path.realpath(os.path.pardir))
+
 import xml.etree.ElementTree as et
 
 from matrix_elements.ArgonePotential import ElectromagneticAv18TermsInteraction_JScheme,\
@@ -119,7 +122,7 @@ if __name__ == '__main__':
             Inter_._SWITCH_OFF_TERMS[term] = True
         
         talmiInts = {}
-        for term in ('df', 's'): #Inter_._SWITCH_OFF_TERMS.keys():
+        for term in Inter_._SWITCH_OFF_TERMS.keys():
             print(f" Evaluating [{term}] ...")
             Inter_._SWITCH_OFF_TERMS[term] = False
             
