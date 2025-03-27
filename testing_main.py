@@ -13,17 +13,18 @@ from matrix_elements.BrinkBoeker import PotentialSeries_JTScheme
 from matrix_elements.ZeroRangeForces import Delta_JTScheme
 from matrix_elements.DensityForces import DensityDependentForce_JTScheme
 from matrix_elements.TensorForces import TensorS12_JTScheme
-from matrix_elements.ArgonePotential import NucleonAv18TermsInteraction_JTScheme
+from matrix_elements.ArgonePotential import NucleonAv18TermsInteraction_JTScheme,\
+    NucleonAv14TermsInteraction_JTScheme
 
 if __name__ == '__main__':
     
     " 0 5 001 001 101 101 0 1"
-    J = 2
+    J = 0
     T = 1
-    bra = QN_2body_jj_JT_Coupling(QN_1body_jj(1,3,5, mt= 1),
-                                  QN_1body_jj(1,1,3, mt= 1), J, T)
-    ket = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,3, mt= 1),
-                                  QN_1body_jj(1,2,5, mt= 1), J, T)
+    bra = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5, mt= 1),
+                                  QN_1body_jj(0,2,5, mt=-1), J, T)
+    ket = QN_2body_jj_JT_Coupling(QN_1body_jj(0,2,5, mt= 1),
+                                  QN_1body_jj(0,2,5, mt=-1), J, T)
     # ket = QN_2body_jj_JT_Coupling(QN_1body_jj(0,1,1, mt=-1),
     #                               QN_1body_jj(0,0,1, mt=-1), J, T)
     # bra = QN_2body_jj_JT_Coupling(QN_1body_jj(5,1,1, mt=-1),
@@ -32,22 +33,28 @@ if __name__ == '__main__':
     #                               QN_1body_jj(5,1,1, mt=-1), J, T)
     
     kwargs = {
-        # CentralMEParameters.potential: {'name': PotentialForms.Wood_Saxon},
+        CentralMEParameters.potential: {'name': PotentialForms.Gaussian},
         # CentralMEParameters.opt_mu_2 : {'value': 0.2,},
         # CentralMEParameters.opt_mu_3 : {'value': 0.5,},
         # CentralMEParameters.n_power  : {'value': 0,},
-        # CentralMEParameters.mu_length: {'value': 1.42955,},
-        # BrinkBoekerParameters.Wigner:     {'value': 1000.0,} ,
+        CentralMEParameters.mu_length: {'value': 1.4295301308423947,},
+        BrinkBoekerParameters.Wigner:     {'value': 1.0,} ,
         # BrinkBoekerParameters.Bartlett:   {'value': 0,},
         # BrinkBoekerParameters.Heisenberg: {'value': 0,},
         # BrinkBoekerParameters.Majorana:   {'value': 0,},
-        SHO_Parameters.b_length: 1.815,
+        SHO_Parameters.b_length: 1.500,
     }
-    NucleonAv18TermsInteraction_JTScheme.turnDebugMode(False)
-    NucleonAv18TermsInteraction_JTScheme.setInteractionParameters(**kwargs)
-    me = NucleonAv18TermsInteraction_JTScheme(ket, bra)
+    Inter_ = NucleonAv14TermsInteraction_JTScheme
+    Inter_._SWITCH_OFF_CONSTANTS = True
+    for term in Inter_._SWITCH_OFF_TERMS.keys():
+        if term == Inter_.TermEnum.t: continue
+        Inter_._SWITCH_OFF_TERMS[term] = True
+    
+    NucleonAv14TermsInteraction_JTScheme.turnDebugMode(True)
+    NucleonAv14TermsInteraction_JTScheme.setInteractionParameters(**kwargs)
+    me = NucleonAv14TermsInteraction_JTScheme(ket, bra)
     print(me.value)
-    # me.saveXLog('ws-central')
+    me.saveXLog('tensor-av14')
     0/0
     
     # kwargs = {

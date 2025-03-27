@@ -4,6 +4,9 @@ Created on Mar 8, 2021
 @author: Miguel
 '''
 import numpy as np
+from copy import deepcopy
+from typing import Self
+from inspect import getclasstree
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters,\
     BrinkBoekerParameters, PotentialForms
@@ -16,8 +19,8 @@ from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
 from matrix_elements.transformations import TalmiTransformation
 from helpers.WaveFunctions import QN_2body_LS_Coupling, QN_1body_radial
 from helpers.integrals import _SpinOrbitPartialIntegral, _RadialIntegralsLS
-from copy import deepcopy
 from helpers.Log import XLog
+
 
 class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled, 
     
@@ -137,7 +140,7 @@ class SpinOrbitForce(TalmiTransformation): # _TwoBodyMatrixElement_JTCoupled,
     def _interactionConstantsForCOM_Iteration(self):
         """ Common Matrix element in the (nlNL,n'l') Moshinsky series"""
         factor = safe_wigner_6j(self._l,    self.L_bra, self._L, 
-                                self.L_ket, self._l_q,         1)
+                                self.L_ket, self._l_q,        1)
         if self.isNullValue(factor):
             return 0
         
@@ -235,8 +238,7 @@ class SpinOrbitFiniteRange_JTScheme(SpinOrbitForce_JTScheme):
         
         return prod_part
 
-
-class Quadratic_SpinOrbit_JTScheme(SpinOrbitFiniteRange_JTScheme):
+class _Quadratic_SpinOrbit_jrelativeEval_JTScheme(SpinOrbitFiniteRange_JTScheme):
     
     """
     Interaction for   V(r) * (Exchange_terms) * (l*S)^2
@@ -248,11 +250,12 @@ class Quadratic_SpinOrbit_JTScheme(SpinOrbitFiniteRange_JTScheme):
         def deltaConditionsForGlobalQN(self):          L_bra - Lket <= 1
         def _deltaConditionsForCOM_Iteration(self):    (l + S + T, even)
         def _totalSpinTensorMatrixElement(self):       (NOT USED)
+        def _validKetTotalSpins(self):                 S_bra = S_ket = 1
+        
+    ## NOTE: the definition of the relative- j decomposition values imply a null
+             <nlSj|ls|n'l'Sj> = 0 for S=0, also l'=l from l^2 operator.
     """
-    
-    def _validKetTotalSpins(self):
-        """ Differs from standard l*S,  when j decoupling include both S=S' """
-        return (self.S_bra, )
+    _angular_me_ls2 = {}
     
     def centerOfMassMatrixElementEvaluation(self):
         #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
@@ -277,9 +280,17 @@ class Quadratic_SpinOrbit_JTScheme(SpinOrbitFiniteRange_JTScheme):
     def _interactionConstantsForCOM_Iteration(self):
         # no special internal c.o.m interaction constants for the Central ME
         ## l_q = l
+        tpl = "_".join([str(x) for x in (self.J, self.L_bra, self.L_ket,
+                                         self._l, self._L)])
+        if tpl in self._angular_me_ls2:
+            return self._angular_me_ls2[tpl]
+        
+        ## Breakpoint to waring the dimension of the spinOrbit_me dictionary
+        assert self._angular_me_ls2.__len__() < 1e7, "I might be exploding. Fix me!"        
+        
         j_min = max( abs(self.S_bra - self._l), abs(self.J - self._L))
         j_max = min(     self.S_bra + self._l,      self.J + self._L)
-    
+        
         sum_ = 0.0
         for j in range(j_min, j_max +1):
             self._j_rel = j
@@ -291,8 +302,10 @@ class Quadratic_SpinOrbit_JTScheme(SpinOrbitFiniteRange_JTScheme):
             if self.isNullValue(fac_2): continue
     
             factor = (2*j + 1) * fac_1 * fac_2
-            sum_ += factor * self._spin_isospin_forCOM_Iteration()
-    
+            j_me   = self._spin_isospin_forCOM_Iteration()
+            sum_  += factor * j_me
+        
+        self._angular_me_ls2[tpl] = sum_
         return sum_
     
     def _spin_isospin_forCOM_Iteration(self):
@@ -312,14 +325,133 @@ class Quadratic_SpinOrbit_JTScheme(SpinOrbitFiniteRange_JTScheme):
     
     def _LScoupled_MatrixElement(self):
         """ The exchange operators can be done here, reusing the method."""
-        return SpinOrbitFiniteRange_JTScheme._LScoupled_MatrixElement(self)    
-    
+        return SpinOrbitFiniteRange_JTScheme._LScoupled_MatrixElement(self)
+        
 
+class _Quadratic_SpinOrbit_standardCOM_JTScheme(SpinOrbitFiniteRange_JTScheme):
+    
+    """
+    Interaction for   V(r) * (Exchange_terms) * (l*S)^2
+        
+    """
+    _angular_me_ls2 = {}
+    
+    def _validKetTotalSpins(self):
+        """ 
+        Return ket states <tuple> of the total spin, for tensor force impose 
+        S = S' = 1, return nothing to skip the bracket spin S=0
+        """
+        if self.S_bra == 0:
+            return []
+        return (1, )
+    
+    def _validKetTotalAngularMomentums(self):
+        """ 
+        Return ket states <tuple> of the total angular momentum, depending of 
+        the Force.
+        
+        ## Quadratic Spin-orbit involves a rank 2 tensor. the range is up to 2.
+        """
+        _L_min = max(0, self.L_bra - 2)
+        _L_max =        self.L_bra + 2
+        gen_ = (l_q for l_q in range(_L_min, _L_max +1))
+        return tuple(gen_)
+    
+    def centerOfMassMatrixElementEvaluation(self):
+        #TalmiTransformation.centerOfMassMatrixElementEvaluation(self)
+        """ 
+        Radial Brody-Moshinsky transformation, direct implementation for  
+        non-central spin orbit force.
+        """       
+        if not self.deltaConditionsForGlobalQN(): return 0
+        
+        aux = self._BrodyMoshinskyTransformation()
+        return  aux
+    
+    def _globalInteractionCoefficient(self):
+        """ _globalInteractionCoefficient() * sum_p { I(p) * series_(p) } """
+        skip, spin_me = self._totalSpinTensorMatrixElement()
+        if skip:
+            return 0
+        
+        phase   = (-1)**(self.S_bra + self.J)
+    
+        factor = np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1)) * spin_me
+    
+        return phase * factor * self.PARAMS_FORCE.get(CentralMEParameters.constant)
+    
+    def _totalSpinTensorMatrixElement(self):
+        """ <1/2 1/2 (S) | S^[1]| 1/2 1/2 (S)>, only non zero for S=S'=1 
+        boolean for skip"""
+        if (self.S_bra != self.S_ket) or (self.S_bra == 0):
+            return True, 0.0
+        
+        return False, 6 ## = np.sqrt(6)
+    
+    def _interactionConstantsForCOM_Iteration(self):
+        """
+        Explicit expression from the 12-j symbol for rank 2
+        """
+        tpl = "_".join([str(x) for x in (self.J, self.L_bra, self.L_ket, 
+                                         self._l, self._L)])
+        if tpl in self._angular_me_ls2:
+            return self._angular_me_ls2[tpl]
+        
+        ## Breakpoint to waring the dimension of the spinOrbit_me dictionary
+        assert self._angular_me_ls2.__len__() < 1e7, "I might be exploding. Fix me!"
+        
+        sum_ = 0.0
+        for rr in range(3):
+            aux = [0, 0, 0, 0]
+            args = [
+                (1, 1, rr,  1, 1, 1),
+                (self.L_bra, self.S_bra, self.J,   self.S_ket, self.L_ket, rr), 
+                (self._l, self._l, rr,  1, 1, self._l),
+                (self._l, self._l, rr,  self.L_ket, self.L_bra, self._L),
+            ]
+            aux[0] = -1/3 if (rr == 0) else 1/6   ## analytical formula
+            for k in range(1, 4):
+                aux[k] = safe_wigner_6j(*args[k])
+                if self.isNullValue(aux[k]): break
+    
+            factor = (2*rr + 1) * np.prod(aux)
+            sum_ += factor
+        
+        sum_ *= ((-1)**(self._l + self._L))
+        sum_ *= self._l * (self._l + 1) * (2*self._l + 1) 
+        
+        self._angular_me_ls2[tpl] = sum_
+        return sum_
+
+## Select only ONE approach to evaluate the quadratic matrix element.
+class Quadratic_SpinOrbit_JTScheme(
+        # _Quadratic_SpinOrbit_jrelativeEval_JTScheme,
+        _Quadratic_SpinOrbit_standardCOM_JTScheme,
+    ):
+    """
+    Select ONE and ONLY ONE of the approaches to evaluate the Quadratic LS
+    """
+    @classmethod
+    def __new__(cls, *args, **kwargs):
+        parents = getclasstree([Quadratic_SpinOrbit_JTScheme, ])
+        parents = [A.__name__ for A in parents[1][0][1]]
+        
+        if ((_Quadratic_SpinOrbit_jrelativeEval_JTScheme.__name__ in parents) and 
+            (_Quadratic_SpinOrbit_standardCOM_JTScheme.__name__   in parents)):
+            raise BaseException("LS quadratic cannot inherit from both"
+                                         "J-relative and Standard LS2 classes." )
+        
+        return super(Quadratic_SpinOrbit_JTScheme, cls).__new__(cls)
+    
+    @classmethod
+    def getMatrixElementClassLogs(cls):
+        return f"Size of stored angular momentum matrix elements [{len(cls._angular_me_ls2):}]"
+    
 class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
     
     """
     Short Range Approximation of Spin Orbit force:
-          -i W_LS(r) *(p1-p2)* x delta(r1-r2) (p1-p2) * (s1 + s2)
+          -i W_LS *(p1-p2)* x delta(r1-r2) (p1-p2) * (s1 + s2)
           
     decoupling of the JT reduced m.e. and direct evaluation from gradient formula
     and recurrence relations.

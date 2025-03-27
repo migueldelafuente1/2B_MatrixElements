@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="M3Y P2 (PRC 68 014316, 2003)- Fermi Density" details=""/>
 	<Output_Parameters>
-		<Output_Filename>M3Y_P2_MZ4</Output_Filename>
+		<Output_Filename>M3Y_P2_MZ3</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>
@@ -29,6 +29,7 @@
 		<Q_Number sp_state='203' sp_energy=''/>
 		<Q_Number sp_state='10001' sp_energy=''/>
 		
+		<!--
 		<Q_Number sp_state='307' sp_energy=''/>
 		<Q_Number sp_state='305' sp_energy=''/>
 		<Q_Number sp_state='10103' sp_energy=''/>
@@ -40,7 +41,6 @@
 		<Q_Number sp_state='10203' sp_energy=''/>
 		<Q_Number sp_state='20001' sp_energy=''/>
 		
-		<!--
 		<Q_Number sp_state='511' sp_energy=''/>
 		<Q_Number sp_state='509' sp_energy=''/>
 		<Q_Number sp_state='10307' sp_energy=''/>

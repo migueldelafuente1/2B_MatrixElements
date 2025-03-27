@@ -19,6 +19,9 @@ from .BrinkBoeker import YukawiansM3Y_JTScheme, YukawiansM3Y_tensor_JTScheme, \
     YukawiansM3Y_SpinOrbit_JTScheme
 from matrix_elements.ArgonePotential import NucleonAv18TermsInteraction_JTScheme,\
     NucleonAv14TermsInteraction_JTScheme, ElectromagneticAv18TermsInteraction_JScheme
+from matrix_elements.SkyrmeForces import ShortRangeSpinOrbit_COM_JTScheme
+from matrix_elements.MomentumForces import RelativeMomentumSquared_JTScheme,\
+    TotalMomentumSquared_JTScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -50,6 +53,9 @@ def switchMatrixElementType(force, J_scheme=False):
         return CoulombForce
     elif force == ForceEnum.Kinetic_2Body:
         return KineticTwoBody_JTScheme
+    elif force == ForceEnum.Kinetic_Total:
+        # return RelativeMomentumSquared_JTScheme
+        return TotalMomentumSquared_JTScheme
     elif force == ForceEnum.Quadratic_OrbitalMomentum:
         return Quadratic_OrbitalMomentum_JTScheme
     elif force == ForceEnum.Density_Dependent:
@@ -74,6 +80,7 @@ def switchMatrixElementType(force, J_scheme=False):
     elif force == ForceEnum.SpinOrbit:
         return SpinOrbitForce_JTScheme
     elif force == ForceEnum.SpinOrbitShortRange:
+        # return ShortRangeSpinOrbit_COM_JTScheme
         return ShortRangeSpinOrbit_JTScheme
     elif force == ForceEnum.SpinOrbitFiniteRange:
         return SpinOrbitFiniteRange_JTScheme

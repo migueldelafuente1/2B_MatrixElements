@@ -90,6 +90,7 @@ class TBME_Runner(object):
         self.interactionSchemes = {}
         self._brokeInteractions = {}
         self._forceNameFromForceEnum = {}
+        self._logsFromForce     = {}
         
         self.filename_output = 'out'
         
@@ -120,6 +121,16 @@ class TBME_Runner(object):
         print(_SUITE_PRESENTATION_TEMPLATE.format(suite=self.__class__.__name__,
                                                   input_details  = input_block,
                                                   datetime_start = now))
+    def __getClassLogs(self, force):
+        """ calling the class to obtain running specific log details """
+        self._logsFromForce[force] = self.tbme_class.getMatrixElementClassLogs()
+    
+    def _printMERunningLogs(self):
+        """ 
+        Just after evaluating the run() method, print the execution results.
+        """
+        for force, details in self._logsFromForce.items():
+            print(f"{force: >25} ::", details)
     
     @classmethod
     def setFolderToSaveResults(cls, new_folder=None):
@@ -566,7 +577,6 @@ The program will exclude it from the interaction file and will produce the .com 
         else:
             raise TBME_RunnerException("force [{}] invalid scheme: {}".format(
                                        force, self.interactionSchemes[force]))
-            
     
     def _readMatrixElementsFromFile(self, force_str, **params):
         """ 
@@ -692,7 +702,9 @@ The program will exclude it from the interaction file and will produce the .com 
                 except BaseException:
                     trace = traceback.format_exc()
                     self._procedureToSkipBrokenInteraction(force_str, trace)
+            self.__getClassLogs(force)
         
+        print(_LINE_1)
         print("Finished computation, Total time (s): [", sum(times_.values()),"]=")
         print("\n".join(["\t"+str(t)+"s" for t in times_.items()]))
         if len(self._brokeInteractions) > 0:
@@ -709,6 +721,8 @@ The program will exclude it from the interaction file and will produce the .com 
         now = now.strftime("%d/%m/%Y %H:%M:%S")
         print(f" ** Suite Runner [{self.__class__.__name__}] ended without incidences. ")
         print(f" ** end at: {now}")
+        self._printMERunningLogs()
+        print(_LINE_1)
     
     def _procedureToSkipBrokenInteraction(self, force_str, exception_trace):
         """
@@ -838,12 +852,14 @@ The program will exclude it from the interaction file and will produce the .com 
                 all_null = False
                 
                 if abs(mat_elem) < 1.e-10:
-                    values.append("{: 12.6e}".format(mat_elem))
+                    values.append("{: >13.6e}".format(mat_elem))
+                elif abs(mat_elem) > 100:
+                    values.append("{: >13.6e}".format(mat_elem))
                 else:
-                    values.append("{: 12.10f}".format(mat_elem))
+                    values.append("{: >13.10f}".format(mat_elem))
             else:
                 try:
-                    values.append("{: .10f}".format(mat_elem))
+                    values.append("{: >13.10f}".format(mat_elem))
                 except TypeError as tp:
                     # TODO: 
                     pass

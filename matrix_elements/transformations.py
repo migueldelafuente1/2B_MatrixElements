@@ -238,19 +238,23 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         _dummy_me._l_q = l_q
         _dummy_me._p   = p
         
-        return _dummy_me._B_coefficient_evaluation() / (b_param**3)
+        return _dummy_me._B_coefficient_evaluation(n, l, n_q, l_q, p) / (b_param**3)
     
     
-    def _B_coefficient(self, b_param=None, com_qqnn=False):
-        """ _Memorization Pattern for B coefficients. B coeffs. are never zero"""
+    def _B_coefficient(self, b_param=None, com_qqnn=False, specific_qqnn=None):
+        """ _Memorization Pattern for B coefficients. """
         
         if not b_param:
             b_param = self.PARAMS_SHO[SHO_Parameters.b_length]
         
-        if com_qqnn:
-            tpl_0   = (self._N, self._L, self._N_q, self._L_q, self._q)
-        else: ## relative qqnn
-            tpl_0   = (self._n, self._l, self._n_q, self._l_q, self._p)
+        if not specific_qqnn:
+            if com_qqnn:
+                tpl_0   = (self._N, self._L, self._N_q, self._L_q, self._q)
+            else: ## relative qqnn
+                tpl_0   = (self._n, self._l, self._n_q, self._l_q, self._p)
+        else:
+            tpl_0 = specific_qqnn
+            assert len(specific_qqnn) == 5, "Insert a valid tuple of qqnn for B-coeff"
         
         ## NOTE: the accessor sort the (n,l) > (n',l') to not evaluate it 
         ## twice the element, since B(n,l,n',l', p) = B(n',l',n,l, p)
@@ -265,7 +269,11 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
     def _B_coefficient_evaluation(self, n, l, n_q, l_q, p):
         """ 
         SHO normalization coefficients for WF, not b_length dependent .
-        NOTE:: B coeffs. are never zero
+        NOTE:: 
+            B coeffs. are zero only if there is not a condition on the k-sum
+            limits for negative max_value, which occurs depending on valid relative
+            l,l' values compatible with the rho and lambda. 
+            i.e. n=n'=0, l=l'=1 B=0
         """
         # parity condition
         if(((l + l_q)%2)!=0):
@@ -332,6 +340,26 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         raise MatrixElementException("Abstract Method, Implement me!")
         return
     
+    def _invalid_p_forBMBiteration(self):
+        """
+        p values are restricted to l+l' <= p <= 2(n+n') + l +l', otherwise,
+        that lead to incompatible B_coefficients (negative factorials). 
+        The _Bcoefficient is program to ignore these cases (B_p=0), but this 
+        condition avoid uncecessary p steps from 0 to rho. 
+        """
+        lpl_q = (self._l + self._l_q)
+        if lpl_q % 2 == 1:  
+            lpl_q /= 2
+        else:
+            lpl_q = lpl_q // 2
+        
+        if (self._p < lpl_q): 
+            return True
+        if (self._p > self._n + self._n_q + lpl_q): 
+            return True
+        
+        return False
+        
     def _interactionSeries(self):
         """
         Final Method.!!
@@ -359,9 +387,11 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
             if self.DEBUG_MODE:
                 XLog.write('talmi', p=p)
             self._p = p
+            Ip =     self.talmiIntegral()
+            if self.isNullValue(Ip): continue
+            
             # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
             series = 2 * self._interactionSeries()
-            Ip =     self.talmiIntegral()
             product = series * Ip
             sum_ += product
             # sum_ += self._interactionSeries() * self.talmiIntegral()
@@ -528,6 +558,7 @@ class _TalmiTransformation_SecureIter(_TalmiTransformationBase):
                 
                 if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
                     continue
+                if self._invalid_p_forBMBiteration(): continue
                 
                 bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, 
                                      self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
@@ -764,8 +795,114 @@ class TalmiTransformation(_TalmiTransformation_SecureIter):
         if  save_pdf:
             plt.savefig("central_potential.pdf")
         plt.show()
-    
 
+
+
+class TalmiIndependentMoshinskyTransformation(_TalmiTransformation_SecureIter):
+    
+    """
+    This base method evaluates directly the matrix elements for the 
+    Moshinsky transformation, without using directly the Talmi integrals.
+    
+        Talmi-integral Transformation
+            <1,2 (LST)| V | 3,4 (L'ST)>= Sum_p C_V(1,2,3,4, LL'ST; p) I_p
+            
+                C_V(...) = Sum_(nln'l'NL) BMBs B_(nln'l'p) * coeffs
+        
+        Plain Brody-Moshinshy transformation
+            <1,2 (LST)| V | 3,4 (L'ST)> = Sum_(nln'l'NL) BMBS * coeffs * <nl|V|n'l'>
+    
+                <nl|V|n'l'> : radialRelativeMatrixElement method
+    
+    The evaluation of Talmi integrals are not forbidden but if evaluated, must be 
+    inside the method for the radialMatrixElement.
+    
+    This process is also useful to evaluate interactions that mix different 
+    nl quantum numbers (i.e. gradient dependent interactions) such as
+    
+        <nl| V | n'l'> = Sum_(n"l") f(nln'l'| n"l") <nl|W| n"l"> <n'l'|W| n"l">
+    
+    """
+    
+    def _BrodyMoshinskyTransformation(self):
+        """
+        ##  WARNING: This method is final. Do not overwrite!!
+        
+        Sum over valid p-Talmi integrals range (Energy + Ang. momentum + parity 
+        conservation laws). Call implemented Talmi Coefficients for 
+        Brody-Moshinsky transformation
+        """
+        series = 0.0
+        if self.DEBUG_MODE: XLog.write('talmi')
+        
+        constant = self._globalInteractionCoefficient()
+        if not self.isNullValue(constant): 
+            series   = 2 * self._interactionSeries()
+        
+        if self.DEBUG_MODE: XLog.write('talmi', series = series, constant=constant)
+            
+        return constant * series
+    
+    def _interactionSeries(self):
+        """
+            FINAL METHOD!
+        Series for the Brody-Moshinsky transformation, converting the 121'2' into
+        COM quantum numbers
+        """
+        sum_ = 0.0
+        if self.DEBUG_MODE:
+            XLog.write('intSer')
+        
+        for qqnn_bra in self._validCOM_qqnn('bra'):
+            
+            self._n, self._l, self._N, self._L = qqnn_bra
+            
+            bmb_bra = BM_Bracket(self._n, self._l, self._N, self._L, 
+                                 self.bra.n1, self.bra.l1, self.bra.n2, self.bra.l2, 
+                                 self.L_bra)
+            if self.isNullValue(bmb_bra):
+                continue
+            if self.DEBUG_MODE:
+                XLog.write('intSer', nlNL=qqnn_bra)
+            
+            for l_q in self._validKet_relativeAngularMomentums():
+                self._l_q = l_q
+                
+                self._n_q  = self._n
+                self._n_q += (self.rho_ket - self.rho_bra + self._l  - self._l_q) // 2
+                
+                if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
+                    continue                
+                bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, 
+                                     self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
+                                     self.L_ket)
+                if self.isNullValue(bmb_ket):
+                    continue
+                
+                _com_coeff = self._interactionConstantsForCOM_Iteration()
+                V_nlnqlq   = self.radialRelativeMatrixElement()
+                
+                aux =  _com_coeff * bmb_bra * bmb_ket * V_nlnqlq
+                sum_ += aux
+                
+                # TODO: comment when not debugging
+                if self.DEBUG_MODE:
+                    XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q, 
+                               bmbs=bmb_bra * bmb_ket, radInt=V_nlnqlq, 
+                               comCoeff=_com_coeff, aux=aux)
+                #     self._debbugingTable(bmb_bra, bmb_ket, _com_coeff, _b_coeff)
+        if self.DEBUG_MODE:
+            XLog.write('intSer', value=sum_)
+        return sum_
+    
+    def radialRelativeMatrixElement(self):
+        """
+        Abstract method for evaluating the integral <nl| V | n'l'>
+        """
+        raise MatrixElementException("Abstract method, Implement me!")
+        
+    
+    
 class TalmiMultiInteractionTransformation(TalmiTransformation):
     '''
     Multi-evaluated interactions evaluates the Talmi method for very expensive 
@@ -791,6 +928,12 @@ class TalmiMultiInteractionTransformation(TalmiTransformation):
                             _matrixElementCompoundEvaluation()
                             
     '''
+    
+    def __init__(self, bra, ket, run_it=True):
+        TalmiTransformation.__init__(self, bra, ket, run_it=run_it)
+        
+        ## n' for central interactions can be less than the l'+2 case for Tensor 
+        self._n_q_max_central = None
     
     def _BrodyMoshinskyTransformation(self):
         """
@@ -872,8 +1015,12 @@ class TalmiMultiInteractionTransformation(TalmiTransformation):
                 self._n_q  = self._n
                 self._n_q += (self.rho_ket - self.rho_bra + self._l  - self._l_q) // 2
                 
+                if self.DEBUG_MODE:
+                    XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q)
+                
                 if self._n_q < 0 or not self._deltaConditionsForCOM_Iteration():
                     continue
+                if self._invalid_p_forBMBiteration(): continue
                 
                 bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N, self._L, 
                                      self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
@@ -882,7 +1029,11 @@ class TalmiMultiInteractionTransformation(TalmiTransformation):
                     continue
                 
                 _b_coeff = self._B_coefficient(self.PARAMS_SHO.get(SHO_Parameters.b_length))
+                if self.isNullValue(_b_coeff): 
+                    continue  # skip the heavy matrix element evaluation
+                
                 #_com_coeff = self._interactionConstantsForCOM_Iteration()
+                self._n_q_max_central = self._n + (self.rho_ket - self.rho_bra) // 2
                 m_elems = self._matrixElementCompoundEvaluation()
                 
                 aux =  bmb_bra * bmb_ket * _b_coeff * m_elems
@@ -890,8 +1041,7 @@ class TalmiMultiInteractionTransformation(TalmiTransformation):
                 
                 # TODO: comment when not debugging
                 if self.DEBUG_MODE:
-                    XLog.write('intSer_ket', nq=self._n_q, lq=self._l_q, 
-                               bmbs=bmb_bra * bmb_ket, 
+                    XLog.write('intSer_ket', bmbs=bmb_bra * bmb_ket, 
                                B=_b_coeff, m_elems=m_elems, aux=aux)
         if self.DEBUG_MODE:
             XLog.write('intSer', value=sum_)
@@ -989,7 +1139,31 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
             for q in range(cls._integrals_q_max + 1, cls._integrals_q_max + n_integrals +1):                
                 cls._talmiIntegrals_R.append(talmiIntegral(q, *args, **kwargs))
                 cls._integrals_q_max += 1
-            
+    
+    
+    def _invalid_p_forBMBiteration(self):
+        """
+        p values are restricted to l+l' <= p <= 2(n+n') + l +l', otherwise,
+        that lead to incompatible B_coefficients (negative factorials).
+        
+        Overwritten method to evaluate the same for the NLN'L' vs q relation.
+        """
+        if _TalmiTransformation_SecureIter._invalid_p_forBMBiteration(self):
+            return True
+        
+        LpL_q = (self._L + self._L_q)
+        if LpL_q % 2 == 1:  
+            LpL_q /= 2
+        else:
+            LpL_q = LpL_q // 2
+        
+        if (self._p < LpL_q): 
+            return True
+        if (self._p > self._N + self._N_q + LpL_q): 
+            return True
+        
+        return False
+    
     def talmiIntegral(self):
         """ 
         Get or update Talmi integrals for the calculations
@@ -1041,6 +1215,7 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
                 skip -= (self._n + self._N) + (self.rho_ket - self.rho_bra )//2
                 if skip != 0: 
                     continue
+                if self._invalid_p_forBMBiteration(): continue
                 
                 bmb_ket = BM_Bracket(self._n_q, self._l_q, self._N_q, self._L_q, 
                                      self.ket.n1, self.ket.l1, self.ket.n2, self.ket.l2, 
@@ -1090,11 +1265,13 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
                 if self.DEBUG_MODE: XLog.write('talmi', p=p, q=q)
                 
                 self._q = q
+                Ip =     self.talmiIntegral()
+                Iq =     self.totalRCoordinateTalmiIntegral()
+                
+                if self.isNullValue(Ip) or self.isNullValue(Iq): continue
                 
                 # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
                 series = 2 * self._interactionSeries()
-                Ip =     self.talmiIntegral()
-                Iq =     self.totalRCoordinateTalmiIntegral()
                 product = series * Ip * Iq
                 sum_ += product
                                 

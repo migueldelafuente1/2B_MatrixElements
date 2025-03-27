@@ -9,7 +9,8 @@ from matrix_elements.ArgonePotential import ElectromagneticAv18TermsInteraction_
     NucleonAv14TermsInteraction_JTScheme, NucleonAv18TermsInteraction_JTScheme
 from helpers.TBME_Runner import TBME_Runner
 from scripts.automateInteractions import OUTPUT_XML, template_xml
-from helpers.Helpers import valenceSpacesDict_l_ge10_byM, ConstantsV18
+from helpers.Helpers import valenceSpacesDict_l_ge10_byM, ConstantsV18,\
+    ORDER_GEN_LAGUERRE
 from helpers.Enums import ValenceSpaceParameters, AttributeArgs, InputParts,\
     Output_Parameters, SHO_Parameters, ForceEnum
 
@@ -57,19 +58,19 @@ def __set_up_input_xml(term, b_len, MZMin, MZMax, inters=[]):
     ## Switch on the interaction.
     for inter in inters:
         if inter == ForceEnum.Argone18Electromagetic:
-            fn_.text = f"electroAV18_{term}_b{b_len:4.2f}".replace('.', '')
+            fn_.text = f"EMAV18_{term}_b{b_len:4.2f}".replace('.', '')
             title_.set(AttributeArgs.name,  
                        f"Integral term [{inter}] ELECTRO [{term}] B_LEN={b_len:3.2f} V0=1MeV")
             f  = et.SubElement(forces, ForceEnum.Argone18Electromagetic, 
                                attrib={AttributeArgs.ForceArgs.active : 'True'})
         elif inter == ForceEnum.Argone14NuclearTerms:
-            fn_.text = f"nnAV14_{term}_b{b_len:4.2f}".replace('.', '')
+            fn_.text = f"AV14_{term}_b{b_len:4.2f}".replace('.', '')
             title_.set(AttributeArgs.name,  
                        f"Integral term [{inter}] NUCLEAR [{term}] B_LEN={b_len:3.2f} V0=1MeV")
             f  = et.SubElement(forces, ForceEnum.Argone14NuclearTerms, 
                                attrib={AttributeArgs.ForceArgs.active : 'True'})
         elif inter == ForceEnum.Argone18NuclearTerms:
-            fn_.text = f"nnAV18_{term}_b{b_len:4.2f}".replace('.', '')
+            fn_.text = f"AV18_{term}_b{b_len:4.2f}".replace('.', '')
             title_.set(AttributeArgs.name,  
                        f"Integral term [{inter}] NUCLEAR [{term}] B_LEN={b_len:3.2f} V0=1MeV")
             f  = et.SubElement(forces, ForceEnum.Argone18NuclearTerms, 
@@ -103,6 +104,9 @@ def __exportTalmiIntegrals(force, talmiInts, b_len):
     with open(fn_, 'w+') as f:
         f.write(txt_)
 
+
+
+
 if __name__ == '__main__':
     
     __TEST_CASE = 1
@@ -111,14 +115,47 @@ if __name__ == '__main__':
         ## Visualize the interaction without constants, seeing the radial and
         ## angular constants.
         
-        Inter_, force = ElectromagneticAv18TermsInteraction_JScheme, ForceEnum.Argone18Electromagetic
+        Inter_, force = NucleonAv14TermsInteraction_JTScheme, ForceEnum.Argone14NuclearTerms
         
         b_len = 1.50
         MZMin = 0
+        MZMax = 2
+        ORDER_GEN_LAGUERRE = 350
+        
+        Inter_._SWITCH_OFF_CONSTANTS = False
+        for term in Inter_._SWITCH_OFF_TERMS.keys():
+            Inter_._SWITCH_OFF_TERMS[term] = True
+        
+        talmiInts = {}
+        for term in ('lS2_NN_T2', ): #  Inter_._SWITCH_OFF_TERMS.keys(): # 
+            print(f" Evaluating [{term}] ...")
+            Inter_._SWITCH_OFF_TERMS[term] = False
+            
+            inp_fn = __set_up_input_xml(term, b_len, MZMin, MZMax, inters=[force,])
+            
+            runner_ = TBME_Runner(filename=inp_fn, verbose=True)
+            runner_.run()
+            
+            Inter_._SWITCH_OFF_TERMS[term] = True
+            
+            talmiInts[term] = Inter_._talmi_integrals[term]
+            
+        __exportTalmiIntegrals(force, talmiInts, b_len)
+        print(" All terms evaluated! Bye.")
+
+    elif __TEST_CASE == 2:
+        ## Visualize the interaction without constants, seeing the radial and
+        ## angular constants.
+        
+        Inter_, force = ElectromagneticAv18TermsInteraction_JScheme, ForceEnum.Argone18Electromagetic
+        
+        b_len = 1.50
+        MZMin = 4
         MZMax = 4
-        ORDER_GEN_LAGUERRE = 348
+        ORDER_GEN_LAGUERRE = 350
         
         Inter_._SWITCH_OFF_CONSTANTS = True
+        Inter_.USE_EXACT_VACUUM_POLARIZATION = True
         for term in Inter_._SWITCH_OFF_TERMS.keys():
             Inter_._SWITCH_OFF_TERMS[term] = True
         

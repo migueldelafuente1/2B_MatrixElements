@@ -11,7 +11,7 @@ from helpers.TBME_Runner import TBME_Runner, TBME_RunnerException
 from helpers.Enums import InputParts as ip, ForceEnum, CouplingSchemeEnum,\
     ForceFromFileParameters, AttributeArgs
 from helpers.Helpers import safe_wigner_9j, readAntoine, printProgressBar,\
-    prettyPrintDictionary, _LINE_2
+    prettyPrintDictionary, _LINE_2, _LINE_1
 from matrix_elements import switchMatrixElementType
 from helpers.WaveFunctions import QN_1body_jj, QN_2body_jj_J_Coupling,\
     QN_2body_jj_JT_Coupling
@@ -54,6 +54,15 @@ class TBME_SpeedRunner(TBME_Runner):
     def _checkHamilTypeAndForces(self):
         TBME_Runner._checkHamilTypeAndForces(self)
     
+    def _printMERunningLogs(self):
+        """ 
+        Just after evaluating the run() method, print the execution results.
+        """
+        for force, i in self.forcesDict.items():
+            tbme_class = self.forces[i]
+            details = tbme_class.getMatrixElementClassLogs()
+            print(f"{force: >25} ::", details)
+    
     def _setForces(self):
         """ Set the properties of the m.e. classes: 
             Explicit Antisymmetrization_, Scheme
@@ -93,8 +102,6 @@ class TBME_SpeedRunner(TBME_Runner):
                     MasterForce_cls = switchMatrixElementType(force)
                     class Force_cls(MasterForce_cls):
                         pass
-                    
-                        
                 # if force == ForceEnum.Kinetic_2Body:
                 #     continue # jump the 2BodyCOM (otherwise it's appended to the 2b) 
                 
@@ -136,6 +143,7 @@ class TBME_SpeedRunner(TBME_Runner):
             # the computation in J is common, separate between
               
         self._computeForValenceSpaceJCoupled()
+        print(_LINE_1)
         print("Finished computation, Total time (s): [{}]".format(time() - c_time))
         
         self.resultsByInteraction['J_results']  = self.results_J 
@@ -161,7 +169,8 @@ class TBME_SpeedRunner(TBME_Runner):
         now = now.strftime("%d/%m/%Y %H:%M:%S")
         print(f" ** Suite Runner [{self.__class__.__name__}] ended without incidences. ")
         print(f" ** end at: {now}")
-    
+        self._printMERunningLogs()
+        print(_LINE_1)
     
     def _calculate1BodyME(self):
         """ Addapt the TBME_runner to addapt the 1b matrix elements. """
@@ -277,6 +286,13 @@ class TBME_SpeedRunner(TBME_Runner):
     def _instance_JT_SchemeWF(self, force_index):
         f = force_index
         ## TODO: remove self.bra and ket if is not necessary out of this method
+        
+        ## Necessary to refresh the self.bra/ket to a dummy index mt
+        self.bra_1.m_t = 0
+        self.bra_2.m_t = 0
+        self.ket_1.m_t = 0
+        self.ket_2.m_t = 0
+        
         for T in (0, 1):
             # assume M.E. cannot couple <(JT)|V|J'T'> if J', T' != J, T
             bra = QN_2body_jj_JT_Coupling(self.bra_1, self.bra_2, self.J, T)

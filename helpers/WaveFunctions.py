@@ -217,6 +217,7 @@ class _ParticleWaveFunction(_WaveFunction):
             return
         assert sp_1.m_t in (1, -1), AttributeError("Sp state 1 not labeled as p or n")
         assert sp_2.m_t in (1, -1), AttributeError("Sp state 2 not labeled as p or n")
+        return (sp_1.m_t + sp_2.m_t) // 2
         
     @property
     def identicalParticles(self):
@@ -447,7 +448,7 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
             AttributeError("Single particle j1, j2 states don't sum J")
         assert abs(M)  <= J, AttributeError("M (J) must be <= J")
         assert T in (0, 1), AttributeError("T must be 1 or 0")
-        assert abs(MT) <= T, AttributeError("MT must be <= T")
+        assert abs(MT) <= T, AttributeError(f"MT[{MT}] must be <= T[{T}] [{sp_1}][{sp_2}]")
         
         ## Not necessary check m_t labels for the single particle states and total T
         if T == 1:
@@ -600,9 +601,13 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
     
     def _checkQNArguments(self, sp_1, sp_2, J, M):
         
-        self._checkLabeledState(sp_1, sp_2)
+        m_t = self._checkLabeledState(sp_1, sp_2)
+        t   = 1 
+        # choosing T = 1 should not be critical, since the matrix elements are 
+        # charge-breaking and therefore, cannot hold T dependence.
+        
         #QN_2body_jj_JT_Coupling._checkQNArguments(sp_1, sp_2, J, 0, M, 0)
-        super(QN_2body_jj_J_Coupling, self)._checkQNArguments(sp_1, sp_2, J, 0, M, 0)
+        super(QN_2body_jj_J_Coupling, self)._checkQNArguments(sp_1, sp_2, J, t, M, m_t)
          
     def norm(self):
         """ Norm of a 2 body antisymmetric wave function """

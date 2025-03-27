@@ -4,6 +4,7 @@ Created on Feb 23, 2021
 @author: Miguel
 '''
 import numpy as np
+import inspect
 
 from helpers.WaveFunctions import QN_2body_jj_JT_Coupling, QN_2body_jj_J_Coupling,\
     QN_1body_jj, _1Body_WaveFunction, _WaveFunction
@@ -158,8 +159,19 @@ class _OneBodyMatrixElement:
     def isNullValue(self, value):
         """ Method to fix cero values and stop calculations."""
         return abs(value) < self.NULL_TOLERANCE
-
-
+    
+    @classmethod
+    def getMatrixElementClassLogs(cls):
+        """
+        Default log of the matrix element class (individual MatrixElements class
+        cannot share a common attribute to store it own details) specify in each
+        class.
+        """
+        return f'No after-run details.  ::  <{cls.__name__}>'
+        
+    @classmethod
+    def setMatrixElementClassLogs(cls):
+        raise MatrixElementException("Abstract Method, implement me!")
 
 class _TwoBodyMatrixElement(_OneBodyMatrixElement):
     '''

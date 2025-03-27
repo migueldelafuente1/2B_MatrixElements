@@ -124,8 +124,8 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
             sum_ += aux
         
         aux  = np.exp(fact(N) - gamma_half_int(2*p + 3) + C**2 - ((N+1)/2)*np.log(A))
-        aux *= 2 * (b_param**3) * np.power(2**0.5 * b_param / mu_3 ,N) / B
-        sum_ *= aux
+        aux *= (b_param**3) * np.power(2**0.5 * b_param / mu_3 ,N) / B
+        sum_*= aux
                 
         return sum_
     

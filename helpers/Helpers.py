@@ -183,14 +183,44 @@ def polynomialProduct(poly1, poly2):
             coeffs[k] += poly1[i]*poly2[j]
     return coeffs
 
+def gradientRadialNablaMatrixElements(n_q, l_q, n, l, only_radial=False):
+    """
+    Returns the result of the gradient matrix element <n'l' |Nabla| nl>
+    :only_radial exclude the angular momentum factor sqrt(l+1), -sqrt(l)
+    """
+    aux = 0
+    if (l_q == l + 1):
+        if   (n_q == n - 1):
+            aux = -np.sqrt(n)
+        elif (n_q == n):
+            aux = -np.sqrt(n + l + 1.5)
+        
+        if only_radial: 
+            return aux
+        return np.sqrt(l + 1) * aux
+    elif (l_q == l - 1):
+        if   (n_q == n + 1):
+            aux = np.sqrt(n + 1)
+        elif (n_q == n):
+            aux = np.sqrt(n + l + 0.5)
+        
+        if only_radial: 
+            return aux
+        return -np.sqrt(l) * aux
+    return aux
+        
+
 #===============================================================================
 #%%     sympy angular momentum fucntions
 #===============================================================================
 from sympy.physics.wigner import wigner_9j, racah, wigner_6j, clebsch_gordan, wigner_3j
 
 def safe_wigner_9j(a,b,c, d,e,f, g,h,i):
-    """ Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the
-     arguments don't fulfill the triangle relation. 
+    """ 
+    :args angular momentum values as j (not 2*j!!!), subroutine accepts 0.5, 1/2 floats
+    
+    Wigner 9j symbol, same arguments as in Avoid the ValueError whenever the
+    arguments don't fulfill the triangle relation. 
      { (a,b,c)
        (d,e,f)
        (g,h,i) } 
@@ -202,7 +232,10 @@ def safe_wigner_9j(a,b,c, d,e,f, g,h,i):
         return 0
 
 def safe_racah(a, b, c, d, ee, ff):
-    """ Avoid the ValueError whenever the arguments don't fulfill the triangle
+    """ 
+    :args angular momentum values as j (not 2*j!!!), subroutine accepts 0.5, 1/2 floats
+    
+    Avoid the ValueError whenever the arguments don't fulfill the triangle
     relation. """
     try: 
         return float(racah(a, b, c, d, ee, ff, prec=None))
@@ -210,10 +243,14 @@ def safe_racah(a, b, c, d, ee, ff):
         return 0
 
 def safe_wigner_6j(a,b,c, d,e,f):
-    """ Wigner 6j symbol, same arguments as in Avoid the ValueError whenever the
-     arguments don't fulfill the triangle relation. 
+    """ 
+    :args angular momentum values as j (not 2*j!!!), subroutine accepts 0.5, 1/2 floats
+    
+    Wigner 6j symbol, same arguments as in Avoid the ValueError whenever the
+    arguments don't fulfill the triangle relation. 
      { (a,b,c)
        (d,e,f) } 
+    
     """
     try: 
         args = (a,b,c, d,e,f)
@@ -223,7 +260,7 @@ def safe_wigner_6j(a,b,c, d,e,f):
 
 def safe_clebsch_gordan(j1, j2, j3, m1, m2, m3):
     """
-    :args   j1, j2, j3,   m1, m2, m3
+    :args   j1, j2, j3,   m1, m2, m3         (j values not 2j values!!!)
     
     Calculates the Clebsch-Gordan coefficient
     < j1 m1, j2 m2 | j3 m3 >.
@@ -234,12 +271,53 @@ def safe_clebsch_gordan(j1, j2, j3, m1, m2, m3):
 
 def safe_3j_symbols(j1, j2, j3, m1, m2, m3):
     """
-    :args     j_1, j_2, j_3, m_1, m_2, m_3
+    :args     j_1, j_2, j_3, m_1, m_2, m_3   (j values not 2j values!!!)
     
     Calculates the Clebsch-Gordan coefficient for the base 
     < j1 m1, j2 m2 | j3 m3 >.
     """
     return float(wigner_3j(j1, j2, j3, m1, m2, m3))
+
+def safe_wigner_12j_symbol(a2, a3, a4, b1, b3, b4, c1, c2, c4, d1, d2, d3):
+    """
+    :args Evaluates for a*,b*,c*,d* as j values (can be given j/2 values)
+    
+        { --  a2  a3  a4 }
+        { b1  --  b3  b4 }
+        { c1  c2  --  c4 }
+        { d1  d2  d3  -- }
+    
+    Varshalovich :: Quantum Theory of Angular Momentum. cap 10.13.3. (25) pg 367
+    triangular relations come from the safe - 6j, only limit for the sum index
+    related to the a,b,c,d values 
+    
+    IMPORTANT: verify previously, triangular relations between the different 
+    intermediate relations: 
+        A(b1,c1,d1) A(a2,c2,d2) A(a3,b3,d3) A(c4,b4,a4)
+        A(a1,a2,a3) A(b1,b3,b4) A(c1,c2,c4) A(d1,d2,d3) 
+    
+    """
+    
+    Xmin = max(max(abs(a3-b4), abs(b1-d3)), max(abs(c4-a2), abs(d2-c1)))
+    Xmax = min(min(a3+b4, b1+d3), min(c4+a2, d2+c1))
+    ## All values are 2*J, then 2*J // 2 is not rounded
+    if (int(round(2*Xmin,0)) % 2) != (int(round(2*Xmax,0)) % 2): return 0
+    
+    sum_ = 0.0
+    for xx in range(Xmin, Xmax +1):
+        aux = [0, 0, 0, 0]
+        args_k = [
+            (a3,b4,xx, b1,d3,b3), (a3,b4,xx, c4,a2,a4),
+            (b1,d3,xx, d2,c1,d1), (c4,a2,xx, d2,c1,c2), 
+        ]
+        for k in range(4):
+            try:
+                aux[k] = float(wigner_6j(*args_k[k], prec=None))
+            except ValueError or AttributeError: 
+                return 0
+        
+        sum_ += (2*xx + 1) * np.prod(aux)
+    return sum_
 
 def _triangularRelation(a, b, c):
     """

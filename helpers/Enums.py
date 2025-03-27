@@ -79,6 +79,7 @@ class ForceEnum(Enum):
     Density_FiniteRange  = 'DensityFiniteRange'
     Quadratic_OrbitalMomentum = 'Quadratic_OrbitalMomentum'
     Kinetic_2Body    = 'Kinetic_2Body'
+    Kinetic_Total    = 'Kinetic_Total'
     Multipole_Delta  = 'Multipole_Delta'
     Multipole_Moment = 'Multipole_Moment'
     SkyrmeBulk = 'SkyrmeBulk'
@@ -196,6 +197,7 @@ ForceVariablesDict = {
     ForceEnum.Quadratic_OrbitalMomentum  : CentralWithExchangeParameters,
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
+    ForceEnum.Kinetic_Total : Enum,
     ForceEnum.SDI           : SDIParameters,
     ForceEnum.Delta         : BrinkBoekerParameters,
     ForceEnum.Multipole_Delta : MultipoleParameters,

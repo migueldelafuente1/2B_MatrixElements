@@ -29,13 +29,19 @@ if __name__ == "__main__":
         # _runner = TBME_Runner(filename='input.xml')
         # _runner = TBME_SpeedRunner(filename='input.xml')
         # _ = 0
-        # _runner = TBME_Runner(filename='input_D1S.xml')
-        # _runner = TBME_Runner(filename='input.xml')
+        # _runner = TBME_Runner(filename='input_M3Y.xml')
+        # _runner = TBME_SpeedRunner(filename='input.xml')
         # _runner = TBME_SpeedRunner(filename='input_B1.xml')
         # _runner.run()
     
-        _runner = TBME_SpeedRunner(filename='input_test_frD.xml', verbose=False)
+        # _runner = TBME_SpeedRunner(filename='input_test_frD.xml', verbose=False)
         # _runner = TBME_SpeedRunner(filename='final_input.xml', verbose=False)
-        _runner.run()
+        # _runner.run()
+        
+        files_ = ['input_B1.xml', 'input_D1S.xml', 'input_M3Y_P2.xml', 'input_M3Y_P6.xml']
+        for f in files_:
+            _runner = TBME_SpeedRunner(filename=f)
+            _runner.run()
+            del _runner
     
     print(" [2B_MatrixElements.main] Program ended without incidences! Bye.")
