@@ -108,10 +108,13 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
                 cls.PARAMS_CORE[fa.DensDep.protons ] = int(_z)
                 cls.PARAMS_CORE[fa.DensDep.neutrons] = int(_n)  
             
-            elif param in (dd_p.file, dd_p.integration):
+            elif param in (dd_p.file, dd_p.integration, dd_p.x0H, dd_p.x0M):
                 # Entries for DFromFile but not for BaseDensity, 
                 # "file" is mandatory, "integration" is optional (both dict like)
-                if param == dd_p.file:
+                if param in (dd_p.x0H, dd_p.x0M):
+                    aux = float(aux.get(AttributeArgs.value, 0))
+                    cls.PARAMS_FORCE[param] = float(aux)
+                elif param == dd_p.file:
                     if (cls.__name__==DensityDependentForceFromFile_JScheme.__name__
                         and (aux==None)):
                         raise MatrixElementException(
@@ -143,8 +146,12 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
     
     def _LScoupled_MatrixElement(self):
         
-        phs = ((-1)**self.S_bra)
-        fact = 1 - (phs * self.PARAMS_FORCE[DensityDependentParameters.x0])
+        phs = [
+            self.PARAMS_FORCE[DensityDependentParameters.x0 ] * (-1)**(self.S_bra + 1), 
+            self.PARAMS_FORCE[DensityDependentParameters.x0H] * (-1)**self.T,
+            self.PARAMS_FORCE[DensityDependentParameters.x0M] * (-1)**(self.S_bra+self.T + 1),
+        ]
+        fact = 1 + sum(phs)
         
         ## Antisymmetrization_ factor 
         fact *= (1 - ((-1)**(self.T + self.S_ket)))

@@ -128,5 +128,16 @@
 		<Coulomb active='True'>
 			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
 		</Coulomb>
+		<Density_Dependent active='False'>
+			<!-- Density dependent Force based on Fermi density for the nucleus,
+				parametrization from Gogny D1S:
+					t0 * (1 + x0*P_s) * rho^alpha(r1 + r-2 / 2) * delta(r1 - r2)
+				<constant value='1390.6'  	units='MeV*fm^-4'/>
+				-->
+			<constant value='1320'  	units='MeV*fm^-4'/>
+			<alpha    value='0.333333'/>
+			<x0		  value='0.72576'/>
+			<!--  core     protons='0' neutrons ='0' core_b_len='1.5953'/ -->
+		</Density_Dependent>
 	</Force_Parameters>
 </input>

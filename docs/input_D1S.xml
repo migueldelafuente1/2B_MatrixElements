@@ -159,6 +159,17 @@
 			<file name='results/32Mg_wf.txt' />
 			<core protons='12' neutrons ='20' core_b_len='1.89'/>
 		</Density_From_File>
+		<Density_Dependent active='False'>
+			<!-- Density dependent Force based on Fermi density for the nucleus,
+				parametrization from Gogny D1S:
+					t0 * (1 + x0*P_s) * rho^alpha(r1 + r-2 / 2) * delta(r1 - r2)
+				<constant value='1390.6'  	units='MeV*fm^-4'/>
+				-->
+			<constant value='1390.6'  	units='MeV*fm^-4'/>
+			<alpha    value='0.333333'/>
+			<x0		  value='1'/>
+			<!--  core     protons='0' neutrons ='0' core_b_len='1.5953'/ -->
+		</Density_Dependent>
 		<TensorS12 active='False'>
 			<!-- Tensor Force.
 				Standard non central force S_12 parameterized with exponential, 

@@ -146,7 +146,9 @@ class PotentialSeriesParameters(Enum):
 
 class DensityDependentParameters(Enum):
     constant    = 'constant' # t_0
-    x0    = 'x0'
+    x0    = 'x0'             # x0- Bartlett    P^s
+    x0H   = 'x0H'            #     Heisenberg -P^t     
+    x0M   = 'x0M'            #     Majorana   -P^t*P^s
     alpha = 'alpha'
     core  = 'core'
     file  = 'file'
