@@ -76,34 +76,26 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
     elif potential == PotentialForms.Yukawa:
         sum_ = 0.       
         
-        cte_bm = b_param / ((2**0.5) * mu_param)
-        N = 2*p + 1
-        for k in range(N +1):
-            aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
-            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + 1 - k/2, cte_bm**2)
-            
-            sum_ += aux
+        A    = (2**0.5) * b_param / mu_param
+        x, w = getGeneralizedLaguerreRootsWeights(2*p + 1, order=max(10, 3*p//5))
+        f    = np.exp(-np.power(x/A, 2))
+        sum_ = sum(w * f)
         
-        aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
-        aux *= mu_param * (b_param**2) / (2**0.5)
-        sum_ *= aux
+        aux   = 2 * (b_param**3) 
+        sum_ *= aux / np.exp(gamma_half_int(p + 3) + (2*p + 3)*np.log(A))
         
         return sum_
     
     elif potential == PotentialForms.Exponential:
         sum_ = 0.       
         
-        cte_bm = b_param / ((2**0.5) * mu_param)
-        N = 2*p + 2
-        for k in range(N +1):
-            aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
-            aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + (3 - k)/2, cte_bm**2)
-            
-            sum_ += aux
+        A    = (2**0.5) * b_param / mu_param
+        x, w = getGeneralizedLaguerreRootsWeights(2*p + 2, order=max(10, 3*p//5))
+        f    = np.exp(-np.power(x/A, 2))
+        sum_ = sum(w * f)
         
-        aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
-        aux *= (b_param**3)
-        sum_ *= aux
+        aux   = 2 * (b_param**3) 
+        sum_ *= aux / np.exp(gamma_half_int(p + 3) + (2*p + 3)*np.log(A))
         
         return sum_
     
@@ -153,6 +145,43 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         raise IntegralException("Talmi integral [{}] is not defined, valid potentials: {}"
                         .format(potential, PotentialForms.members()))
 
+#===============================================================================
+## NOTE: Old expressions for the exponential-like potentials, not recommended, 
+## this version fails for p>15 due the large sum additions in the series.
+    # elif potential == PotentialForms.Yukawa:
+    #     sum_ = 0.       
+    #
+    #     cte_bm = b_param / ((2**0.5) * mu_param)
+    #     N = 2*p + 1
+    #     for k in range(N +1):
+    #         aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
+    #         aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + 1 - k/2, cte_bm**2)
+    #
+    #         sum_ += aux
+    #
+    #     aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
+    #     aux *= mu_param * (b_param**2) / (2**0.5)
+    #     sum_ *= aux
+    #
+    #     return sum_
+    #
+    # elif potential == PotentialForms.Exponential:
+    #     sum_ = 0.       
+    #
+    #     cte_bm = b_param / ((2**0.5) * mu_param)
+    #     N = 2*p + 2
+    #     for k in range(N +1):
+    #         aux = gamma_half_int((N + 1 - k)) - fact(k) - fact(N - k)
+    #         aux = np.exp(aux) * ((-cte_bm)**k) * gammaincc(p + (3 - k)/2, cte_bm**2)
+    #
+    #         sum_ += aux
+    #
+    #     aux  = np.exp( fact(N) - gamma_half_int(2*p + 3) + cte_bm**2)
+    #     aux *= (b_param**3)
+    #     sum_ *= aux
+    #
+    #     return sum_
+#===============================================================================
 
 def integralsWithCutoff(p, potential, cutoff_len, b_param, mu_param, n_power, 
                         **kwargs):

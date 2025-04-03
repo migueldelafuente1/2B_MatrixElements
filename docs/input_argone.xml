@@ -1,0 +1,77 @@
+<input>
+	<Interaction_Title name="Argone Potential V 18" details=""/>
+	<Output_Parameters>
+		<Output_Filename>AV14</Output_Filename>
+		<Hamil_Type>4</Hamil_Type>
+		<COM_correction>1</COM_correction>
+	</Output_Parameters>
+	<SHO_Parameters>
+		<!-- A_Mass (int) of the nucleus mandatory, hbar_omega and b (floats)
+			   are not required parameters, define values only for explicit 
+			   setting
+			-->
+		<A_mass>20</A_mass>
+		<Z>12</Z>
+		<!--hbar_omega units='MeV'>18.431586884467016</hbar_omega -->
+		<b_length units='fm'>1.50</b_length>
+	</SHO_Parameters>
+	<Valence_Space l_great_than_10='True'>
+		<Q_Number sp_state='001' sp_energy=''/>
+		
+		<Q_Number sp_state='101' sp_energy=''/>
+		<Q_Number sp_state='103' sp_energy=''/>
+		
+		<Q_Number sp_state='205' sp_energy=''/>
+		<Q_Number sp_state='10001' sp_energy=''/>
+		<Q_Number sp_state='203' sp_energy=''/>
+		
+		<Q_Number sp_state='307' sp_energy=''/>
+		<Q_Number sp_state='10103' sp_energy=''/>
+		<Q_Number sp_state='305' sp_energy=''/>
+		<Q_Number sp_state='10101' sp_energy=''/>
+		
+		<Q_Number sp_state='409' sp_energy=''/>
+		<Q_Number sp_state='10205' sp_energy=''/>
+		<Q_Number sp_state='407' sp_energy=''/>
+		<Q_Number sp_state='20001' sp_energy=''/>
+		<Q_Number sp_state='10203' sp_energy=''/>
+		
+		<Q_Number sp_state='511' sp_energy=''/>
+		<Q_Number sp_state='509' sp_energy=''/>
+		<Q_Number sp_state='10307' sp_energy=''/>
+		<Q_Number sp_state='10305' sp_energy=''/>
+		<Q_Number sp_state='20103' sp_energy=''/>
+		<Q_Number sp_state='20101' sp_energy=''/>
+		
+		<!--Q_Number sp_state='613' sp_energy=''/>
+		<Q_Number sp_state='10409' sp_energy=''/>
+		<Q_Number sp_state='20205' sp_energy=''/>
+		<Q_Number sp_state='611' sp_energy=''/>
+		<Q_Number sp_state='10407' sp_energy=''/>
+		<Q_Number sp_state='30001' sp_energy=''/>
+		<Q_Number sp_state='20203' sp_energy=''/-->
+		<!-- valence space-->
+	</Valence_Space>
+	<Core>
+		<innert_core protons='0' neutrons ='0' name=''/>
+	</Core>
+	<Force_Parameters>
+		<Central active='False'>
+			<!-- Central force potential,
+				Shaped as exponential, gaussian, power term, yukawa or coulomb 
+				functions f(r; mu, n), modulated by constant: V(r)=C*f(r; mu, n)
+				-->
+			<potential 	name='gaussian'/>
+			<constant 	value='1.0'  units='MeV'/>
+			<mu_length	value='1000.6' 	units='fm'/>
+		</Central>
+		<Coulomb active='True'>
+			<!-- Electrostatic interaction, only HamilType=4, cannot be fixed -->
+		</Coulomb>
+		<Argone18Electromagetic active='False'>
+			<!-- Argone 18 terms central/noncentral EM for each channel pp, nn, pn -->
+		</Argone18Electromagetic>
+		<Argone18NuclearTerms active='False'/>
+		<Argone14NuclearTerms active='True'/>
+	</Force_Parameters>
+</input>
