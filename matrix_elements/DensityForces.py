@@ -112,6 +112,7 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
                 # Entries for DFromFile but not for BaseDensity, 
                 # "file" is mandatory, "integration" is optional (both dict like)
                 if param in (dd_p.x0H, dd_p.x0M):
+                    if aux == None: aux = {}
                     aux = float(aux.get(AttributeArgs.value, 0))
                     cls.PARAMS_FORCE[param] = float(aux)
                 elif param == dd_p.file:

@@ -5,7 +5,6 @@ Created on Mar 8, 2021
 '''
 import numpy as np
 from copy import deepcopy
-from typing import Self
 from inspect import getclasstree
 
 from helpers.Enums import CouplingSchemeEnum, CentralMEParameters,\
