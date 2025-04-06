@@ -920,12 +920,18 @@ class _RadialTwoBodyDecoupled():
 
 class _RadialIntegralsLS(_RadialTwoBodyDecoupled):
     
-    def _r_dependentIntegral(self, No2):
+    _r_integrals_memo = {}
+    
+    @classmethod
+    def _r_dependentIntegral(cls, No2):
         """ Integral r^2*No2 exp(-2* r^2), b lengths extracted (b**6)
         :No2 stands for N over 2, being N = 2*(p+p') + sum{l} (+2 opt.)"""
         
         # l1 + l2 + l1_q + l2_q is even
-        return np.exp(gamma_half_int(2*No2 + 1) - ((No2 + 1.5)*np.log(2)))
+        if not No2 in cls._r_integrals_memo:
+            aux = np.exp(gamma_half_int(2*No2 + 1) - ((No2 + 1.5)*np.log(2)))
+            cls._r_integrals_memo[No2] = aux
+        return cls._r_integrals_memo[No2]
     
     @staticmethod
     def integral(type_integral, wf1_bra, wf2_bra, wf1_ket, wf2_ket, b_length): 

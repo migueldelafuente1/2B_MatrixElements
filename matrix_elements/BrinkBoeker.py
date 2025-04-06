@@ -295,11 +295,6 @@ class YukawiansM3Y_JTScheme(BrinkBoeker):
     indeterminate number of Wigner terms.
     """
     
-    # def __init__(self, bra, ket, run_it=True):
-    #     self._com_me1_stored = 0
-    #     self._com_me2_stored = {}
-    #     BrinkBoeker.__init__(self, bra, ket, run_it=run_it)
-    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """ 
@@ -326,19 +321,15 @@ class YukawiansM3Y_JTScheme(BrinkBoeker):
         #cls.plotRadialPotential()
         cls._integrals_p_max = -1
         cls._talmiIntegrals  = tuple(([] for _ in range(cls.numberGaussians)))
-        
     
-    def _LScoupled_MatrixElement(self):
-        self._com_me1_stored = 0
-        self._com_me2_stored = {}
-        
-        return BrinkBoeker._LScoupled_MatrixElement(self)
-    
+
 class YukawiansM3Y_tensor_JTScheme(YukawiansM3Y_JTScheme):
     """
     Introduced to speed up the tensor term.
     """
-        
+    _angular_com_ten = {}
+    _angular_rel_ten = {}
+    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """ 
@@ -422,49 +413,45 @@ class YukawiansM3Y_tensor_JTScheme(YukawiansM3Y_JTScheme):
         if skip:
             return 0
         
-        if self._part == 0:
-            self._com_me1_stored = 0
-            
+        tpl_ = (self.L_bra, self.L_ket, self.J, self.T)
+        if not tpl_ in self._angular_com_ten:
+                        
             factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
                                     self.S_ket, self.L_ket, 2)
-            if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
-                return 0
+            if not self.deltaConditionsForGlobalQN(): factor = 0
+            
             phase   = (-1)**(self.S_bra + self.J + self.L_ket + self.L_bra)
             ## NOTE: the last L_bra should be from the ket since the W
             factor *= 3.8832518251113983 #* np.sqrt(2*self.J + 1) 
             ## 3.8832 = _sqrt(24*pi / 5)
             factor *= ((2*self.L_bra + 1)*(2*self.L_ket + 1))**0.5
     
-            self._com_me1_stored = factor * spin_me * phase
+            self._angular_com_ten[tpl_] = factor * spin_me * phase
         
-        return self._com_me1_stored * self._BrodyMoshinskyTransformation()
+        return self._angular_com_ten[tpl_] * self._BrodyMoshinskyTransformation()
     
     def _interactionConstantsForCOM_Iteration(self):
         
-        if self._part == 0:
-            self._com_me2_stored[(self._l, self._L, self._l_q)] = 0
-            
+        tpl_ = (self.L_bra, self.L_ket, self._L, self._l, self._l_q)
+        if not tpl_ in self._angular_rel_ten:
             factor = safe_wigner_6j(self._L, self._l,    self.L_bra,
                                     2,       self.L_ket, self._l_q)
-            if self.isNullValue(factor):
-                return 0
             phase   = (-1)**(self._L + self._l)
             factor *= safe_clebsch_gordan(self._l, 2, self._l_q, 0, 0, 0)
             factor *= np.sqrt((2*self._l + 1)) * phase * 0.6307831305050401
             ## 0.6307 =  sqrt(5 / 4*pi)
             
-            self._com_me2_stored[(self._l, self._L, self._l_q)] =  factor
-        return self._com_me2_stored.get((self._l, self._L, self._l_q), 0) 
-    
+            self._angular_rel_ten[tpl_] =  factor
+        
+        return self._angular_rel_ten[tpl_]
 
 class YukawiansM3Y_SpinOrbit_JTScheme(YukawiansM3Y_tensor_JTScheme):
     """
     Introduced to speed up the Spin-Orbit term.
     """
-    def __init__(self, bra, ket, run_it=True):
-        self._com_me1_stored = 0
-        self._com_me2_stored = {}
-        BrinkBoeker.__init__(self, bra, ket, run_it=run_it)
+    
+    _angular_com_ls = {}
+    _angular_rel_ls = {}
     
     def _validKet_relativeAngularMomentums(self):
         """  Spin orbit interaction only allows l'==l"""
@@ -510,34 +497,29 @@ class YukawiansM3Y_SpinOrbit_JTScheme(YukawiansM3Y_tensor_JTScheme):
         if skip:
             return 0
         
-        if self._part == 0:
-            self._com_me1_stored = 0
-            
+        tpl_ = (self.L_bra, self.L_ket, self.J, self.T)
+        if not tpl_ in self._angular_com_ls:
             factor = safe_wigner_6j(self.L_bra, self.S_bra, self.J,
                                     self.S_ket, self.L_ket,      1)
-            if self.isNullValue(factor) or not self.deltaConditionsForGlobalQN():
-                return 0
+            if not self.deltaConditionsForGlobalQN(): factor = 0
             
             phase   = (-1)**(self.rho_bra + self.J)
             factor *= np.sqrt((2*self.L_bra + 1)*(2*self.L_ket + 1))
             
-            self._com_me1_stored = factor * spin_me * phase
-        
-        return self._com_me1_stored * self._BrodyMoshinskyTransformation()
+            self._angular_com_ten[tpl_] = factor * spin_me * phase
+            
+        return self._angular_com_ten[tpl_] * self._BrodyMoshinskyTransformation()
     
     def _interactionConstantsForCOM_Iteration(self):
         
-        if self._part == 0:
-            self._com_me2_stored[(self._l, self._L, self._l_q)] = 0
-            
+        tpl_ = (self.L_bra, self.L_ket, self._L, self._l, self._l_q)
+        if not tpl_ in self._angular_rel_ls:
             # no special internal c.o.m interaction constants for the Central ME
             factor = safe_wigner_6j(self._l,    self.L_bra, self._L, 
                                     self.L_ket, self._l_q,         1)
-            if self.isNullValue(factor):
-                return 0
             
             factor *= np.sqrt(self._l * (self._l + 1) * (2*self._l + 1))
-            self._com_me2_stored[(self._l, self._L, self._l_q)] = factor
+            self._angular_rel_ls[tpl_] = factor
         
-        return self._com_me2_stored.get((self._l, self._L, self._l_q), 0)
-
+        return self._angular_rel_ls[tpl_]
+    
