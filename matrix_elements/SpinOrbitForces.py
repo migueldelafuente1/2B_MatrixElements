@@ -437,7 +437,7 @@ class Quadratic_SpinOrbit_JTScheme(
         
         if ((_Quadratic_SpinOrbit_jrelativeEval_JTScheme.__name__ in parents) and 
             (_Quadratic_SpinOrbit_standardCOM_JTScheme.__name__   in parents)):
-            raise BaseException("LS quadratic cannot inherit from both"
+            raise BaseException("LS quadratic cannot inherit from both "
                                          "J-relative and Standard LS2 classes." )
         
         return super(Quadratic_SpinOrbit_JTScheme, cls).__new__(cls)
@@ -457,6 +457,7 @@ class ShortRangeSpinOrbit_JTScheme(SpinOrbitForce_JTScheme):
     """
     
     _PARAMETERS_SETTED = False
+    NULL_TOLERANCE = 1.0e-9
     
     def _run(self):
         """ Calculate the antisymmetric matrix element value. """

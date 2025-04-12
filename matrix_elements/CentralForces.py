@@ -6,7 +6,7 @@ Created on Mar 10, 2021
 import numpy as np
 
 from helpers.Helpers import Constants, safe_wigner_6j, _LINE_2,\
-    prettyPrintDictionary
+    prettyPrintDictionary, almostEqual
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     _TwoBodyMatrixElement_JCoupled, _TwoBodyMatrixElement_Antisym_JTCoupled, \
@@ -315,7 +315,8 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     
     _BREAK_ISOSPIN = False
-        
+    NULL_TOLERANCE = 1.0e-9
+    
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):
         """
@@ -373,18 +374,23 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
             # self._kin_factor = 1 / (self.PARAMS_SHO[SHO_Parameters.A_Mass] 
             #         * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
             #         * 2 * Constants.M_MEAN)
+        if abs(self.bra.totalNshells - self.bra.totalNshells) > 2: return 0
+        
+        nabla_1 = self._nablaReducedMatrixElement(1)
+        nabla_2 = self._nablaReducedMatrixElement(2)
+        
+        #if almostEqual(nabla_1 * nabla_2, 0, tolerance=1.e-9): return 0
         
         fact = safe_wigner_6j(self.bra.l1, self.bra.l2, self.L_bra, 
                               self.ket.l2, self.ket.l1, 1)
         fact *= ((-1)**(self.ket.l1 + self.bra.l2 + self.L_bra))
-            
-        nabla_1 = self._nablaReducedMatrixElement(1)
-        nabla_2 = self._nablaReducedMatrixElement(2)
+        
         if self.DEBUG_MODE:
             XLog.write("Lme", nabla1=nabla_1, nabla2=nabla_2, f=fact, 
                        kin_f= self._kin_factor)
             
-        return fact * self._kin_factor * nabla_1 * nabla_2
+        value = fact * self._kin_factor * nabla_1 * nabla_2
+        return value
 
 class Quadratic_OrbitalMomentum_JTScheme(CentralForce_JTScheme):
     

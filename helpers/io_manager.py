@@ -602,10 +602,10 @@ class TBME_Reader():
             data = f.readlines()
             if ignorelines:
                 data = data[int(ignorelines):]
-        if constant:
-            self.const = float(constant)
-        self.l_ge_10 = l_ge_10
         
+        self.const = float(constant) if constant else 0.0
+        self.l_ge_10 = l_ge_10
+        self.filename = filename
         if filename.endswith(OutputFileTypes.sho):
             self.scheme = self._Scheme.JT
         elif (filename.endswith(OutputFileTypes.twoBody)
@@ -778,6 +778,10 @@ class TBME_Reader():
         ## NOTE: do not sort here bra-ket, since it has a particle-label in the
         ##       J-scheme related to the possition in the imported line.
         return bra, ket, int(header[-2]), int(header[-1]), skip
+    
+    def getMatrixElementClassLogs(self):
+        """ Mimic the __log after run details of a Matrix-Element method. """
+        return f"Element from file [{self.filename}], multiplied by factor[{self.const:6.3f}]"
     
 #===============================================================================
 # AUXIALIRY METHODS FOR EXPORTATION,

@@ -31,7 +31,6 @@ class TBME_SpeedRunner(TBME_Runner):
     This reduce the time spent in decoupling JT. Restricting the time only for 
     the two body LS m.e (with direct or implicit antisymetrization).
     '''
-
     isNullValue = _TwoBodyMatrixElement.isNullValue
     
     def __init__(self, filename='', verbose=True, manual_input={}):
@@ -138,6 +137,7 @@ class TBME_SpeedRunner(TBME_Runner):
         
         # get force from file if appears
         self._setForces()
+        if self.IGNORE_ALMOST_NULL_RESULTS: self.NULL_TOLERANCE = 1.0e-9
         
         ## compute the valence space.   
             # the computation in J is common, separate between

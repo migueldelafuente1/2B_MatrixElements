@@ -56,6 +56,8 @@ class TBME_Runner(object):
     NULL_TOLERANCE = _TwoBodyMatrixElement.NULL_TOLERANCE
     PRINT_LOG = True
     
+    IGNORE_ALMOST_NULL_RESULTS = True # if the result is numerical noise (1e-14)
+                                      # write 0.0. Else, print the scientific fmt.
     RESULT_FOLDER = OUTPUT_FOLDER
     
     _Scheme = TBME_Reader._Scheme
@@ -613,6 +615,7 @@ The program will exclude it from the interaction file and will produce the .com 
         
         self.results = data_.getMatrixElemnts(self._twoBodyQuantumNumbersSorted)
         self.resultsByInteraction[force_str] = deepcopy(self.results)
+        self.tbme_class = data_
     
     
     def combineAllResults(self):
@@ -852,7 +855,11 @@ The program will exclude it from the interaction file and will produce the .com 
                 all_null = False
                 
                 if abs(mat_elem) < 1.e-10:
-                    values.append("{: >13.6e}".format(mat_elem))
+                    if self.IGNORE_ALMOST_NULL_RESULTS:
+                        mat_elem = 0.0
+                        values.append("{: >13.10f}".format(mat_elem))
+                    else:
+                        values.append("{: >13.6e}".format(mat_elem))
                 elif abs(mat_elem) > 100:
                     values.append("{: >13.6e}".format(mat_elem))
                 else:

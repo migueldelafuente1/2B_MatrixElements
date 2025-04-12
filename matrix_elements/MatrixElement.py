@@ -668,6 +668,7 @@ class _MatrixElementReader(_TwoBodyMatrixElement):
     
     COUPLING = (CouplingSchemeEnum.JJ, CouplingSchemeEnum.T)
     _BREAK_ISOSPIN = False
+    NULL_TOLERANCE = 1.0e-9
 
 #===============================================================================
 #  COMMON METHODS AND FUNCTIONS FOR MATRIX ELEMENTS

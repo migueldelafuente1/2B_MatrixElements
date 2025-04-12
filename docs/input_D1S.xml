@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="B1, +LS+Coul" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_MZ5</Output_Filename>
+		<Output_Filename>D1S_MZ</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>
@@ -13,7 +13,7 @@
 		<A_mass>22</A_mass>
 		<Z>12</Z>
 		<hbar_omega units='MeV'/>
-		<b_length units='fm'>1.9</b_length>
+		<b_length units='fm'>1.85</b_length>
 	</SHO_Parameters>
 	<Core>
 		<innert_core protons='0' neutrons ='0' name=''/>
@@ -98,7 +98,7 @@
 		<Q_Number sp_state='40203'   sp_energy=''/>
 		<Q_Number sp_state='50001'   sp_energy=''/>
 		
-		<!-- valence space -->
+		< valence space -->
 	</Valence_Space>
 	<Force_Parameters>
 		<Force_From_File active='False'>

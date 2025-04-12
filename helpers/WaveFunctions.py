@@ -35,6 +35,11 @@ class _1Body_WaveFunction:
     @property
     def particleLabel(self):
         return self._particleLabels[self.m_t]
+    
+    @property 
+    def Nshell(self):
+        raise WaveFunctionException("Abstract method, implement oscillator number.")
+        return
 
 #===============================================================================
 #     ONE BODY WAVE FUCNTIONS
@@ -87,6 +92,10 @@ class QN_1body_radial(_1Body_WaveFunction):
     @property
     def shellState(self):
         return shellSHO_Notation(self.n, self.l)
+    
+    @property
+    def Nshell(self):
+        return 2*self.n + self.l
 
 class QN_1body_jj(_1Body_WaveFunction):
     """
@@ -168,7 +177,9 @@ class QN_1body_jj(_1Body_WaveFunction):
     def parity(self):
         return (-1)**(self.l)
             
-        
+    @property
+    def Nshell(self):
+        return 2*self.n + self.l
 
 #===============================================================================
 #  TWO BODY WAVE FUNCTIONS
@@ -241,6 +252,10 @@ class _ParticleWaveFunction(_WaveFunction):
             self.MT = (self.sp_state_1.m_t + self.sp_state_2.m_t) // 2
         return self.MT
     
+    @property
+    def totalNshells(self):
+        """ Total Shell oscillator number of the shells: 2(n1 + n2) + l1 + l2. """
+        return self.sp_state_1.Nshell + self.sp_state_2.Nshell
 
 class QN_2body_L_Coupling(_ParticleWaveFunction):
     
@@ -554,6 +569,11 @@ class QN_2body_jj_JT_Coupling(_WaveFunction):
                         return True
                     
         return False
+    
+    @property
+    def totalNshells(self):
+        """ Total Shell oscillator number of the shells: 2(n1 + n2) + l1 + l2. """
+        return self.sp_state_1.Nshell + self.sp_state_2.Nshell
 
 class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
     
