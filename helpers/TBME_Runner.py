@@ -57,7 +57,9 @@ class TBME_Runner(object):
     PRINT_LOG = True
     
     IGNORE_ALMOST_NULL_RESULTS = True # if the result is numerical noise (1e-14)
-                                      # write 0.0. Else, print the scientific fmt.
+                                    # write 0.0. Else, print the scientific fmt
+    PRINT_ME_WITH_SCIENTIFIC_FORMAT = False
+    
     RESULT_FOLDER = OUTPUT_FOLDER
     
     _Scheme = TBME_Reader._Scheme
@@ -833,7 +835,6 @@ The program will exclude it from the interaction file and will produce the .com 
         
         return [title, valen, energ, core_args]
     
-    
     def _formatValues2Standard(self, J_vals):
         """ 
         Cast all numerical values to standard form: all with 6 digits, 
@@ -851,25 +852,50 @@ The program will exclude it from the interaction file and will produce the .com 
         
         for mat_elem in J_vals.values():
             
-            if abs(mat_elem) > self.NULL_TOLERANCE:
-                all_null = False
+            if not self.PRINT_ME_WITH_SCIENTIFIC_FORMAT:
+                """
+                Print with 12 decimals and no scientific format:
+                    0.000011519742
+                    0.115197425321
+                    11.51974253216
+                    1151974.253216
+                   -0.115197425321
+                """
+                if abs(mat_elem) < self.NULL_TOLERANCE:
+                    if self.IGNORE_ALMOST_NULL_RESULTS: mat_elem = 0
+                    try:
+                        values.append("  {: >13.12f}".format(mat_elem))
+                    except TypeError as tp:
+                        pass
+                    continue
                 
-                if abs(mat_elem) < 1.e-10:
-                    if self.IGNORE_ALMOST_NULL_RESULTS:
-                        mat_elem = 0.0
-                        values.append("{: >13.10f}".format(mat_elem))
-                    else:
-                        values.append("{: >13.6e}".format(mat_elem))
-                elif abs(mat_elem) > 100:
-                    values.append("{: >13.6e}".format(mat_elem))
+                all_null = False
+                if mat_elem > 0:
+                    str_ = "  " + f"{mat_elem:12.12f}"[:14]
                 else:
-                    values.append("{: >13.10f}".format(mat_elem))
+                    str_ = " " + f"{mat_elem:12.12f}"[:15]
+                
+                values.append(str_)
             else:
-                try:
-                    values.append("{: >13.10f}".format(mat_elem))
-                except TypeError as tp:
-                    # TODO: 
-                    pass
+                ## OLD MODE, can produce scientific format
+                if abs(mat_elem) > self.NULL_TOLERANCE:
+                    all_null = False
+                    
+                    if abs(mat_elem) < 1.e-10:
+                        if self.IGNORE_ALMOST_NULL_RESULTS:
+                            mat_elem = 0.0
+                            values.append("{: >13.10f}".format(mat_elem))
+                        else:
+                            values.append("{: >13.6e}".format(mat_elem))
+                    elif abs(mat_elem) > 1000:
+                        values.append("{: >13.6e}".format(mat_elem))
+                    else:
+                        values.append("{: >14.10f}".format(mat_elem))
+                else:
+                    try:
+                        values.append("{: >13.10f}".format(mat_elem))
+                    except TypeError as tp:
+                        pass
         return all_null, values
     
     def _getJvaluesFromIsospin(self, val_t0, val_t1, J, bra1, bra2, ket1, ket2):
