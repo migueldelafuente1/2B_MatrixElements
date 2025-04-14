@@ -28,6 +28,7 @@ import numpy as np
 import traceback
 from datetime import datetime
 from matrix_elements.CentralForces import _Kinetic_1BME
+from helpers.Log import Log
 
 _SUITE_PRESENTATION_TEMPLATE = """
 * ================================================================= *
@@ -77,6 +78,8 @@ class TBME_Runner(object):
     
     def __init__(self, filename='', verbose=True, manual_input={}):
         
+        Log()
+        
         self.filename   = filename
         self.PRINT_LOG  = verbose
         self.input_obj  = None
@@ -121,10 +124,13 @@ class TBME_Runner(object):
         
         now = datetime.now()
         now = now.strftime("%d/%m/%Y %H:%M:%S")
-                
-        print(_SUITE_PRESENTATION_TEMPLATE.format(suite=self.__class__.__name__,
-                                                  input_details  = input_block,
-                                                  datetime_start = now))
+        
+        print_ = _SUITE_PRESENTATION_TEMPLATE.format(suite=self.__class__.__name__,
+                                                     input_details  = input_block,
+                                                     datetime_start = now)        
+        print(print_)
+        Log.write(print_, level=Log.CaseEnum.SUMMARY)
+        
     def __getClassLogs(self, force):
         """ calling the class to obtain running specific log details """
         self._logsFromForce[force] = self.tbme_class.getMatrixElementClassLogs()
@@ -498,12 +504,14 @@ The program will exclude it from the interaction file and will produce the .com 
                         self.results[q_numbs[i]][q_numbs[j]][T][J] = me.value
                         
                         if me.value and self.PRINT_LOG:
-                            print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{}T:{})> {}'
+                            txt = ' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{}T:{})> {}\t= {:.8} '\
                                   .format(self._count, self._total_me,
                                           time.time()-tic,
                                           bra.shellStatesNotation, 
-                                          ket.shellStatesNotation, J, T, force))
-                            print('\t= {:.8} '.format(me.value))                        
+                                          ket.shellStatesNotation, J, T, force, 
+                                          me.value)
+                            print(txt)
+                            Log.write(txt)
     
     def _computeForValenceSpaceJCoupled(self, force=''):
         """ 
@@ -556,16 +564,18 @@ The program will exclude it from the interaction file and will produce the .com 
                         self.results[q_numbs[i]][q_numbs[j]][J][m] = me.value
                         
                         if me.value and self.PRINT_LOG:
-                            print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})> {}'
+                            txt = ' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})> {}\t= {:.8} '\
                                   .format(self._count, self._total_me,
                                           time.time()-tic, 
-                                          bra, ket, J, force))
-                            print('\t= {:.8} '.format(me.value))
+                                          bra, ket, J, force, me.value)
+                            print(txt)
+                            Log.write(txt)
                 if not self.PRINT_LOG:
                     if (self._count-self._progress_stp)/self._total_me < 0.001:
                         continue
-                    printProgressBar(self._count, self._total_me, 
-                                     prefix='Progress '+force+':')
+                    x, t = self._count, self._total_me
+                    printProgressBar(x, t, prefix=f'Progress {force}:')
+                    Log.write(" Progress [{}] [{: >6.2f}]".format(force, 100*x/t))
                     self._progress_stp = self._count
     
     def _computeForValenceSpace(self, force):
@@ -712,6 +722,9 @@ The program will exclude it from the interaction file and will produce the .com 
         print(_LINE_1)
         print("Finished computation, Total time (s): [", sum(times_.values()),"]=")
         print("\n".join(["\t"+str(t)+"s" for t in times_.items()]))
+        Log.write(_LINE_1
+                  +"Finished computation, Total time (s): [{}]=\n".format(sum(times_.values()))
+                  +"\n".join(["\t"+str(t)+"s" for t in times_.items()]))
         if len(self._brokeInteractions) > 0:
             print(_LINE_1, "ERROR !! Interactions have errors"
                   " and where skipped with these exceptions")

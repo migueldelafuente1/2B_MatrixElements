@@ -9,6 +9,7 @@ from datetime import datetime
 import traceback
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
+from helpers.Enums import Enum
 
 def castIterable2Str(iterable, n=0):
     """ Given a dictionary, list or set in python, returns a well tabulated and 
@@ -80,7 +81,7 @@ class Log(object):
     classdocs:
     '''
     __instance = None
-    _DEBUG_FOLDER = 'results/_logs'
+    _DEBUG_FOLDER = '/results/_logs'
     #LEVELS: ERROR, WARN, INFO, DEBUG - default: INFO
 
     ## Use this level when logging information related to errors for which the execution must stop
@@ -88,6 +89,12 @@ class Log(object):
     WARNING = 'WARNING'
     DEBUG   = 'DEBBUG'
     SUMMARY = 'SUMMARY'
+    
+    class CaseEnum(Enum):
+        ERROR   = 'ERROR'
+        WARNING = 'WARNING'
+        DEBUG   = 'DEBBUG'
+        SUMMARY = 'SUMMARY'
     
     def __init__(self):
         self.__debugFileName    = self._DEBUG_FOLDER + "/logsDebug.txt"
@@ -116,22 +123,22 @@ class Log(object):
         #st = datetime.datetime.now()
         msg_debug = '[{0}\t{1}] :: {2}'
         
-        if level in (Log.WARNING, Log.ERROR):
+        if level in (Log.CaseEnum.WARNING, Log.CaseEnum.ERROR):
             msg_debug = msg_debug.format(level, st, message)
             self._debugLogs.append(msg_debug)
             self._summaryLogs.append(msg_debug) # All incidences will be shown in             
             self._writeInFiles(both=True)
-            if (level==Log.ERROR) and (raiseExc is not None):
+            if (level==Log.CaseLog.ERROR) and (raiseExc is not None):
                 if isinstance(raiseExc(), (Exception, BaseException)):
                     Log.writeTraceback(raiseExc().__class__.__name__)
                     raise raiseExc(message)
         
-        elif level in (Log.DEBUG, Log.SUMMARY):
-            msg_debug = msg_debug.format(Log.DEBUG, st, message)
+        elif level in (Log.CaseEnum.DEBUG, Log.CaseEnum.SUMMARY):
+            msg_debug = msg_debug.format(Log.CaseEnum.DEBUG, st, message)
             self._debugLogs.append(msg_debug)
-            if level == Log.SUMMARY:
+            if level == Log.CaseEnum.SUMMARY:
                 self._summaryLogs.append(message)
-            self._writeInFiles(both=(level==Log.SUMMARY))
+            self._writeInFiles(both=(level==Log.CaseEnum.SUMMARY))
         
     
     @staticmethod
@@ -143,10 +150,10 @@ class Log(object):
         (param channel is not necessary in these tests)
         :param raiseExc=None: \a <Exception> or derived class to raise exception in case of ERROR
         * Example:
-        Log.write('Destroyng tmpPageXmlDocs object', Log.DEBUG)
+        Log.write('Destroyng tmpPageXmlDocs object', Log.CaseEnum.DEBUG)
         --> DEBUG:: [2015-04-21 18:08:39] - Destroyng tmpPageXmlDocs object
         '''
-        level = level if level else Log.DEBUG
+        level = level if level else Log.CaseEnum.DEBUG
         if not isinstance(level, (tuple, list)):
             level = tuple([level])
         
@@ -159,7 +166,7 @@ class Log(object):
     def writeTraceback(exception_type=''):
         """ Log the trace of any error that happened before a point in the code.
             Call this function in an exception block for a general exception or 
-            from Log.write( , Log.ERROR, ).
+            from Log.write( , Log.CaseEnum.ERROR, ).
         """
         self = Log.getInstance()
         
@@ -187,12 +194,12 @@ class Log(object):
                 self._writeInFiles(both=True)
             else:
                 Log.write('\nException type: <{}>'.format(exception_type), 
-                          Log.DEBUG)
+                          Log.CaseEnum.DEBUG)
             if _trace.strip() != 'NoneType: None':
-                Log.write('\n'+_trace, Log.DEBUG)
+                Log.write('\n'+_trace, Log.CaseEnum.DEBUG)
         except UnicodeDecodeError as e:
             Log.write(str(e)+'\n\t(This error occurs when there are non utf-8 '
-                      'characters in the last called module)', Log.WARNING)
+                      'characters in the last called module)', Log.CaseEnum.WARNING)
     
     def _timeMethodConsumption(self, time, method_name):
         """ if the method is registered, add a call-count and append the time"""
@@ -238,7 +245,7 @@ class Log(object):
     def _generateFiles(self, create=False):
         _mode, startHeader, endHeader = 'a', False, True
         if create:
-            _mode, startHeader, endHeader = 'a', True, False
+            _mode, startHeader, endHeader = 'w+', True, False
         
         ## get a table of timing values
         if self.__timers:

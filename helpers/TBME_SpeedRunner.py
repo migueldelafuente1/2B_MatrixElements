@@ -19,6 +19,7 @@ from itertools import combinations_with_replacement
 from helpers.io_manager import valenceSpaceShellNames, TBME_Reader
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement
 from datetime import datetime
+from helpers.Log import Log
 
 class TBME_SpdRunnerException(TBME_RunnerException):
     pass
@@ -145,6 +146,7 @@ class TBME_SpeedRunner(TBME_Runner):
         self._computeForValenceSpaceJCoupled()
         print(_LINE_1)
         print("Finished computation, Total time (s): [{}]".format(time() - c_time))
+        Log.write(_LINE_1+"Finished computation, Total time (s): [{}]".format(time() - c_time))
         
         self.resultsByInteraction['J_results']  = self.results_J 
         self.interactionSchemes['J_results']    = self._Scheme.J
@@ -518,13 +520,17 @@ class TBME_SpeedRunner(TBME_Runner):
         
         if not all_null:
             if self.PRINT_LOG:
-                print(' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})>'
+                txt = ' * me[{}/{}]_({:.4}s): <{}|V|{} (J:{})>'\
                       .format(self._count, self._total_me, time() - self._tic, 
-                              bra, ket, self.J))
+                              bra, ket, self.J)
+                print(txt)
+                Log.write(txt)
             else:
                 ## print progress bar only for delta_steps % > 0.3%
                 if (self._count-self._progress_stp)/self._total_me > 0.003:
                     printProgressBar(self._count, self._total_me)
                     self._progress_stp = self._count
+                    
+                    Log.write(f" Progress [{100*self._count/self._total_me: >6.2f}]")
 
 ## E.O.F
