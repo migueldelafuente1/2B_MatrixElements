@@ -258,9 +258,14 @@ class Log(object):
         self._debugLogs.append(_header)
         self._summaryLogs.append(_header)
         
-        if not os.path.exists(self._DEBUG_FOLDER[1:]): # omit the first / 
+        _, fld_res, fld_log = self._DEBUG_FOLDER.split('/')
+        if not os.path.exists(fld_res+'/'+fld_log): # omit the first / 
             #create report folder if does not exist
-            os.makedirs(self._DEBUG_FOLDER)
+            if not os.path.exists(fld_res):
+                os.mkdir(fld_res)
+            os.chdir(fld_res)
+            os.mkdir(fld_log)
+            os.chdir('../')
             
         with open(self.__debugFileName, _mode) as df:
             df.write(_header)   #self._debugLogs.join())
