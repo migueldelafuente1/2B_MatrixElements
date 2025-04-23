@@ -258,7 +258,7 @@ class Log(object):
         self._debugLogs.append(_header)
         self._summaryLogs.append(_header)
         
-        if not os.path.exists(self._DEBUG_FOLDER):
+        if not os.path.exists(self._DEBUG_FOLDER[1:]): # omit the first / 
             #create report folder if does not exist
             os.makedirs(self._DEBUG_FOLDER)
             
