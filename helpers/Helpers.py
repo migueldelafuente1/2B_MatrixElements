@@ -143,7 +143,7 @@ def gamma_half_int(i):
         raise ValueError("Gamma Function G(n/2) need n >= 1, got: {}".format(i))
     return _gamma_half_int[i - 1]
 
-ORDER_GEN_LAGUERRE = 350 #359
+ORDER_GEN_LAGUERRE = 300 #359 max
 _genLaguerre_roots_weights = [
     {}, # roots,
     {}  # weights
