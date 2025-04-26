@@ -159,6 +159,7 @@ def getGeneralizedLaguerreRootsWeights(_2alpha, order=ORDER_GEN_LAGUERRE):
 
 def genLaguerreQuadraturesbuild(alphaOver2):
     global ORDER_GEN_LAGUERRE
+    global _genLaguerre_roots_weights
     for alpha in range(0, alphaOver2):
         x, w = roots_genlaguerre(ORDER_GEN_LAGUERRE, alpha/2, mu=False)
         _genLaguerre_roots_weights[0][alpha] = x
