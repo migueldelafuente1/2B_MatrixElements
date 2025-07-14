@@ -11,15 +11,21 @@ import xml.etree.ElementTree as et
 from helpers.WaveFunctions import QN_1body_jj
 from helpers.Helpers import readAntoine, shellSHO_Notation, valenceSpacesDict_l_ge10,\
     getCoreNucleus, getAllPermutationsOf2Bstates, prettyPrintDictionary,\
-    sortingHamiltonian
+    sortingHamiltonian, valenceSpacesDict_l_ge10_byM
 from copy import deepcopy
 
 
-def castAntoineFormat2Str(state, l_ge_10=False):
+def castAntoineFormat2Str(state, l_ge_10=False): #, lout_eq_lin=True
     """ 
     return a string with the state index in Antoine format. Check state.
     
-    :l_ge_10 <bool> [default=False] format for l>10. Converts l<10 to this format
+    :l_ge_10 <bool>    [default=False] format for l>10 to export. Converts l<10 
+        to this format.
+    :lout_eq_lin<bool> [default=True]  if true, use to transform the index given
+        for int and str cases,
+        
+        *** NOT USED, read the matrix element in the l10-format and use the 
+            method to transform the tuple.
     """
     if isinstance(state, QN_1body_jj):
         if l_ge_10:
@@ -783,6 +789,120 @@ class TBME_Reader():
         """ Mimic the __log after run details of a Matrix-Element method. """
         return f"Element from file [{self.filename}], multiplied by factor[{self.const:6.3f}]"
     
+def readMatrixElementsJScheme(filename_, out_filename=None):
+    """
+    Function to read a matrix element file in J-scheme and sort it in the 
+    order of the shells by: valenceSpacesDict_l_ge10_byM[N]
+    
+    :filename_ [str/path obj] valid path
+    :out_filename [str] OPTIONAL. Saves in this path, otherwise skips
+    
+    Returns:
+    :hamil_J = {(a_i, a_j): {(a_i', a_j'): {J0:[pppp, pnpn, pnnp, nppn, npnp, nnnn], ...}, ...}, ...}
+    :sh_states_sorted  = [ a0, a1, ...,  aN]
+    :sh_states_2b_sort = [(a0, a0), (a0, a1), ..., (aN, aN)]
+    """
+    hamil_J = {}
+    sh_states = []
+    Ns = set()
+    with open(filename_, 'r' ) as f:
+        data = f.readlines()[1:]
+        
+        for line in data:
+            line = line.strip()
+            
+            if line.startswith('0 5 '):
+                line = line.split()
+                abcd = tuple([int(x) for x in line[2:6]])
+                _n   = [readAntoine(x, l_ge_10=True) for x in abcd]
+                _n   = [2*_n[i][0] + _n[i][1] for i in range(4)]
+                for x in _n: Ns.add(x)
+                for x in abcd:
+                    if x not in sh_states: sh_states.append(x)
+                J_min, J_max = [int(x) for x in line[6:8]]
+                J = J_min
+                if abcd in hamil_J:
+                    print(f" [WARNING] element [{abcd}] already in Hamiltonian")
+                hamil_J[abcd] = dict([(j, list()) for j in range(J_min, J_max+1)])
+            else:
+                line = line.split()
+                j_vals = [float(x) for x in line]
+                assert J <= J_max, f"Invalid J[{J}], exceeding J range[{J_min}:{J_max}] {abcd}"
+                hamil_J[abcd][J] = deepcopy(j_vals)
+                J += 1      
+    
+    ## verify the states, 
+    print(f" * Shells in the hamiltoninan [{Ns}]")
+    sh_states_sorted = []
+    for N in sorted(Ns):
+        for x in  valenceSpacesDict_l_ge10_byM[N]:
+            sh_states_sorted.append(int(x))
+    print(" * SHO states readed :", sh_states)
+    print(" * SHO states sorted :", sh_states_sorted)
+    
+    ## if states are not in order, define the order and switch affected matrix elements
+    # if sh_states == sh_states_sorted:
+    sh_states_2b, sh_states_2b_sort = [], []
+    for i, a in enumerate(sh_states_sorted):
+        for b in sh_states_sorted[i:]:
+            sh_states_2b.append( (a, b) )
+    for i, a in enumerate(sh_states_2b):
+        for b in sh_states_2b[i:]:
+            sh_states_2b_sort.append( tuple([*a, *b]) )
+    
+    final_HAMIL = {}
+    lines_2b_final = [f" TEST: [{filename_}] hamiltonian rearranged for state order", ]
+    for abcd in sh_states_2b_sort:
+        a,b, c,d = abcd
+        ja, jb, jc, jd = [readAntoine(x, l_ge_10=True)[2] for x in abcd]
+        jab,jcd = (-1)**((ja+jb)/2), (-1)**((jc+jd)/2)
+        
+        permutations_abcd = {
+            0 : ((a,b, c,d), 1),       1 : ((c,d, a,b), 1),
+            2 : ((b,a, c,d), jab),     4 : ((c,d, b,a), jab),
+            3 : ((a,b, d,c), jcd),     5 : ((d,c, a,b), jcd),
+            6 : ((b,a, d,c), jab*jcd), 7 : ((d,c, b,a), jab*jcd),
+        }
+        _permut_indx = {
+            0: (1, 2, 3, 4),    1: (1, 3, 2, 4),
+            2: (3, 4, 1, 2),    3: (2, 1, 4, 3),
+            4: (2, 4, 1, 3),    5: (3, 1, 4, 2),
+            6: (4, 3, 2, 1),    7: (4, 2, 3, 1),
+        }
+        for case_, aux in permutations_abcd.items():
+            abcd2, phs0 = aux
+            if not abcd2 in hamil_J: continue
+            ## if permutation not in hamil_J, the element abcd wont be saved
+            
+            if abcd != abcd2: print("Switching ", abcd2, "to", abcd, " with case:", case_, phs0)
+            
+            jmin, jmax = min(hamil_J[abcd2].keys()), max(hamil_J[abcd2].keys())
+            lines_2b_final.append(" 0 5 {} {} {} {} {} {}".format(*abcd, jmin, jmax))
+            final_HAMIL[abcd] = dict([(j, [0,]*6) for j in hamil_J[abcd2].keys()])
+            
+            for J, j_vals in hamil_J[abcd2].items():
+                
+                phs = phs0
+                if not case_ in (0, 1, 6, 7): phs *= (-1)**(J+1)
+                for t in range(6):
+                    t2 = t
+                    if not t in (0, 5):  # 1, 2, 3, 4
+                        t2 = _permut_indx[case_][t-1]
+                    
+                    final_HAMIL[abcd][J][t] = phs * j_vals[t2]
+                    ## Would be necessary to switch the matrix elements??
+                lines_2b_final.append("\t"+"   ".join([f"{x: >16.12f}" for x in final_HAMIL[abcd][J]]))
+            break
+    
+    ## Test: print the Hamiltonian rearranged
+    if out_filename:
+        with open(out_filename, 'w+') as f:
+            f.write('\n'.join(lines_2b_final))
+        
+    hamil_J = deepcopy(final_HAMIL)
+    
+    return hamil_J, sh_states_sorted, sh_states_2b_sort
+
 #===============================================================================
 # AUXIALIRY METHODS FOR EXPORTATION,
 #===============================================================================

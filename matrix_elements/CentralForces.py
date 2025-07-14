@@ -276,13 +276,30 @@ class _Kinetic_1BME(_OneBodyMatrixElement_jjscheme):
         _b  = SHO_Parameters.b_length
         _ho = SHO_Parameters.hbar_omega
         _A  = SHO_Parameters.A_Mass
-        assert _A in kwargs and _b in kwargs, "A_mass and oscillator b length are mandatory"
+        assert _A in kwargs, "A_mass is mandatory"
+        assert _ho in kwargs or _b in kwargs, "hbar.omega OR oscillator b length are mandatory"
         
-        b_len = float(kwargs.get(_b))
-        cls.PARAMS_SHO[_b] = b_len
-        cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
-        hbaromega = (Constants.HBAR_C**2) / (Constants.M_MEAN * (b_len**2))
-        cls.PARAMS_SHO[_ho] = hbaromega
+        if not _ho in kwargs:
+            b_len = float(kwargs.get(_b))
+            cls.PARAMS_SHO[_b] = b_len
+            cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
+            hbaromega = (Constants.HBAR_C**2) / (Constants.M_MEAN * (b_len**2))
+            cls.PARAMS_SHO[_ho] = hbaromega
+        else:
+            ## 
+            ## Hbar omega is recommended to be used if present, for the 
+            ## 1b kin matrix elements to be consistent with the hbarw 
+            ## in the .sho (used for 1B-COM in TAURUS).
+            ## 
+            hbaromega = float(kwargs.get(_ho))
+            cls.PARAMS_SHO[_ho] = hbaromega
+            cls.PARAMS_SHO[_A] = int(kwargs.get(_A))
+            if _b in kwargs:
+                b_len = float(kwargs.get(_b))
+                cls.PARAMS_SHO[_b] = b_len
+            else:
+                b_len = Constants.HBAR_C / np.sqrt(Constants.M_MEAN * hbaromega)
+                cls.PARAMS_SHO[_b] = b_len
         
     def _run(self):
         

@@ -12,8 +12,8 @@ from copy import deepcopy
 
 class Constants:
     HBAR      = 6.582119e-22   # MeV s
-    HBAR_C    = 197.327053# << value in Taurus ## 197.326963      # MeV fm 
-    # HBAR_C    = 197.326963   # MeV fm (value in Taurus)
+    # HBAR_C    = 197.327053# << value in Taurus ## 197.326963      # MeV fm 
+    HBAR_C    = 197.3269788   # MeV fm (value in Taurus)
     
     M_PROTON  = 938.27208816   # MeV/c2
     M_NEUTRON = 939.56542052   # MeV/c2
@@ -209,7 +209,6 @@ def gradientRadialNablaMatrixElements(n_q, l_q, n, l, only_radial=False):
             return aux
         return -np.sqrt(l) * aux
     return aux
-        
 
 #===============================================================================
 #%%     sympy angular momentum fucntions
@@ -724,26 +723,26 @@ SHO_shell_order = ['S', 'P', 'SD', 'F', 'PF', 'G',
 
 valenceSpacesDict = {
     'S'   : ('001',),
-    'P'   : ('103','101'),
-    'SD'  : ('205', '1001', '203'),
+    'P'   : ('103', '101'),
+    'SD'  : ('205', '203', '1001'),
     'F'   : ('307',),
-    'PF'  : ('1103', '305', '1101'),
+    'PF'  : ('305', '1103', '1101'),
     'G'   : ('409',),
-    'SDG' : ('1205', '407', '2001', '1203'),
+    'SDG' : ('407', '1205', '1203', '2001'),
     'H'   : ('511',),
     'PFH' : ('509', '1307', '1305', '2103', '2101'),
     'I'   : ('613',),
-    'SDGI': ('1409', '2205', '611', '1407', '3001', '2203'),
+    'SDGI': ('611', '1409', '1407', '2205', '2203', '3001'),
     'J'   : ('715',)
     }
 valenceSpacesDict_l_ge10 = {
     'S'   : ('001',),
     'P'   : ('103','101'),
-    'SD'  : ('205', '10001', '203'),
-    'PF'  : ('307','10103', '305', '10101'),
-    'SDG' : ('409','10205', '407', '20001', '10203'),
-    'PFH' : ('511', '509', '10307', '10305', '20103', '20101'),
-    'SDGI': ('613', '10409', '20205', '611', '10407', '30001', '20203'),
+    'SD'  : ('205', '203', '10001'),
+    'PF'  : ('307', '305', '10103', '10101') ,
+    'SDG' : ('409', '407', '10205', '10203', '20001'),
+    'PFH' : ('511', '509', '10307', '10305', '20103', '20101') ,
+    'SDGI': ('613', '611', '10409', '10407', '20205', '20203', '30001') ,
     'J'   : ('715',)
     }
 
@@ -845,6 +844,19 @@ def getAllPermutationsOf2Bstates(tb_states, l_ge_10, is_j_scheme=True):
         for bk, t_perm, phs in permuts:
             permuts.append( ((bk[0], bk[1]), (bk[2], bk[3]), t_perm, phs) )
     return permuts
+
+def getJrangeFor2ShellStates(a, b, get_L_range=False, l_ge_10=True):
+    """
+    Return the range of J (or L) for two SHO states
+    :return Jmin, Jmax
+    """
+    if get_L_range:
+        la, lb = readAntoine(a, l_ge_10)[1], readAntoine(b, l_ge_10)[1]
+        Lmin, Lmax = abs(la - lb), la +lb
+        return Lmin, Lmax
+    ja, jb = readAntoine(a, l_ge_10)[2], readAntoine(b, l_ge_10)[2]
+    Jmin, Jmax = abs(ja - jb) // 2, (ja + jb) // 2
+    return Jmin, Jmax
 
 
 def shellSHO_Notation(n, l, j=0):

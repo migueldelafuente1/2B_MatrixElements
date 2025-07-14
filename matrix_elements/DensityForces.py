@@ -5,6 +5,7 @@ Created on 29 dic 2023
 '''
 
 import numpy as np
+import os
 import time
 from sympy import S
 
@@ -30,6 +31,7 @@ from copy import deepcopy, copy
 from helpers.Enums import DensityDependentParameters as dd_p
 from helpers.Enums import AttributeArgs as atrE
 from matrix_elements.transformations import TalmiGeneralizedTransformation
+
 
 # class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
 class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
@@ -216,9 +218,9 @@ class _Base_DensityDep_FromFile_Jscheme(DensityDependentForce_JTScheme):
     RECOUPLES_LS    = False
     _BREAK_ISOSPIN  = True
     
-    _R_DIM = 20
+    _R_DIM = 15
     _A_DIM =  0
-    _OMEGA = 20
+    _OMEGA = 14
     USING_LEBEDEV = True
     
     @classmethod
@@ -299,15 +301,19 @@ class _Base_DensityDep_FromFile_Jscheme(DensityDependentForce_JTScheme):
         if cls.USING_LEBEDEV:
             ## Angular Grid from Lebedev_ Imported from /docs/LebedevPointsWeights
             if cls._OMEGA % 2 == 1:
+                print(" WARNING: Valid Omega Orders [14,16,18,20,22], OMEGA +=1")
                 cls._OMEGA += 1
-            if cls._OMEGA < 14: 
+            if cls._OMEGA < 14:
                 print(" WARNING: Minimum Omega for Lebedev is 14, fixing to that.")
                 cls._OMEGA = 14
             elif cls._OMEGA > 22:
                 print(" WARNING: Maximum Omega for Lebedev is 22, fixing to that.")
                 cls._OMEGA = 22
             ## read the file and convert the numbers
-            with open(f'docs/LebedevPointsWeightsOmg{cls._OMEGA}.gut', 'r') as f:
+            f_ = f'docs/LebedevPointsWeightsOmg{cls._OMEGA}.gut'
+            if not os.path.exists(f_): f_ = '../' + f_
+            cls._A_DIM = 0
+            with open(f_, 'r') as f:
                 for line in f.readlines()[1:]:
                     line = line.strip().replace('D', 'E')
                     i, costh, phi, wA = line.split()
@@ -457,6 +463,7 @@ class _Base_DensityDep_FromFile_Jscheme(DensityDependentForce_JTScheme):
         t_ = (time.time() - t_start)
         print( " [DONE] Spatial Density has been imported and evaluated. ",
               f"({t_:5.3f}s) A={integ_A:9.5f}")
+        # 0/0
     
     @classmethod
     def evalutate_spatial_density(cls):
@@ -677,9 +684,10 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         self.exchange_phase = None
         self.exch_2bme = None
         
-        if (bra.sp_state_1.m_t + bra.sp_state_2.m_t != 
-            ket.sp_state_1.m_t + ket.sp_state_2.m_t):
-            self._value = 0.0
+        if almostEqual(self.PARAMS_FORCE[dd_p.x0], 1, 1.e-4):
+            if (bra.sp_state_1.m_t + bra.sp_state_2.m_t != 
+                ket.sp_state_1.m_t + ket.sp_state_2.m_t):
+                self._value = 0.0
         else:
             self._nullConditionForSameOrbit()
         
@@ -710,13 +718,12 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         
         self._value *= self.bra.norm() * self.ket.norm()
     
-            
     def _calculateJMatrixElement(self):
         """
         Process has the antisymmetrization in the uncoupled matrix element.
         Process does not require the LS coupling
         """        
-        
+        self._isospinExchangeFactor() # fix it once for the matrix, not in r-integral
         ALPHA_ = self.PARAMS_FORCE[dd_p.alpha]
         B_LEN_ = self.PARAMS_SHO[SHO_Parameters.b_length]
 
@@ -773,19 +780,24 @@ class DensityDependentForceFromFile_JScheme(_TwoBodyMatrixElement_Antisym_JCoupl
         """ Matrix element factor associated with the isospin """
         ta,tb = self.bra.sp_state_1.m_t, self.bra.sp_state_2.m_t
         tc,td = self.ket.sp_state_1.m_t, self.ket.sp_state_2.m_t
-        X_ac_bd  = ((ta==tc)*(tb==td))
-        X_ac_bd -= self.PARAMS_FORCE[dd_p.x0]*((ta==td)*(tb==tc))
-        X_ad_bc  = ((ta==td)*(tb==tc)) 
-        X_ad_bc -= self.PARAMS_FORCE[dd_p.x0]*((ta==tc)*(tb==td))
+        
+        X_ac_bd  = (1       + self.PARAMS_FORCE[dd_p.x0M])*((ta==tc)*(tb==td))
+        X_ac_bd -= (self.PARAMS_FORCE[dd_p.x0]
+                     + self.PARAMS_FORCE[dd_p.x0H]  )     *((ta==td)*(tb==tc))
+        X_ad_bc  = (1       + self.PARAMS_FORCE[dd_p.x0M])*((ta==td)*(tb==tc)) 
+        X_ad_bc -= (self.PARAMS_FORCE[dd_p.x0]
+                     + self.PARAMS_FORCE[dd_p.x0H]  )     *((ta==tc)*(tb==td))
         
         self.X_ac_bd = X_ac_bd
-        self.X_ad_bc = X_ad_bc            
+        self.X_ad_bc = X_ad_bc
                  
     def _radialAngularIntegral(self, mja, mjb, mjc, mjd):
         
-        self._isospinExchangeFactor()
-        if abs(self.X_ac_bd - self.X_ad_bc) < 1.0e-6: 
-            return 0.0
+        # self._isospinExchangeFactor()
+        if almostEqual(self.PARAMS_FORCE[dd_p.x0], 1, 1.e-4):
+            ## this condition omits the pppp / nnnn in the x0=1 case.
+            if abs(self.X_ac_bd - self.X_ad_bc) < 1.0e-6: 
+                return 0.0
         
         ALPHA_ = self.PARAMS_FORCE[dd_p.alpha]
         B_LEN_ = self.PARAMS_SHO[SHO_Parameters.b_length]
