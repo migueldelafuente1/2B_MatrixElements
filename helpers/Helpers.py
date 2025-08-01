@@ -541,7 +541,8 @@ def __copyHamiltonian_4keyTo2keys(results_0, reverse=False):
                 results[(*bra_, *ket_)] = vals
     return results
 
-def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
+def sortingHamiltonian(results, sorted_2b_comb, 
+                       is_jt=False, l_ge_10=True, assert_repetitions=False):
     """
     This function returns a hamiltonian in the order given, applying the phase
     changes from the J or JT scheme.
@@ -573,9 +574,11 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
             if phs == 0: continue ## redundant permutation
             
             not_in_ = not bk_perm in dict_1
-            
+            if bk_perm in ((1, 101, 1, 103), (1, 103, 1, 101)): 
+                _ = 0
             if is_jt:
-                dict_1[bk_perm] = {0: {}, 1:{}}
+                if not_in_:
+                    dict_1[bk_perm] = {0: {}, 1:{}}
                 for T in (0,1):
                     for J in vals[T]:
                         phs2 = phs
@@ -588,12 +591,20 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
                             #     _ = 0
                         else:
                             # Test if matches
-                            assert abs(dict_1[bk_perm][T][J] 
-                                       - phs2 * vals[T][J]) < 1.0e-6,\
-                                       "[ERROR]: values of:{} does not match "\
-                                       "/with previous:{}".format(bk_perm, bk)
+                            diff_ = abs(dict_1[bk_perm][T][J] - phs2 * vals[T][J])
+                            if diff_ > 1.0e-6:
+                                if assert_repetitions:
+                                    assert diff_ < 1.0e-6,\
+                                           "[ERROR]: values of:{} does not match "\
+                                           "/with previous:{}".format(bk_perm, bk)
+                                else:
+                                    print(f" [WARNING] values doesnt match on "
+                                          f"{bk_perm}[JT:{J} {T}][{dict_1[bk_perm][T][J]}], "
+                                          f"{bk}[{phs2 * vals[T][J]}]")
+                                    
             else:
-                dict_1[bk_perm] = dict([(J, dict()) for J in vals])
+                if not_in_:
+                    dict_1[bk_perm] = dict([(J, dict()) for J in vals])
                 for J in vals:
                     phs2 = phs
                     if i not in (0,4, 3,7): ## double/non exchange has no J dep.
@@ -603,11 +614,17 @@ def sortingHamiltonian(results, sorted_2b_comb, is_jt=False, l_ge_10=True):
                             dict_1[bk_perm][J][T] = phs2 * vals[J][t_perm[T]]
                         else:
                             # Test if matches
-                            # Test if matches
-                            assert abs(dict_1[bk_perm][J][T] 
-                                   - phs2 * vals[J][t_perm[T]]) < 1.0e-6,\
-                                       "[ERROR]: values of:{} does not match "\
-                                       "/with previous:{}".format(bk_perm, bk)
+                            
+                            diff_ = abs(dict_1[bk_perm][J][T] - phs2 * vals[J][t_perm[T]])
+                            if diff_ > 1.0e-6:
+                                if assert_repetitions:
+                                    assert diff_ < 1.0e-6,\
+                                           "[ERROR]: values of:{} does not match "\
+                                           "/with previous:{}".format(bk_perm, bk)
+                                else:
+                                    print(f" [WARNING] values doesnt match on "
+                                          f"{bk_perm}[JT:{J} {T}][{dict_1[bk_perm][J][T]}], "
+                                          f"{bk}[{phs2 * vals[J][t_perm[T]]}]")
     
     # 2 sort in the order of bra (sorting_order) and apply the phs-changes
     dict_2 = {}

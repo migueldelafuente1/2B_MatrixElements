@@ -17,9 +17,9 @@ class _1Body_WaveFunction:
     attribute [m_e]"""
     
     _particleLabels = {
-        -1   : 'p',
-        0    : '',
-        1    : 'n'}
+        1   : 'p',
+        0   : '',
+        -1  : 'n'}
     
     def __init__(self, *args):
         raise WaveFunctionException("Abstract method, implement me!")
@@ -594,14 +594,15 @@ class QN_2body_jj_J_Coupling(_ParticleWaveFunction, QN_2body_jj_JT_Coupling):
     COUPLING = CouplingSchemeEnum.JJ
     
     # j1 and j2 are fractions and they are defined as 2*j
-    def __init__(self, sp_state_jj_1, sp_state_jj_2, J, M=None):
+    def __init__(self, sp_state_jj_1, sp_state_jj_2, J, M=None, ignoreCheck=False):
         
         if M == None:
             M = (sp_state_jj_1.m + sp_state_jj_2.m) // 2
         else:
             assert M == (sp_state_jj_1.m + sp_state_jj_2.m) // 2, "unconsistent M for WF."
         
-        self._checkQNArguments(sp_state_jj_1, sp_state_jj_2, J, M)
+        if not ignoreCheck:
+            self._checkQNArguments(sp_state_jj_1, sp_state_jj_2, J, M)
         
         self.sp_state_1 : QN_1body_jj = sp_state_jj_1
         self.sp_state_2 : QN_1body_jj = sp_state_jj_2

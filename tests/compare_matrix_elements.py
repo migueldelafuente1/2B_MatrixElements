@@ -419,10 +419,10 @@ def printMatrixElementsJ2b_1vs2(hamil_1, hamil_2, sh_states_sorted, interactions
 if __name__ == '__main__':
     
     filename_1 = '../savedHamilsBeq1/usdb_J_A16.2b'
-    filename_2 = '../scripts/results/D1S_16O_Nsho2.2b'
+    filename_2 = '../scripts/results/D1S_rea_16O_Nsho2.2b'
     INTERACTIONS_ = ('USDB', 'D1S')
-    filename_2 = '../scripts/results/B1_16O_Nsho2.2b'
-    INTERACTIONS_ = ('USDB', 'B1')
+    # filename_2 = '../scripts/results/B1_16O_Nsho2.2b'
+    # INTERACTIONS_ = ('USDB', 'B1')
     # filename_1 = '../scripts/results/D1S_t0_16O_Nsho2.2b'
     # filename_2 = '../scripts/results/D1S_dd_16O_Nsho2.2b'
     # INTERACTIONS_ = ('HAMIL', 'DD')
