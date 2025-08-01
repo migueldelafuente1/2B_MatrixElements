@@ -87,7 +87,7 @@ def __set_up_input_xml(Z, A, MZMin, MZMax, interaction,
     _val_str = "" if MZMax!=MZMin else f"_Nsho{MZMin}"
     
     if interaction != 'READ':
-        fn_.text = f"{interaction}_{A}{elementNameByZ[Z]}".replace('.', '')
+        fn_.text = f"{interaction}_A{A}".replace('.', '')
         title_.set(AttributeArgs.name,  
                    f" [{interaction}] B_LEN={b_len:3.2f}")
         ht_.text = '3'
@@ -114,7 +114,7 @@ def __set_up_input_xml(Z, A, MZMin, MZMax, interaction,
                     f.remove(f_core)
                 
                 if only_DD:
-                    fn_.text = f"{interaction}_dd_{A}{elementNameByZ[Z]}{_val_str}".replace('.', '')
+                    fn_.text = f"{interaction}_dd_A{A}{_val_str}".replace('.', '')
                     title_.set(AttributeArgs.name, f" [{interaction}] DD interaction only B_LEN={b_len:3.2f}")
                     ht_.text = '4'
                     out_path_interaction = 'results/' + fn_.text
@@ -127,13 +127,13 @@ def __set_up_input_xml(Z, A, MZMin, MZMax, interaction,
                     f  = forces.find(ForceEnum.SpinOrbitShortRange)
                     f.set(AttributeArgs.ForceArgs.active, 'False')
             else:
-                fn_.text = f"{interaction}_t0_{A}{elementNameByZ[Z]}{_val_str}".replace('.', '')
+                fn_.text = f"{interaction}_t0_A{A}{_val_str}".replace('.', '')
                 title_.set(AttributeArgs.name,  
                            f" [{interaction}] B_LEN={b_len:3.2f} Without DD term (t3=0)")
                 out_path_interaction = 'results/' + fn_.text
     else:
         nstr = MZMin if MZMax==MZMin else f"{MZMin}to{MZMax}"
-        fn_.text = f"{original_inter}_{A}{elementNameByZ[Z]}_Nsho{nstr}".replace('.', '')
+        fn_.text = f"{original_inter}_A{A}_Nsho{nstr}".replace('.', '')
         out_path_interaction = 'results/' + fn_.text
         
         ht_.text = '3'
@@ -161,6 +161,111 @@ def __set_up_input_xml(Z, A, MZMin, MZMax, interaction,
         f2.set(AttributeArgs.FileReader.l_ge_10,  'True')
         
         
+    tree.write(fn_xml)
+    return fn_xml, out_path_interaction
+
+def __set_up_input_xml_D1Srea(Z, A, MZMin, MZMax, interaction,
+                              read_inter_from=None):
+    """
+    :interaction  ( D1S, READ )
+    """
+    global USE_COULOMB, USE_COM_2B, ORIGINAL_INTER
+    use_coulomb = USE_COULOMB
+    global FILENAME_XML_INTER
+    
+    __fn = FILENAME_XML_INTER.split('/')[-1]
+    shutil.copy(FILENAME_XML_INTER, '.')
+    root = et.parse(__fn).getroot()
+    
+    original_inter = ORIGINAL_INTER #'B1' #'D1S' #
+    INTER_NC = f'D1S_A{A}_rea.xml'
+    fn_xml = INTER_NC
+    global A0, Z0
+    
+    hbaromega = 45*A**(-1/3) - 25*A**(-2/3)
+    b_len     = Constants.HBAR_C / np.sqrt(Constants.M_MEAN * hbaromega)
+    print("b length   =", b_len)
+    print("hbar omega =",hbaromega)
+    
+    title_ = root.find(InputParts.Interaction_Title)
+    out_   = root.find(InputParts.Output_Parameters)
+    fn_    = out_.find(Output_Parameters.Output_Filename)
+    ht_    = out_.find(Output_Parameters.Hamil_Type)
+    com_   = out_.find(Output_Parameters.COM_correction)
+    
+    sho_ = root.find(InputParts.SHO_Parameters)
+    hbo_ = sho_.find(SHO_Parameters.hbar_omega)
+    b_   = sho_.find(SHO_Parameters.b_length)
+    a_   = sho_.find(SHO_Parameters.A_Mass)
+    z_   = sho_.find(SHO_Parameters.Z)
+    
+    cor_ = root.find(InputParts.Core).find(CoreParameters.innert_core)
+    
+    
+    valenSp  = root.find(InputParts.Valence_Space)
+    for elem_ in valenSp.findall(ValenceSpaceParameters.Q_Number):
+        valenSp.remove(elem_)
+    valenSp  = set_valenceSpace_Subelement(valenSp, MZMin, MZMax)
+    forces   = root.find(InputParts.Force_Parameters)
+    
+    tree = et.ElementTree(root)
+    
+    ## SHO params and Valence space
+    b_.text  = str(b_len)
+    hbo_.text= str(hbaromega)
+    a_.text  = str(A)
+    z_.text  = str(Z)
+    
+    
+    com_.text = '1' if USE_COM_2B else '0'
+    _val_str  = "" if MZMax!=MZMin else f"_Nsho{MZMin}"
+    
+    if MZMax == MZMin:
+        nstr = MZMin
+        fn_.text = f"D1S_rea_A{A}_Nsho{nstr}".replace('.', '')
+        out_path_interaction = 'results/' + fn_.text
+    else:
+        nstr = f"{MZMin}to{MZMax}"
+        fn_.text = f"D1S_rea_A{A}".replace('.', '')
+        out_path_interaction = 'results/' + fn_.text
+    
+    if MZMax == MZMin:
+        ht_.text = '3'
+        z_c, n_c = __CORES_BY_MZMIN[MZMin - 1]
+        cor_.set(CoreParameters.protons,  str(z_c))
+        cor_.set(CoreParameters.neutrons, str(n_c)) 
+    else:
+        ht_.text = '3'
+        cor_.set(CoreParameters.protons,  '0')
+        cor_.set(CoreParameters.neutrons, '0') 
+        
+    title_.set(AttributeArgs.name,  
+               f"Reduced D1S Hamil with Rearrangement MZ={MZMax} B_LEN={b_len:3.2f}")
+    
+    f  = forces.find(ForceEnum.Brink_Boeker)
+    f.set(AttributeArgs.ForceArgs.active, 'True')
+    f  = forces.find(ForceEnum.Coulomb)
+    f.set(AttributeArgs.ForceArgs.active, str(use_coulomb))
+    f  = forces.find(ForceEnum.SpinOrbitShortRange)
+    f.set(AttributeArgs.ForceArgs.active, 'True')
+    if MZMax == MZMin:
+        ## For the interaction with core, import the interaction from [read_inter_from]
+        f  = forces.find(ForceEnum.Brink_Boeker)
+        f.set(AttributeArgs.ForceArgs.active, 'False')
+        f  = forces.find(ForceEnum.Coulomb)
+        f.set(AttributeArgs.ForceArgs.active, 'False')
+        f  = forces.find(ForceEnum.SpinOrbitShortRange)
+        f.set(AttributeArgs.ForceArgs.active, 'False')
+    
+    f  = forces.find(ForceEnum.Force_From_File)
+    f.set(AttributeArgs.ForceArgs.active, 'True')
+    f1 = f.find(ForceFromFileParameters.file)
+    f1.set(AttributeArgs.name, read_inter_from)
+    f2 = f.find(ForceFromFileParameters.options)
+    f2.set(AttributeArgs.FileReader.constant,  '1.0')
+    f2.set(AttributeArgs.FileReader.ignorelines, '1')
+    f2.set(AttributeArgs.FileReader.l_ge_10,  'True')
+    
     tree.write(fn_xml)
     return fn_xml, out_path_interaction
 
@@ -239,7 +344,8 @@ def create_slater_wf(Z, N, inter, MZmin, MZmax):
 
 def adjust_monopole_hamiltonian_to_core(A, hamil_nocore, hamil_sm, N_min, N_max,
                                         interaction=None,
-                                        use_com_corr=False):
+                                        use_com_corr=False,
+                                        export_other_hamils=True):
     """
     Adjust the energy of the 0-body term and the 1-body sp-energies
     from a 2-body hamiltonian
@@ -426,7 +532,7 @@ def adjust_monopole_hamiltonian_to_core(A, hamil_nocore, hamil_sm, N_min, N_max,
     with open(hamil_sm+'.sho', 'w+') as f:
         f.write(''.join(lines_sho))
         
-    if interaction=='D1S':
+    if interaction=='D1S' and export_other_hamils:
         ## Export the BB+LS+Coul terms without the DD term
         inp_fn, out_path_1 = __set_up_input_xml(Z0, A0, N_SHO, N_SHO, 'D1S', 
                                                 exclude_DD=True)
@@ -437,13 +543,13 @@ def adjust_monopole_hamiltonian_to_core(A, hamil_nocore, hamil_sm, N_min, N_max,
         shutil.copy(hamil_sm+'.01b', out_path_1+'.01b')
         
         ## Export the DD matrix elements (full space)
-        inp_fn, out_path_1 = __set_up_input_xml(Z0, A0, 0, N_SHO, 'D1S', 
+        inp_fn, out_path_1 = __set_up_input_xml(Z, A, 0, N_SHO, 'D1S', 
                                                 only_DD=True)
         runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
         runner_.run()
         
         ## Export the DD matrix elements (full space)
-        inp_fn, out_path_1 = __set_up_input_xml(Z0, A0, N_SHO, N_SHO, 'D1S', 
+        inp_fn, out_path_1 = __set_up_input_xml(Z, A, N_SHO, N_SHO, 'D1S', 
                                                 only_DD=True)
         runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
         runner_.run()
@@ -583,49 +689,131 @@ def _convert_JTmatrixElements(filename_, A, adjust_to_mass=False):
                 aux = "    ".join([f"{x: >15.11f}" for x in j_vals[J]])
                 lines.append("    "+aux)
         f.write('\n'.join(lines))
-            
+
+def _moveAFilesToFoldersInResults():
+    """
+    Copying files f
+    """
+    os.chdir('results')
+    all_files = list(os.listdir())
+    all_files = list(filter(lambda x: os.path.isfile(x), all_files))
+    A_tail    = list(filter(lambda x: x.startswith('D1S_A') and 
+                            (x.endswith('.sho') and not 'Nsho' in x), 
+                            all_files))
+    A_folders = [x.replace('D1S_A','').replace('.sho','') for x in A_tail]
+    for A in A_folders:
+        if not A.isdigit(): continue
+        _fld = f'A{A}'
+        if _fld in os.listdir():
+            shutil.rmtree(_fld)
+        os.mkdir(_fld)
+        files2mv = []
+        for f in all_files:
+            if not _fld in f: continue
+            files2mv.append(f)
+        
+        print(f"  ** Files for {_fld}")
+        for f in files2mv:
+            shutil.move(f, f'{_fld}/')
+            print(f" moving [{f}] into [{_fld}]")
+        
+
 if __name__ == '__main__':
     
     # _convert_JTmatrixElements('usdb.sho', A, adjust_to_mass=False)
     
     #===========================================================================
-    # D1S interaction
+    # clear the result folders into A-folders
     #===========================================================================
-    ## Interaction definition for no-core space
-    N_SHO = 2
-    Z, A   = 8, 16
+    # _moveAFilesToFoldersInResults()
+    # 0/0
+    #===========================================================================
+    # D1S interaction - From Rearrangement matrix elements
+    #===========================================================================
+    # Interaction definition for no-core space
+    N_SHO  = 3
+    N_SHO_VS = 2
+    Z, A   = 12, 24 # 12, 24 #
     Z0, A0 = 8, 16
     FILENAME_XML_INTER = '../docs/input_D1S.xml'
-    USE_COULOMB = True
+    USE_COULOMB = False
     USE_COM_2B  = True
     ORIGINAL_INTER = 'D1S'
+    
+    # for zi in range(0, 12+1, 2):
+    #     Z, A   = 8+zi, 16+2*zi # 8, 16
     
     create_slater_wf(Z, A-Z, 'D1S', 0, N_SHO)
     shutil.copy('final_wf.txt', 'initial_wf_1.txt')
     
-    inp_fn, out_path_1 = __set_up_input_xml(Z, A, 0, N_SHO, 'D1S', exclude_DD=False)
+    # inp_fn, out_path_1 = __set_up_input_xml(Z, A, 0, N_SHO, 'D1S', exclude_DD=False)
+    #
+    # runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
+    # runner_.run()
     
-    runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
-    runner_.run()
-    
-    ## no-core hamiltonian for EDF
-    inp_fn, _ = __set_up_input_xml(Z, A, 0, N_SHO, 'D1S', exclude_DD=True)
+    ## no-core hamiltonian for EDF: D1S-t0 + Q_matrix elements
+    inp_fn, out_path_1 = __set_up_input_xml_D1Srea(Z, A, 0, N_SHO, 'D1S', 
+                                                   read_inter_from=f'Q_hamilJ_A{A}.2b')
     
     runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
     runner_.run()
     
     ## Truncate the Hamiltonian for a certain shell range
-    inp_fn, out_path = __set_up_input_xml(Z, A, N_SHO, N_SHO, 'READ', 
-                                          read_inter_from=out_path_1+'.2b')
+    
+    inp_fn, out_path = __set_up_input_xml_D1Srea(Z, A, N_SHO_VS, N_SHO_VS, 'READ', 
+                                                 read_inter_from=out_path_1+'.2b')
     
     runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
     runner_.run()
     
     create_slater_wf(Z, A-Z, 'READ', N_SHO, N_SHO)
     
-    adjust_monopole_hamiltonian_to_core(A, out_path_1, out_path, N_SHO, N_SHO,
-                                        interaction='D1S', use_com_corr=USE_COM_2B)
-   
+    adjust_monopole_hamiltonian_to_core(A, out_path_1, out_path, N_SHO_VS, N_SHO_VS,
+                                        interaction='D1S', use_com_corr=USE_COM_2B,
+                                        export_other_hamils=False)
+    0/0
+    #===========================================================================
+    # D1S interaction
+    #===========================================================================
+    ## Interaction definition for no-core space
+    # for zi in range(4, 12+1, 2):
+    #     N_SHO  = 3
+    #     N_SHO_VS = 2
+    #     Z, A   = 8+zi, 16+2*zi # 8, 16
+    #     Z0, A0 = 8, 16  # 8, 16
+    #     FILENAME_XML_INTER = '../docs/input_D1S.xml'
+    #     USE_COULOMB = False
+    #     USE_COM_2B  = True
+    #     ORIGINAL_INTER = 'D1S'
+    #
+    #     create_slater_wf(Z, A-Z, 'D1S', 0, N_SHO)
+    #     shutil.copy('final_wf.txt', 'initial_wf_1.txt')
+    #
+    #     inp_fn, out_path_1 = __set_up_input_xml(Z, A, 0, N_SHO, 'D1S', exclude_DD=False)
+    #
+    #     runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
+    #     runner_.run()
+    #
+    #     ## no-core hamiltonian for EDF
+    #     inp_fn, _ = __set_up_input_xml(Z, A, 0, N_SHO, 'D1S', exclude_DD=True)
+    #
+    #     runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
+    #     runner_.run()
+    #
+    #     ## Truncate the Hamiltonian for a certain shell range
+    #     inp_fn, out_path = __set_up_input_xml(Z, A, N_SHO, N_SHO, 'READ', 
+    #                                           read_inter_from=out_path_1+'.2b')
+    #
+    #     runner_ = TBME_SpeedRunner(filename=inp_fn, verbose=False)
+    #     runner_.run()
+    #
+    #     create_slater_wf(Z, A-Z, 'READ', N_SHO, N_SHO)
+    #
+    #     adjust_monopole_hamiltonian_to_core(A, out_path_1, out_path, N_SHO_VS, N_SHO_VS,
+    #                                         interaction='D1S', use_com_corr=USE_COM_2B)
+    #
+
+    
     #===========================================================================
     
     #===========================================================================
