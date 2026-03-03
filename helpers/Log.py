@@ -495,7 +495,7 @@ class XLog(object):
         #     f.write(data)
         f = open(filename, 'w+')
         f.write(data)
-        #print(data)
+        print(f"Log saved as/in [{filename}]")
     
     @staticmethod
     def resetLog():

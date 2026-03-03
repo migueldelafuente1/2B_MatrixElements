@@ -79,9 +79,11 @@ class ForceEnum(Enum):
     Density_FiniteRange  = 'DensityFiniteRange'
     Quadratic_OrbitalMomentum = 'Quadratic_OrbitalMomentum'
     Kinetic_2Body    = 'Kinetic_2Body'
+    Kinetic_COM      = 'Kinetic_COM' # same as Kinetic_2Body, but to use directly in .2b
     Kinetic_Total    = 'Kinetic_Total'
     Multipole_Delta  = 'Multipole_Delta'
     Multipole_Moment = 'Multipole_Moment'
+    Multipole_Gaussian = 'Multipole_Gaussian'
     SkyrmeBulk = 'SkyrmeBulk'
     TensorS12  = 'TensorS12'
     Force_From_File = 'Force_From_File'
@@ -100,7 +102,9 @@ class PotentialForms(Enum):
     Gaussian_power = 'gaussian_power'       # exp(-(r/mu_)^2) * (r/mu_)^n_power
     Wood_Saxon  = 'wood_saxon'              # (r/mu_)^n_power /( 1 + exp((r-mu_2 * A^1/3)/mu_3) )
     YukawaGauss_power = 'gauss_yukawa_power'# exp(-(r/mu_)-(r/mu_2)^2) * (r/mu_)^n_power
+    Hulthen     = 'hulthen'                 # exp(-(r/mu)) / (1 - exp(-r/mu))
     # Exponential_power = 'exponential_power' # exp(-r/mu_) * (r/mu_)^n_power (NOT ANALITICAL)
+    
 
 #===============================================================================
 # FORCE PARAMETERS DEFINITIONS
@@ -169,6 +173,8 @@ class SDIParameters(Enum):
 
 class MultipoleParameters(Enum):
     constants = 'constants'
+    mu_length = 'mu_length'
+    n_power   = 'n_power'
 
 class ForceFromFileParameters(Enum):
     file  = 'file'
@@ -199,12 +205,14 @@ ForceVariablesDict = {
     ForceEnum.Quadratic_OrbitalMomentum  : CentralWithExchangeParameters,
     ForceEnum.SkyrmeBulk    : SkyrmeBulkParameters, 
     ForceEnum.Kinetic_2Body : Enum,
+    ForceEnum.Kinetic_COM   : Enum,
     ForceEnum.Kinetic_Total : Enum,
     ForceEnum.SDI           : SDIParameters,
     ForceEnum.Delta         : BrinkBoekerParameters,
     ForceEnum.Multipole_Delta : MultipoleParameters,
-    ForceEnum.Multipole_Moment: CentralMEParameters, 
-    ForceEnum.Force_From_File : ForceFromFileParameters,
+    ForceEnum.Multipole_Moment: CentralMEParameters,
+    ForceEnum.Multipole_Gaussian : MultipoleParameters,  
+    ForceEnum.Force_From_File    : ForceFromFileParameters,
     ForceEnum.CentralGeneralized : CentralGeneralizedMEParameters,
     ForceEnum.Argone18NuclearTerms : Enum,
     ForceEnum.Argone14NuclearTerms : Enum,

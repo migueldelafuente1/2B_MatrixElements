@@ -9,7 +9,8 @@ from helpers.Enums import PotentialForms, CentralMEParameters
 from helpers.Helpers import gamma_half_int, fact, angular_condition,\
     safe_clebsch_gordan, _B_coeff_memo_accessor,\
     getStatesAndOccupationUpToLastOccupied, shellSHO_Notation,\
-    getStatesAndOccupationOfFullNucleus, getGeneralizedLaguerreRootsWeights
+    getStatesAndOccupationOfFullNucleus, getGeneralizedLaguerreRootsWeights,\
+    ORDER_GEN_LAGUERRE
 from helpers.Log import XLog
 from . import SCIPY_INSTALLED
 from copy import deepcopy
@@ -137,10 +138,28 @@ def talmiIntegral(p, potential, b_param, mu_param, n_power=0, **kwargs):
         A, B  = np.sqrt(2) * b_param / a, r0 / a 
         x, w  = getGeneralizedLaguerreRootsWeights(2*p + 1 + n_power)
         f     = 1.0 / (1.0 + np.exp((A*np.sqrt(x)) - B))
-        sum_ = sum(w * f)
+        sum_  = sum(w * f)
+        sum_ *= aux
         
         return sum_
+    
+    elif potential == PotentialForms.Hulthen:
         
+        assert ORDER_GEN_LAGUERRE > 100, \
+            "WARNING! Hulthen potential is very problematic, impose a Quadrature for at least order 100."
+        
+        A = np.sqrt(2) * b_param / mu_param
+        
+        aux = np.exp(gamma_half_int(2*p + 3) + (2*p + 3)*np.log(A))
+        aux = 2 * (b_param**3) / aux
+        
+        x, w  = getGeneralizedLaguerreRootsWeights(2*p + 1)
+        f     = x * np.exp(-np.power(x/A, 2)) / (1.0 - np.exp(-x))
+        sum_  = sum(w * f)
+        sum_ *= aux
+        
+        return sum_
+    
     else:
         raise IntegralException("Talmi integral [{}] is not defined, valid potentials: {}"
                         .format(potential, PotentialForms.members()))
