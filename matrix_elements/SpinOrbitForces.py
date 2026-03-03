@@ -11,7 +11,7 @@ from helpers.Enums import CouplingSchemeEnum, CentralMEParameters,\
     BrinkBoekerParameters, PotentialForms
 from helpers.Enums import AttributeArgs, SHO_Parameters
 from helpers.Helpers import safe_racah, safe_clebsch_gordan, safe_3j_symbols,\
-    safe_wigner_6j
+    safe_wigner_6j, safe_wigner_9j
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException, _standardSetUpForCentralWithExchangeOps

@@ -45,7 +45,7 @@ class DensityDependentForce_JTScheme(_TwoBodyMatrixElement_JTCoupled):
     
     _BREAK_ISOSPIN = False
     
-    _R_DIM = 12
+    _R_DIM = 15
     _A_DIM = None
     _OMEGA = None
     

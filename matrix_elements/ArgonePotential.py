@@ -27,6 +27,7 @@ The new Moshinsky expansion requires the generalization of some "final" methods
                         
 '''
 import numpy as np
+import os, shutil
 
 from matrix_elements.transformations import TalmiMultiInteractionTransformation
 from matrix_elements.MatrixElement import MatrixElementException,\
@@ -116,6 +117,8 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
         """
         return self._BrodyMoshinskyTransformation()
     
+    
+    
     @classmethod
     def _calculateIntegrals(cls, key_,  n_integrals =1):
         """
@@ -128,6 +131,7 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
             ## p-th integral (by _key_) in cls._talmi_integrals attribute.
             raise MatrixElementException("Abstract method, implement integrals!")
             cls._integrals_p_max[key_] += 1
+        cls._exportTalmiIntegralsTesting()
     
     def talmiIntegral(self, key_):
         """ 
@@ -305,6 +309,38 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
     ## Methods
     ## -------------------------------------------------------------------------
     
+    @classmethod
+    def _exportTalmiIntegralsTesting(cls, subtitle=''):
+        """ Save the Talmi integrals in results/_logs file."""
+        ## create folder if results/
+        if not os.path.exists('results'): os.makedirs('results')
+        if not os.path.exists('results/_logs'): os.makedirs('results/_logs')
+        
+        from helpers.Helpers import ORDER_GEN_LAGUERRE
+        with open(f'results/_logs/talmiIntegralsArgonne{subtitle}_{ORDER_GEN_LAGUERRE}.txt', 'w+') as f:
+            
+            title_ = "  TALMI INTEGRALS values for b=[{: >9.6f}] with Laguerre-order=[{: >3}]"
+            title_ = title_.format(cls.PARAMS_SHO.get(SHO_Parameters.b_length),
+                                   ORDER_GEN_LAGUERRE)
+            p_max = 0
+            txt_ = []
+            # for key_ in sorted(cls._talmi_integrals.keys()):
+            for key_ in cls._talmi_integrals.keys():
+                values = cls._talmi_integrals[key_]
+                
+                str_ = ''
+                for p, val in enumerate(values):
+                    val_str = f'{val: >15.12f}' if abs(val) > 1.0e-15 else f'           0.00'
+                    str_ += val_str + '  '
+                    
+                    p_max = p
+                txt_.append(f' {key_: >14} : {str_}')
+            
+            head_ = " {: >14} : {}".format('ITEM \ p-order', 
+                                           '  '.join([f"{i: >15}" for i in range(p_max+1)]))
+            
+            f.write('\n'.join([title_, head_, *txt_]))
+    
     def _matrixElementCompoundEvaluation(self):
         """
         Combination of the matrix element for the different modes and channels
@@ -318,7 +354,7 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
 class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
                                            _BaseTalmiMultinteraction_JScheme):
     """
-    Nuclear intermediate-short range interactions from Argone 14 potential:
+    Nuclear intermediate-short range interactions from Argonne 14 potential:
         R.B.Wiringa, R.A. Smith, T.L.Ainsworth
         Nucleon-nucleon potentials with and without Delta(1232) degrees of freedom
         Phys. Rev. C 29.4 (4-1984)
@@ -381,7 +417,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         T2  = 'T2'
         WS0 = 'WS0'
     
-    _DEFAULT_CONSTANTS_NN = {
+    _DEFAULT_CONSTANTS_NN = {   ## key_ = (S, T)
         'c_NN_T2'    : {(0,0): -9.12,   (0,1): -8.1188,
                         (1,0): -6.5572, (1,1): -2.63,},
         'c_NN_WS0'   : {(0,0):  5874,   (0,1):  2800,
@@ -482,11 +518,14 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             return True
         return False
     
+    
+    
+    
     #===========================================================================
     # INDIVIDUAL MATRIX ELEMETNTS AND TALMI INTEGRALS
     #=========================================================================== 
     @classmethod
-    def _integralCentralOPE(cls, p, key_):
+    def _integralCentralOPE_version1(cls, p, key_):
         """
         It has analytical expression, fill the different isospin-channels
         TODO: Test with quadratures
@@ -499,7 +538,29 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         Y2 = talmiIntegral(p, PotentialForms.YukawaGauss_power, b, mu, 
                            n_power=0, opt_mu_2=cutoff)
         I = Y1 - Y2
+                
+        cls._talmi_integrals[key_].append(I)
+    
+    @classmethod
+    def _integralCentralOPE(cls, p, key_):
+        """
+        It has analytical expression, fill the different isospin-channels
+        TODO: Test with quadratures
+        """
+        b      = cls.PARAMS_SHO.get(SHO_Parameters.b_length)
+        mu     = cls.PARAMS_FORCE_OPE.get(CentralMEParameters.mu_length)
+        cutoff = cls.PARAMS_FORCE.get(CentralMEParameters.opt_cutoff)
+        x, w   = getGeneralizedLaguerreRootsWeights(2*(2*p + 1))        
         
+        A  =  np.sqrt(2) * b / mu
+        B  = (mu / cutoff)**2
+        def __funct(x2, A, B):
+            return ((1 - np.exp(-B * x2)) / np.exp(x2 / (A**2))  )
+        I  = np.dot(w, __funct(np.power(x, 2), A, B))
+        
+        aux = (2*p + 3)*np.log(A) + gamma_half_int(2*p + 3)
+        I  *= 2 * b**3 / np.exp(aux)  
+                
         cls._talmi_integrals[key_].append(I)
     
     @classmethod
@@ -518,13 +579,17 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         def __funct(x2, A, B, n):
             return (np.power((1 - np.exp(-B*x2)), 2)
                     / (np.exp(x2 / (A**2)) * np.power(x2, n/2)) )
-        I = 0.0
+        
+        Ik = []
         x2 = np.power(x, 2)
         for n, c_i in enumerate(poly):
-            I += c_i * np.dot(w, __funct(x2, A, B, n))
+            Ik.append(c_i * np.dot(w, __funct(x2, A, B, n)))
+        I = sum(Ik)
         
         aux = (2*p + 3)*np.log(A) + gamma_half_int(2*p + 3)
         I  *= 2 * b**3 / np.exp(aux)
+        
+        if cls.DEBUG_MODE: XLog.write('I',  Ik=Ik, value=I)
         
         cls._talmi_integrals[key_].append(I)        
     
@@ -544,13 +609,18 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         def __funct(x2, A, B, k):
             return (np.power(1 - np.exp(-B*x2), 4) 
                     / (np.exp(x2 / ((2*A)**2)) * np.power(x2, k/2) ) )
-        I = 0.0
+        
+        Ik = []
         x2 =  np.power(x, 2)
         for k, c_k in enumerate(poly2):
-            I += c_k * (2**-k) * np.dot(w, __funct(x2, A, B, k))
+            aux = (2**k) * np.dot(w, __funct(x2, A, B, k))
+            Ik.append(c_k * aux)
+            
+        I = sum(Ik)
+        aux = (2*p + 3)*np.log(2*A) + gamma_half_int(2*p + 3)
+        I  *= (2 * b)**3 / np.exp(aux)
         
-        aux = (2*p + 3)*np.log(A) + gamma_half_int(2*p + 3) + 2*p*np.log(2)
-        I  *= b**3 / np.exp(aux)
+        if cls.DEBUG_MODE: XLog.write('I',  Ik=Ik, value=I)
         
         cls._talmi_integrals[key_].append(I)
     
@@ -562,12 +632,12 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         a  = cls.PARAMS_FORCE[CentralMEParameters.opt_mu_2]
         r0 = cls.PARAMS_FORCE[CentralMEParameters.opt_mu_3]
         
-        N = int(key_[-1])
+        N  = int(key_[-1])
         
-        I = talmiIntegral(p, PotentialForms.Wood_Saxon, b, mu, 
-                          n_power=N, opt_mu_2=a, opt_mu_3=r0)
+        I  = talmiIntegral(p, PotentialForms.Wood_Saxon, b, mu, 
+                           n_power=N, opt_mu_2=a, opt_mu_3=r0)
+                
         cls._talmi_integrals[key_].append(I)
-    
     
     @classmethod
     def _calculateIntegrals(cls, key_,  n_integrals =1):
@@ -609,6 +679,9 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
                 
             else:
                 raise MatrixElementException(f"not OPE or NN, got [{key_}]")
+        
+        ## Testing: export into results/logs to print the current status of the Ip
+        cls._exportTalmiIntegralsTesting('AV14-N')
     
     def _get_tensor_jrel_angular_me(self):
         """ C_T*<ljS| Y_2*X_2 |l'jS> with S=S'=1 """
@@ -683,9 +756,9 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         me_ang  = 2 * self.T*(self.T + 1) - 3 
         me_ang *= 2 * self.S_bra*(self.S_bra + 1) - 3 
         c1      = self.PARAMS_FORCE_OPE[CentralMEParameters.constant]
-        me_rad  = c1 * self.talmiIntegral(key_)
+        me_rad  = self.talmiIntegral(key_)
         
-        return me_ang * me_rad
+        return c1 * me_ang * me_rad
         
     def _component_OPE_tensor(self):
         """
@@ -698,9 +771,9 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         me_ang *= 2 * self.T*(self.T + 1) - 3 
         
         c1     = self.PARAMS_FORCE_OPE[CentralMEParameters.constant]
-        me_rad = c1 * self.talmiIntegral(key_)
+        me_rad = self.talmiIntegral(key_)
         
-        return me_ang * me_rad
+        return c1 * me_ang * me_rad
     
     def _component_NN_central(self):
         """ 
@@ -717,8 +790,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             
             constant = self.CONSTANTS_NN[int_][key_]
             integral = self.talmiIntegral(int_)
-            me_rad  += constant * integral 
-        
+            me_rad  += constant * integral
         return me_ang * me_rad
     
     def _component_NN_L2(self):
@@ -855,6 +927,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         ## central CD-ope & NN + l2 terms
         sum_central    = [0, 0, 0]
         sum_noncentral = [0, 0, 0, 0]
+        if self.DEBUG_MODE: XLog.write('compound')
         
         if (self._n_q == self._n_q_max_central):
             if (self._l == self._l_q) and (self.L_bra == self.L_ket):
@@ -863,8 +936,8 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
                 sum_central[1] += self._component_NN_central()
                 sum_central[2] += self._component_NN_L2() ## TODO: THIS WHAT???
             
-            if self.DEBUG_MODE: XLog.write('me_p', central=sum_central)
-            if self.S_bra != 1:    ## tensor/ls dependent have only S=1 components
+            if self.DEBUG_MODE: XLog.write('compound', central=sum_central)
+            if self.S_bra == 0:    ## tensor/ls dependent have only S=1 components
                 return sum(sum_central)
             
             assert self.S_bra == self.S_ket and (self._l+self._l_q)%2 == 0, "Invalid phase conditions"
@@ -874,7 +947,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             if self._l == self._l_q:
                 sum_noncentral[2] = self._component_NN_LS()
                 sum_noncentral[3] = self._component_NN_LS2()
-            if self.DEBUG_MODE: XLog.write('me_p', noncent=sum_noncentral)
+            if self.DEBUG_MODE: XLog.write('compound', noncent=sum_noncentral)
             
         elif self.S_bra == 1:
             ## tensor components can exceed the n' = n + (rho2 - rho1)//2
@@ -1169,6 +1242,8 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
                 raise MatrixElementException(f"not OPE or NN, got [{key_}]")
                         
             cls._integrals_p_max[key_] += 1
+        
+        cls._exportTalmiIntegralsTesting('AV18-N')
     
     def talmiIntegral(self, key_, MT=None):
         """ 
@@ -1889,7 +1964,7 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
                         
             cls._integrals_p_max[key_] += 1
             
-            
+        cls._exportTalmiIntegralsTesting('AV18-EM')
     
     #===========================================================================
     # ## _components

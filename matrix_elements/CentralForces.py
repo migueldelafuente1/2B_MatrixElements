@@ -409,6 +409,27 @@ class KineticTwoBody_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled): #
         value = fact * self._kin_factor * nabla_1 * nabla_2
         return value
 
+class KineticTwoBody_4Hamiltonian_JTScheme(KineticTwoBody_JTScheme):
+    
+    """
+    This class extends the kinnetic 2B correction to be included explicitly 
+    in the Hamiltonian term.
+    """
+                
+    def _LScoupled_MatrixElement(self):
+        
+        if not hasattr(self, "_kin_factor"):
+            self._kin_factor  = - Constants.HBAR_C**2
+            self._kin_factor /= (self.PARAMS_SHO[SHO_Parameters.A_Mass] 
+                    * (self.PARAMS_SHO[SHO_Parameters.b_length]**2)
+                    * Constants.M_MEAN)
+        
+        val = KineticTwoBody_JTScheme._LScoupled_MatrixElement(self)
+        if abs(val)>0:
+            _ = 0
+        return val
+
+
 class Quadratic_OrbitalMomentum_JTScheme(CentralForce_JTScheme):
     
     """

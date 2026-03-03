@@ -22,6 +22,8 @@ from matrix_elements.ArgonePotential import NucleonAv18TermsInteraction_JTScheme
 from matrix_elements.SkyrmeForces import ShortRangeSpinOrbit_COM_JTScheme
 from matrix_elements.MomentumForces import RelativeMomentumSquared_JTScheme,\
     TotalMomentumSquared_JTScheme
+from matrix_elements.MultipoleForces import MultipoleGaussian_JTScheme
+from matrix_elements.CentralForces import KineticTwoBody_4Hamiltonian_JTScheme
 
 
 def switchMatrixElementType(force, J_scheme=False):
@@ -53,6 +55,8 @@ def switchMatrixElementType(force, J_scheme=False):
         return CoulombForce
     elif force == ForceEnum.Kinetic_2Body:
         return KineticTwoBody_JTScheme
+    elif force == ForceEnum.Kinetic_COM:
+        return KineticTwoBody_4Hamiltonian_JTScheme    
     elif force == ForceEnum.Kinetic_Total:
         # return RelativeMomentumSquared_JTScheme
         return TotalMomentumSquared_JTScheme
@@ -70,6 +74,8 @@ def switchMatrixElementType(force, J_scheme=False):
         return Delta_JTScheme
     elif force == ForceEnum.Multipole_Delta:
         return MultipoleDelta_JTScheme
+    elif force == ForceEnum.Multipole_Gaussian:
+        return MultipoleGaussian_JTScheme
     elif force == ForceEnum.Multipole_Moment:
         return MultipoleMoment_JTScheme
     elif force == ForceEnum.CentralGeneralized:

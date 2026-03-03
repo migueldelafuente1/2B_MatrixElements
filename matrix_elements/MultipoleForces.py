@@ -6,7 +6,7 @@ Created on 23 oct 2023
 import numpy as np
 
 from helpers.Helpers import  safe_wigner_6j,\
-    safe_3j_symbols, almostEqual, safe_wigner_9j
+    safe_3j_symbols, almostEqual, safe_wigner_9j, gamma_half_int, fact
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_Antisym_JTCoupled, \
     MatrixElementException, _OneBodyMatrixElement_jjscheme
@@ -175,7 +175,8 @@ class _Multipole_JTScheme(_TwoBodyMatrixElement_Antisym_JTCoupled):
                     * safe_3j_symbols(j_b / 2, j_d / 2, lambda_, .5, -.5, 0))
         
         factor  = ((j_a + 1) * (j_b + 1) * (j_c + 1) * (j_d + 1))**0.5 
-        factor /= 4 * np.pi * ((-1)**((j_c + j_d)//2  - 1))
+        factor /= 4 * np.pi 
+        factor *= (-1)**((j_c + j_d)//2  - 1)
         
         return phs * factor * isos_f * val
     
@@ -340,7 +341,140 @@ class _MultipoleMoment_1BME(_OneBodyMatrixElement_jjscheme):
         return rad_ac 
         
         
+class MultipoleGaussian_JTScheme(_Multipole_JTScheme):
         
+    
+    @classmethod
+    def setInteractionParameters(cls, *args, **kwargs):
+        """
+        Arguments for a general potential form delta(r; mu_length, constant)
+        
+        :b_length 
+        :hbar_omega
+        :constants <dict> 
+            available constants A, B, C and D:
+            V(r1-r2)*(A + B*s(1)s(2) + C*t(1)t(2) + D*s(1)s(2)*t(1)t(2))        
+        """
+        
+        for param in AttributeArgs.ForceArgs.Multipole.members():
+            val = kwargs[MultipoleParameters.constants].get(param)
+            if val != None:
+                val = float(val)
+            kwargs[param] = val
+        for param in (MultipoleParameters.mu_length, ):
+            kwargs[param] = float(kwargs[param][AttributeArgs.value])
+            
+        del kwargs[MultipoleParameters.constants]
+        
+        if cls.PARAMS_FORCE:
+            cls.PARAMS_FORCE = {}
+        
+        params_and_defaults = {
+            SHO_Parameters.b_length     : 1,
+            SHO_Parameters.hbar_omega   : 1,
+            AttributeArgs.ForceArgs.Multipole.A    : 1,
+            AttributeArgs.ForceArgs.Multipole.B    : 0,
+            AttributeArgs.ForceArgs.Multipole.C    : 0,
+            AttributeArgs.ForceArgs.Multipole.D    : 0,
+            MultipoleParameters.mu_length          : 1    
+        }
+        
+        for param, default in params_and_defaults.items():
+            value = kwargs.get(param)
+            value = default if value == None else value
+            
+            if param in SHO_Parameters.members():
+                cls.PARAMS_SHO[param] = value
+            else:
+                cls.PARAMS_FORCE[param] = value
+                
+        B = cls.PARAMS_FORCE[AttributeArgs.ForceArgs.Multipole.B]
+        D = cls.PARAMS_FORCE[AttributeArgs.ForceArgs.Multipole.D]
+        
+        cls._evaluateSpinParts = False
+        ## spin dependent parts are highly consuming,
+        if not (almostEqual(B, 0, 1.e-9) and almostEqual(D, 0, 1.e-9)):
+            cls._evaluateSpinParts = True
+    
+    
+    S_RANGE_MAX = 30
+    _radial_Coeffs = {}
+    @classmethod
+    def _radialAuxCoeff(cls, k, s):
+        if not (k, s) in cls._radial_Coeffs:
+            val = - gamma_half_int(2*(s + k) + 3) - fact(s)
+            cls._radial_Coeffs[(k, s)] = np.exp(val) * np.sqrt(np.pi) / 2
+        return cls._radial_Coeffs[(k, s)]
+    
+    def _RadialCoeff(self, k):
+        sum_ = 0
+        
+        for s in range(self.S_RANGE_MAX +1):
+            
+            sum_s = [0, 0]
+            for term in (1, 2):
+                n ,l  = getattr(self.bra, f'n{term}'), getattr(self.bra, f'l{term}')
+                nq,lq = getattr(self.ket, f'n{term}'), getattr(self.ket, f'l{term}')
+                
+                self._n   = n
+                self._n_q = nq
+                self._l   = l
+                self._l_q = lq
+                    
+                sum_s[term - 1] = self._integrals1B(k,  s)
+            
+            coeff_s = self._radialAuxCoeff(k, s)
+            
+            sum_ += coeff_s * sum_s[0] * sum_s[1]
+        
+        return sum_ * (4*np.pi)
+    
+    def _normConstantSHO(self):
+        factor = 2 / (self.PARAMS_SHO[SHO_Parameters.b_length]**3)
+        aux = 0.5 * (fact(self._n) + fact(self._n_q) -
+                     gamma_half_int(2*(self._n + self._l) + 3 ) -
+                     gamma_half_int(2*(self._n_q + self._l_q) + 3 ) 
+        )
+        return factor * np.exp(aux)  
+    
+    def _LaguerreCoefficient(self, m, n, l):
+        
+        aux = (
+            gamma_half_int(2*(n + l) + 3 ) -
+            gamma_half_int(2*(l + m) + 3 ) -
+            fact(n - m) - fact(m)
+        )
+        return (-1)**m * np.exp(aux)
+        
+        
+    def _integrals1B(self, k, s):
+        
+        b_len   = self.PARAMS_SHO.get(SHO_Parameters.b_length)
+        mu_len  = self.PARAMS_FORCE.get(CentralMEParameters.mu_length)
+        A       = 1/b_len**2 + 1/mu_len**2
+        
+        KS = 2*s + k
+        
+        sum_ = 0
+        for m1 in range(self._n +1):
+            c1_ = self._LaguerreCoefficient(m1, self._n, self._l)
+            for m2 in range(self._n_q +1):
+                c2_ = self._LaguerreCoefficient(m2, self._n_q, self._l_q)
+                
+                K = 2*(m1 + m2) + (self._l + self._l_q) + KS + 2
+                
+                factor = (
+                    gamma_half_int(K + 1)
+                    + np.log(b_len / mu_len) * (KS)
+                    - np.log(b_len) * (K - 2)
+                    - np.log(A) * ((K + 1)/2)
+                )
+                
+                sum_ += c1_ * c2_ * 0.5 * np.exp(factor)
+        
+        return sum_ * self._normConstantSHO()
+        
+    
 
 
 class MultipoleMoment_JTScheme(_Multipole_JTScheme):
@@ -366,8 +500,11 @@ class MultipoleMoment_JTScheme(_Multipole_JTScheme):
         """
         cst_ = CentralMEParameters.constant
         lmd_ = CentralMEParameters.n_power
+        len_ = CentralMEParameters.mu_length
         kwargs[cst_] = float(kwargs[cst_][AttributeArgs.value])
         kwargs[lmd_] = int  (kwargs[lmd_][AttributeArgs.value])
+        if len_ in kwargs:
+            kwargs[len_] = float(kwargs[len_][AttributeArgs.value])
         
         if cls.PARAMS_FORCE:
             cls.PARAMS_FORCE = {}
@@ -377,6 +514,7 @@ class MultipoleMoment_JTScheme(_Multipole_JTScheme):
             SHO_Parameters.hbar_omega    : 1,
             CentralMEParameters.constant : 1,
             CentralMEParameters.n_power  : 0,
+            CentralMEParameters.mu_length: 0,
         }
         
         for param, default in params_and_defaults.items():
