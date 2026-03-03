@@ -1,7 +1,7 @@
 <input>
 	<Interaction_Title name="B1, +LS+Coul" details=""/>
 	<Output_Parameters>
-		<Output_Filename>D1S_MZ</Output_Filename>
+		<Output_Filename>B1_MZ</Output_Filename>
 		<Hamil_Type>4</Hamil_Type>
 		<COM_correction>1</COM_correction>
 	</Output_Parameters>
