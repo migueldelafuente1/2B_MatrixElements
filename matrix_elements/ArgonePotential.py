@@ -31,7 +31,8 @@ import os, shutil
 
 from matrix_elements.transformations import TalmiMultiInteractionTransformation
 from matrix_elements.MatrixElement import MatrixElementException,\
-    _TwoBodyMatrixElement_JTCoupled, _TwoBodyMatrixElement_JCoupled
+    _TwoBodyMatrixElement_JTCoupled, _TwoBodyMatrixElement_JCoupled,\
+    _TwoBodyMatrixElement_Antisym_JCoupled
 from helpers.Enums import SHO_Parameters, CentralMEParameters, Enum,\
     PotentialForms, CouplingSchemeEnum
 from helpers.Helpers import ConstantsV18, safe_wigner_6j, safe_3j_symbols,\
@@ -50,7 +51,8 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
     '''
     COUPLING = CouplingSchemeEnum.JJ
     _BREAK_ISOSPIN    = True
-    EXPLICIT_ANTISYMM = True
+    # EXPLICIT_ANTISYMM =   ## defined from _TwoBodyMatrixElement_<Antisymm>_JCoupled
+    SYMMETRICAL_PNPN  = True # The pnnp phase is accounted.
     
     _TEST_QUADRATURES = True
     
@@ -62,13 +64,24 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
     _ls2_ang_me    = {} ## only for j-relative decomposition    # (j, l): value
     _l2_ang_me     = {} ## (lambda, L, l): value
     _ls_ang_me     = {} ## (L_bra, L_ket, L, l, _l_q): value
-    
+    _6j_ke1_memo   = {} ## (L_bra, L_ket, J) # S=S'=1 k=1
+    _6j_ke2_memo   = {} ## (L_bra, L_ket, J) # S=S'=1 K=2
     
     def __init__(self, bra, ket, run_it=True):        
         _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
     
+    def _nullConditionsOnParticleLabelStates(self):
+        """ Return True always, AV is valid for al pppp, pnpn, etc. """
+        return True
+    
     def _deltaConditionsForCOM_Iteration(self):
-        """ For the antisymmetrization_ of the wave functions. """
+        """ 
+        For the antisymmetrization_ of the wave functions. 
+        
+        ## if self.MT == 0 : return True
+        Must not be done, since its a phase that came from <ab|V|dc> permutation
+        """
+        if self.MT == 0 : return True
         if (((self.S_bra + 1 + self._l) % 2 == 1) and 
             ((self.S_ket + 1 + self._l_q) % 2 == 1)):
                 return True
@@ -104,11 +117,25 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
         gen_ = (l_q for l_q in range(_L_min, _L_max +1))
         return tuple(gen_)
     
+    def _getPhaseForpnnpExchange(self):
+        
+        if self.bra.identicalParticles: return 1
+        
+        pn_b = str(self.bra)[-3:-1]
+        pn_k = str(self.ket)[-3:-1]
+        #pn_b = self.bra.sp_state_1.m_t, self.bra.sp_state_1.m_t
+        
+        if pn_b != pn_k: 
+            return (-1)**self.ket.J
+            #return (-1)**((self.ket.j1 + self.ket.j2)//2 + 1 + self.ket.J)
+        return 1 # 
+    
     def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
         """ 
         <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
         """
-        return self.centerOfMassMatrixElementEvaluation()
+        #phs_pnpn = self._getPhaseForpnnpExchange()
+        return self.centerOfMassMatrixElementEvaluation() #* phs_pnpn
     
     def centerOfMassMatrixElementEvaluation(self):
         """
@@ -141,6 +168,8 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
         """
         if self._p > self._integrals_p_max[key_]:
             n_integrals = max(self.rho_bra, self.rho_ket, 1)
+            if self._integrals_p_max[key_] == -1: 
+                n_integrals += 1    ## otherwise, p=0 is not included if rho >=1
             self._calculateIntegrals(key_, n_integrals)
         return self._talmi_integrals[key_][self._p]
     
@@ -180,13 +209,19 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
     
     def _get_tensor_angular_me(self):
         """ Terms for tensor """
-        if self.S_bra != 1: return 0
-        
+        if self.S_bra != 1 or self.S_ket != 1: return 0
+                
         ang_me = self._com_tensor_angular_me()
         if self.isNullValue(ang_me): return 0
         
-        aux = safe_wigner_6j(self.L_bra, self.S_bra, self.J, 
-                             self.S_ket, self.L_ket, 2)
+        tupl = self._get_key_angular_momentums(self.L_bra, self.L_ket, self.J)
+        if tupl in self._6j_ke2_memo: 
+            aux = self._6j_ke2_memo.get(tupl)
+        else:
+            aux = safe_wigner_6j(self.L_bra, self.S_bra, self.J, 
+                                 self.S_ket, self.L_ket, 2)
+            self._6j_ke2_memo[tupl] = aux
+        
         if self.isNullValue(aux):
             return 0
         ang_me *= aux * (-1)**(self.S_ket + self.J + self.L_bra + self.L_ket)
@@ -235,8 +270,14 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
         ang_me = self._com_spinOrbit_angular_me()
         if self.isNullValue(ang_me): return 0
         
-        aux = safe_wigner_6j(self.L_bra, self.S_bra, self.J, 
-                             self.S_ket, self.L_ket, 1)
+        tupl = self._get_key_angular_momentums(self.L_bra, self.L_ket, self.J)
+        if tupl in self._6j_ke1_memo: 
+            aux = self._6j_ke1_memo.get(tupl)
+        else:
+            aux = safe_wigner_6j(self.L_bra, self.S_bra, self.J, 
+                                 self.S_ket, self.L_ket, 1)
+            self._6j_ke1_memo[tupl] = aux
+        
         if self.isNullValue(aux):
             return 0
         
@@ -308,7 +349,7 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
     
     ## Methods
     ## -------------------------------------------------------------------------
-    
+
     @classmethod
     def _exportTalmiIntegralsTesting(cls, subtitle=''):
         """ Save the Talmi integrals in results/_logs file."""
@@ -316,6 +357,7 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
         if not os.path.exists('results'): os.makedirs('results')
         if not os.path.exists('results/_logs'): os.makedirs('results/_logs')
         
+        __ISOS_LABELS = {(1,-1): '1pp', (1,0): '1pn', (1,1): '1nn', (0,0): '0pn'}
         from helpers.Helpers import ORDER_GEN_LAGUERRE
         with open(f'results/_logs/talmiIntegralsArgonne{subtitle}_{ORDER_GEN_LAGUERRE}.txt', 'w+') as f:
             
@@ -328,15 +370,28 @@ class _BaseTalmiMultinteraction_JScheme(_TwoBodyMatrixElement_JCoupled,
             for key_ in cls._talmi_integrals.keys():
                 values = cls._talmi_integrals[key_]
                 
-                str_ = ''
-                for p, val in enumerate(values):
-                    val_str = f'{val: >15.12f}' if abs(val) > 1.0e-15 else f'           0.00'
-                    str_ += val_str + '  '
-                    
-                    p_max = p
-                txt_.append(f' {key_: >14} : {str_}')
+                
+                if isinstance(values, dict): ## isospin separated forces
+                    for isos, vals in values.items():
+                        str_ = ''
+                        t_str = __ISOS_LABELS[isos]
+                        
+                        for p, val in enumerate(vals):
+                            val_str = f'{val: >15.12f}' if abs(val) > 1.0e-15 else f'           0.00'
+                            str_ += val_str + '  '
+                        
+                        s = key_+ " " + t_str
+                        txt_.append(f' {s: >16} : {str_}')
+                else:
+                    str_ = ''
+                    for p, val in enumerate(values):
+                        val_str = f'{val: >15.12f}' if abs(val) > 1.0e-15 else f'           0.00'
+                        str_ += val_str + '  '
+                        
+                        p_max = p
+                    txt_.append(f' {key_: >16} : {str_}')
             
-            head_ = " {: >14} : {}".format('ITEM \ p-order', 
+            head_ = " {: >16} : {}".format('ITEM \ p-order', 
                                            '  '.join([f"{i: >15}" for i in range(p_max+1)]))
             
             f.write('\n'.join([title_, head_, *txt_]))
@@ -769,6 +824,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
         
         me_ang = self._get_tensor_angular_me()
         me_ang *= 2 * self.T*(self.T + 1) - 3 
+        if self.isNullValue(me_ang): return 0
         
         c1     = self.PARAMS_FORCE_OPE[CentralMEParameters.constant]
         me_rad = self.talmiIntegral(key_)
@@ -799,6 +855,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
         """
         me_ang = self._get_OrbitSquared_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         for x in self.SubNNTermNNEnum.members():
             int_ = self.getInteractionKeyword(self.TermEnum.l2, self.PartEnum.NN, x)
@@ -817,6 +874,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
         """
         me_ang = self._get_tensor_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         for x in self.SubNNTermNNEnum.members():
             int_ = self.getInteractionKeyword(self.TermEnum.t, self.PartEnum.NN, x)
@@ -835,6 +893,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
         """
         me_ang = self._get_spinOrbit_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         for x in self.SubNNTermNNEnum.members():
             int_ = self.getInteractionKeyword(self.TermEnum.lS, self.PartEnum.NN, x)
@@ -853,6 +912,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
             <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
         """
         me_ang = self._get_spinOrbitSquared_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         for x in self.SubNNTermNNEnum.members():
             int_ = self.getInteractionKeyword(self.TermEnum.lS2, self.PartEnum.NN, x)
@@ -962,7 +1022,7 @@ class NucleonAv14TermsInteraction_JTScheme(_TwoBodyMatrixElement_JTCoupled,
 class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme):
     
     '''
-    Nuclear intermediate-short range interactions from Argone 18 potential:
+    Nuclear intermediate-short range interactions from Argonne 18 potential:
         R.B.Wiringa, V.G.J. Stoks, R.Schiavilla
         Accurate nucleon-nucleon potential with charge-independence breaking
         Phys. Rev. C 51.1 (1-1994)
@@ -1130,7 +1190,7 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
                 CentralMEParameters.mu_length: mu_pp,
                 },
             (0, 0): {
-                CentralMEParameters.constant : -const_pn1, 
+                CentralMEParameters.constant : const_pn1, 
                 CentralMEParameters.mu_length: mu_pn,
                 },
         }
@@ -1146,7 +1206,7 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         
         cls.CONSTANTS_NN = deepcopy(cls._DEFAULT_CONSTANTS_NN)
         
-        print(_LINE_2,"  Default constants for [Argone 14 - Nuclear] interaction:")
+        print(_LINE_2,"  Default constants for [Argone 18 - Nuclear] interaction:")
         prettyPrintDictionary({'PARAMS_FORCE    ' : cls.PARAMS_FORCE, })
         prettyPrintDictionary({'PARAMS_FORCE_OPE' : cls.PARAMS_FORCE_OPE})
         prettyPrintDictionary({'CONSTANTS_NN    ' : cls.CONSTANTS_NN, })
@@ -1163,6 +1223,18 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         
         cls._integrals_p_max = dict([(k,-1) for k in cls._talmi_integrals.keys()])
         cls._talmi_integrals = dict([(k, list()) for k in cls._talmi_integrals.keys()])
+        cls._talmi_integrals['c_OPE'] = {
+            (1, 1): [],    # pp -> Y(m_pi 0)
+            (1, 0): [],    # pn -> Y(m_pi +-)
+            (1,-1): [],    # nn -> Y(m_pi 0)
+            (0, 0): [],    # pn -> Y(m_pi +-)
+        }
+        cls._talmi_integrals['t_OPE'] = {
+            (1, 1): [],    # pp -> T(m_pi 0)
+            (1, 0): [],    # pn -> T(m_pi +-)
+            (1,-1): [],    # nn -> T(m_pi 0)
+            (0, 0): [],    # pn -> T(m_pi +-)
+        }
     
     #===========================================================================
     # INDIVIDUAL MATRIX ELEMETNTS AND TALMI INTEGRALS
@@ -1177,15 +1249,20 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         cutoff = cls.PARAMS_FORCE.get(CentralMEParameters.opt_cutoff)
         
         for T in (0, 1):
-            for MT in range(-T, T +1):
-                mu = cls.PARAMS_FORCE_OPE[(T, MT)].get(CentralMEParameters.mu_length)
-                
-                Y1 = talmiIntegral(p, PotentialForms.Yukawa, b, mu)
-                Y2 = talmiIntegral(p, PotentialForms.YukawaGauss_power, b, mu, 
-                                   n_power=0, opt_mu_2=cutoff)
-                I = Y1 - Y2
-                
-                cls._talmi_integrals[key_][(T, MT)].append(I)
+            # for MT in range(-T, T +1): ## omitted, mu_T=1 are redundant
+            MT = 0
+            mu = cls.PARAMS_FORCE_OPE[(T, MT)].get(CentralMEParameters.mu_length)
+            
+            Y1 = talmiIntegral(p, PotentialForms.Yukawa, b, mu)
+            Y2 = talmiIntegral(p, PotentialForms.YukawaGauss_power, b, mu, 
+                               n_power=0, opt_mu_2=cutoff)
+            I = Y1 - Y2
+            
+            cls._talmi_integrals[key_][(T, MT)].append(I)
+            
+            if (T == 1):
+                cls._talmi_integrals[key_][(T, -1)].append(I)
+                cls._talmi_integrals[key_][(T,  1)].append(I)
     
     @classmethod
     def _integralTensorOPE(cls, p, key_):
@@ -1198,23 +1275,28 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         cutoff = cls.PARAMS_FORCE[CentralMEParameters.opt_cutoff]
         
         for T in (0, 1):
-            for MT in range(-T, T +1):
-                # p  = self._p 
-                mu = cls.PARAMS_FORCE_OPE[(T, MT)].get(CentralMEParameters.mu_length)
-                A  = np.sqrt(2) * b / mu
-                B  = (mu / cutoff)**2     ## (B/A)^2 with B = sqrt(2)b / cutoff
-                def __funct(x2, A, B, n):
-                    return (np.power((1 - np.exp(-B*x2)), 2)
-                            / (np.exp(x2 / (A**2)) * np.power(x2, n/2)) )
-                I = 0.0
-                x2 = np.power(x, 2)
-                for n, c_i in enumerate(poly):
-                    I += c_i * np.dot(w, __funct(x2, A, B, n))
-                
-                aux = (2*p + 3)*np.log(A) + gamma_half_int(2*p + 3)
-                I  *= 2 * b**3 / np.exp(aux)
-                
-                cls._talmi_integrals[key_][(T, MT)].append(I)
+            # for MT in range(-T, T +1):
+            MT = 0
+            # p  = self._p 
+            mu = cls.PARAMS_FORCE_OPE[(T, MT)].get(CentralMEParameters.mu_length)
+            A  = np.sqrt(2) * b / mu
+            B  = (mu / cutoff)**2     ## (B/A)^2 with B = sqrt(2)b / cutoff
+            def __funct(x2, A, B, n):
+                return (np.power((1 - np.exp(-B*x2)), 2)
+                        / (np.exp(x2 / (A**2)) * np.power(x2, n/2)) )
+            I = 0.0
+            x2 = np.power(x, 2)
+            for n, c_i in enumerate(poly):
+                I += c_i * np.dot(w, __funct(x2, A, B, n))
+            
+            aux = (2*p + 3)*np.log(A) + gamma_half_int(2*p + 3)
+            I  *= 2 * b**3 / np.exp(aux)
+            
+            cls._talmi_integrals[key_][(T, MT)].append(I)
+            
+            if (T == 1):
+                cls._talmi_integrals[key_][(T, -1)].append(I)
+                cls._talmi_integrals[key_][(T,  1)].append(I)
     
     @classmethod
     def _calculateIntegrals(cls, key_,  n_integrals =1):
@@ -1245,25 +1327,42 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         
         cls._exportTalmiIntegralsTesting('AV18-N')
     
-    def talmiIntegral(self, key_, MT=None):
+    def talmiIntegral(self, key_, T=None, MT=None):
         """ 
         Get or update Talmi integrals for the calculations
         """
+        ## Note: add the p=0 is not included if rho >=1
+        plusp0 = 1 if self._integrals_p_max[key_] == -1  else 0   
         if key_.endswith(self.PartEnum.OPE):
-            assert isinstance(MT, int), "MT is required for OPE part!"
+            assert isinstance(MT, int) and isinstance(T, int), "T, MT are required for OPE part!"
             if self._p > self._integrals_p_max[key_]:
-                n_integrals = max(self.rho_bra, self.rho_ket, 1)
+                n_integrals = max(self.rho_bra, self.rho_ket, 1) + plusp0
                 ## calculate integrals for OPE terms calculates all the MT terms
                 self._calculateIntegrals(key_, n_integrals)
-            return self._talmi_integrals[key_][(self.T, MT)][self._p]
+            return self._talmi_integrals[key_][(T, MT)][self._p]
         else:
             if self._p > self._integrals_p_max[key_]:
-                n_integrals = max(self.rho_bra, self.rho_ket, 1)
+                n_integrals = max(self.rho_bra, self.rho_ket, 1) + plusp0
                 self._calculateIntegrals(key_, n_integrals)
             return self._talmi_integrals[key_][self._p]
     
     ## ------------------------------------------------------------------------
     ## COMPONENTS
+    
+    def _getChargeIsotensorValue(self):
+        """
+        T_12 = 3 t_z(1) * t_z(2) - t(1) * t(2) = 3*tz1*tz2 - 1/2(T(T+1) - 2*3/4)
+        """
+        if self.T == 0:
+            return   0
+        if abs(self.MT) == 1:
+            return 0.5
+        else:
+            return  -1
+        
+    def _getChargeAsymmetricValue(self):
+        """ t_z(1) - t_z(2) // (unnecessary)"""
+        return self.MT
     
     def _component_OPE_central(self):
         """ 
@@ -1281,43 +1380,39 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         idx_   = 3 - (2*self.S_bra + self.T)
         kkk    = CentralMEParameters.constant
         ##             ST  11 10 01  00  
-        _CIDA_cst = {'s'  : [3, 1, -3, -1], 'Ts':  [1,  0, -1, 0],  
+        _CIDA_cst = {'s'  : [3, 1, -3, -1], 
+                     'Ts':  [1, 0, -1,  0],  
                      'tzs': [1, 0, -1,  0], }
         
-        for x in self.SubNNTermNNEnum.members():
-            integrals_CI, integrals_CD, integrals_CA = 0.0, 0.0, 0.0
-            
-            int_ = self.getInteractionKeyword(self.TermEnum.c, self.PartEnum.OPE)
-            if self._SWITCH_OFF_TERMS[int_]: continue
-            
-            if (T == 0):
-                integral = self.talmiIntegral(int_, MT=0)                
-                integrals_CI = self.PARAMS_FORCE_OPE[(T, 0)][kkk] * integral
-            else:
-                # for MT in (-1,0,1):
-                #     key_ = (self.S_bra, self.T, MT)
-                integral_pp = self.talmiIntegral(int_, MT= 1)
-                integral_pn = self.talmiIntegral(int_, MT= 0)
-                integral_nn = self.talmiIntegral(int_, MT=-1)
-                integrals_CI = (
-                    self.PARAMS_FORCE_OPE[(T, 1)][kkk] * integral_pp +
-                    self.PARAMS_FORCE_OPE[(T, 0)][kkk] * integral_pn +
-                    self.PARAMS_FORCE_OPE[(T,-1)][kkk] * integral_nn) / 3
-                integrals_CD = ((
-                    self.PARAMS_FORCE_OPE[(T, 1)][kkk] * integral_pp +
-                    self.PARAMS_FORCE_OPE[(T,-1)][kkk] * integral_nn) / 2
-                    - self.PARAMS_FORCE_OPE[(T, 0)][kkk] * integral_pn) / 6
-                integrals_CA = (
-                    self.PARAMS_FORCE_OPE[(T, 1)][kkk] * integral_pp -
-                    self.PARAMS_FORCE_OPE[(T,-1)][kkk] * integral_nn)  / 4
-            
-            sum_ = 0
-            sum_ += _CIDA_cst['s'][idx_] * integrals_CI / 16
-            if self.T == 1:
-                sum_ += _CIDA_cst[ 'Ts'][idx_] * integrals_CD / 4
-                sum_ += _CIDA_cst['tzs'][idx_] * integrals_CA / 4
-            
-            me_rad  += sum_
+        integrals_CI, integrals_CD, integrals_CA = 0.0, 0.0, 0.0
+        
+        int_ = self.getInteractionKeyword(self.TermEnum.c, self.PartEnum.OPE)
+        if self._SWITCH_OFF_TERMS[int_]: return 0
+        
+        integral_pn  = self.talmiIntegral(int_, T=1, MT=self.MT)
+        integral_pn *= self.PARAMS_FORCE_OPE[(1, self.MT)][kkk]
+        integral_pp, integral_nn = integral_pn, integral_pn
+        
+        if self.MT == 0:
+            integral_pn += (
+                self.talmiIntegral(int_, T=0, MT=self.MT) *
+                self.PARAMS_FORCE_OPE[(0, self.MT)][kkk] * ((-1)**(self.T+1)) )            
+        
+        if (T == 0):
+            integrals_CI = integral_pn
+        else:
+            integrals_CI = ( integral_pp + integral_pn + integral_nn) / 3
+            integrals_CD = ((integral_pp + integral_nn) / 2 - integral_pn) / 6
+            integrals_CA = ( integral_pp - integral_nn) / 4
+        
+        sum_ = 0
+        sum_ += _CIDA_cst['s'][idx_] * integrals_CI / 16
+        if self.T == 1:
+            T12 = self._getChargeIsotensorValue()
+            sum_ += _CIDA_cst[ 'Ts'][idx_] * T12 * integrals_CD / 4
+            sum_ += _CIDA_cst['tzs'][idx_] * self.MT * integrals_CA / 4
+        
+        me_rad  += sum_
         return me_ang * me_rad
     
     def _component_OPE_tensor(self):
@@ -1327,6 +1422,7 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         if self.S_bra == 0: return 0
         
         me_ang = self._get_tensor_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         T      =  self.T
         idx_   = 3 - (2*self.S_bra + self.T)
@@ -1334,36 +1430,36 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         ##             ST  11 10 01  00  
         _CIDA_cst = {'c': [3, 1, 0, 0], 'T':  [1, 0, 0, 0]}
         
-        for x in self.SubNNTermNNEnum.members():
-            integrals_CI, integrals_CD = 0.0, 0.0
-            
-            int_ = self.getInteractionKeyword(self.TermEnum.t, self.PartEnum.OPE)
-            if self._SWITCH_OFF_TERMS[int_]: continue
-            
-            if (T == 0):
-                integral = self.talmiIntegral(int_, MT=0)
-                integrals_CI = self.PARAMS_FORCE_OPE[(T, 0)][kkk] * integral
-            else:
-                integral_pp = self.talmiIntegral(int_, MT= 1)
-                integral_pn = self.talmiIntegral(int_, MT= 0)
-                integral_nn = self.talmiIntegral(int_, MT=-1)
-                integrals_CI = (
-                    self.PARAMS_FORCE_OPE[(T, 1)][kkk] * integral_pp +
-                    self.PARAMS_FORCE_OPE[(T, 0)][kkk] * integral_pn +
-                    self.PARAMS_FORCE_OPE[(T,-1)][kkk] * integral_nn ) / 3
-                integrals_CD = ((
-                    self.PARAMS_FORCE_OPE[(T, 1)][kkk] * integral_pp +
-                    self.PARAMS_FORCE_OPE[(T,-1)][kkk] * integral_nn ) / 2
-                    - self.PARAMS_FORCE_OPE[(T, 0)][kkk] * integral_pn) / 6
-            ## integrals_CA:: specified in the article: 
-            ## ""we neglect the possibility of a charge-asymmetric tensor term""
-            
-            sum_ = 0
-            sum_ += _CIDA_cst['c'][idx_] * integrals_CI / 4
-            if self.T == 1:
-                sum_ += _CIDA_cst['T'][idx_] * integrals_CD
-            
-            me_rad  += sum_
+        integrals_CI, integrals_CD = 0.0, 0.0
+        
+        int_ = self.getInteractionKeyword(self.TermEnum.t, self.PartEnum.OPE)
+        if self._SWITCH_OFF_TERMS[int_]: return 0
+        
+        integral_pn  = self.talmiIntegral(int_, T=1, MT=self.MT)
+        integral_pn *= self.PARAMS_FORCE_OPE[(1, self.MT)][kkk]
+        integral_pp, integral_nn = integral_pn, integral_pn
+        
+        if self.MT == 0:
+            integral_pn += (
+                self.talmiIntegral(int_, T=0, MT=self.MT) *
+                self.PARAMS_FORCE_OPE[(0, self.MT)][kkk] * ((-1)**(self.T+1)) )            
+        
+        if (T == 0):
+            integrals_CI = integral_pn
+        else:
+            integrals_CI = ( integral_pp + integral_pn + integral_nn) / 3
+            integrals_CD = ((integral_pp + integral_nn) / 2 - integral_pn) / 6
+            integrals_CA = ( integral_pp - integral_nn) / 4
+        ## integrals_CA:: specified in the article: 
+        ## ""we neglect the possibility of a charge-asymmetric tensor term""
+        
+        sum_ = 0
+        sum_ += _CIDA_cst['c'][idx_] * integrals_CI / 4
+        if self.T == 1:
+            T12 = self._getChargeIsotensorValue()
+            sum_ += _CIDA_cst['T'][idx_] * T12 * integrals_CD
+        
+        me_rad  += sum_
         return me_ang * me_rad
     
     def _component_NN_central(self):
@@ -1381,10 +1477,10 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         S, T   = self.S_bra, self.T
         idx_   = 3 - (2*self.S_bra + self.T)
         ##             ST  11 10 01  00  
-        _CIDA_cst = {'c': [9, 3,  3,  1], 't':   [3, -3, 1, -1], 
-                     's': [3, 1, -3, -1], 'ts':  [1, -1, -1, 1], 
-                     'T': [3, 0, 1, 0],   'Ts':  [1,  0, -1, 0], 
-                     'tz':[3, 0, 1, 0],   'tzs': [1,  0, -1, 0],}
+        _CIDA_cst = {'c': [9, 3,  3,  1], 't':   [3, -3,  1, -1], 
+                     's': [3, 1, -3, -1], 'ts':  [1, -1, -1,  1], 
+                     'T': [3, 0,  1,  0], 'Ts':  [1,  0, -1,  0], 
+                     'tz':[3, 0,  1,  0], 'tzs': [1,  0, -1,  0],}
         
         for x in self.SubNNTermNNEnum.members():
             integrals_CI, integrals_CD, integrals_CA = 0.0, 0.0, 0.0
@@ -1413,9 +1509,12 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
             for prt in ('c', 't', 's', 'ts'):
                 sum_ += _CIDA_cst[prt][idx_] * integrals_CI / 16
             if self.T == 1:
-                for prt in ('T', 'Ts', 'tz'):
-                    sum_ += _CIDA_cst[prt][idx_] * integrals_CD / 4
-                sum_ += _CIDA_cst['tzs'][idx_] * integrals_CA / 4
+                T12 = self._getChargeIsotensorValue()
+                for prt in ('T', 'Ts'):
+                    sum_ += _CIDA_cst[prt][idx_] * T12 * integrals_CD / 4
+
+                for prt in ('tz', 'tzs'):
+                    sum_ += _CIDA_cst[prt][idx_] * self.MT * integrals_CA / 4
             
             me_rad  += sum_
         return me_ang * me_rad
@@ -1431,6 +1530,7 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
                 CA = tauZ, sig*tauZ
         """
         me_ang = self._get_OrbitSquared_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         S, T   = self.S_bra, self.T
         idx_   = 3 - (2*self.S_bra + self.T)
@@ -1461,6 +1561,7 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         """
         if self.S_bra == 0: return 0
         me_ang = self._get_tensor_angular_me()
+        if self.isNullValue(me_ang): return 0
         me_rad = 0.0
         S, T   = self.S_bra, self.T
         idx_   = 3 - (2*self.S_bra + self.T)
@@ -1489,6 +1590,7 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         """
         if self.S_bra == 0: return 0
         me_ang = self._get_spinOrbit_angular_me()
+        if self.isNullValue(me_ang): return 0
         
         me_rad = 0.0
         S, T   = self.S_bra, self.T
@@ -1518,6 +1620,8 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         """
         if self.S_bra == 0: return 0
         me_ang = self._get_spinOrbitSquared_angular_me()
+        if self.isNullValue(me_ang): return 0
+        
         me_rad = 0.0
         S, T   = self.S_bra, self.T
         idx_   = 3 - (2*self.S_bra + self.T)
@@ -1540,10 +1644,216 @@ class NucleonAv18TermsInteraction_JTScheme(NucleonAv14TermsInteraction_JTScheme)
         return me_ang * me_rad
     
     # def _matrixElementCompoundEvaluation(self): Not needed to be overwriten
+    
 
+
+class NucleonAv18TermsInteraction_JScheme(NucleonAv18TermsInteraction_JTScheme,
+                                          _TwoBodyMatrixElement_JCoupled):
+    
+    """
+    The AV-18 breaks the isospin dependence. The previous procedure is not valid
+    since it cannot express the _component_NN / OPE dependence simultaneously 
+    on T and MT. This is allows an intermediate usage:
+        a) is in J scheme - MT can be defined
+        b) the pnpn terms, that include both T states, but change the isospin 
+            exchange in the pnnp case.
+            * Default values from the former class definitions are now valid.
+            *
+    """
+    
+    COUPLING = CouplingSchemeEnum.JJ
+    _BREAK_ISOSPIN    = True
+    
+    def __init__(self, bra, ket, run_it=True):
+        _TwoBodyMatrixElement_JCoupled.__init__(self, bra, ket, run_it=run_it)
+        
+    def _nullConditionForSameOrbit(self):
+        _TwoBodyMatrixElement_JCoupled._nullConditionForSameOrbit(self)
+    
+    def _LScoupled_MatrixElement(self):#, L, S, L_ket=None, S_ket=None):
+        """ 
+        <(n1,l1)(n2,l2) (LS)| V |(n1,l1)'(n2,l2)'(L'S') (T)>
+        
+        Modification for the Isospin broken TBME. Evaluates the different T values
+        for the pppp / nnnn = V[S,T=1,MT]
+            pnpn = 1/2 (V[S,T=1,MT=0] + V[S,T=0,MT=0])
+            pnnp = 1/2 (V[S,T=1,MT=0] - V[S,T=0,MT=0])
+        """
+        if abs(self.MT) == 1:
+            self.T = 1
+            return self.centerOfMassMatrixElementEvaluation()
+        else:
+            SV = 1 if self._particleIndex[:2] == self._particleIndex[2:] else -1
+            val = 0
+            
+            self.T = 1
+            val +=      self.centerOfMassMatrixElementEvaluation()
+            self.T = 0
+            val += SV * self.centerOfMassMatrixElementEvaluation()
+                
+            return val / 2   
+
+class NucleonAv18TermsInteraction_bench_Jscheme(NucleonAv18TermsInteraction_JScheme):
+    
+    """
+    The interaction, as defined in eq. 20 from the article does not require 
+    the isospin/projection shit. Evaluate the interaction element by element.
+    
+    This leads to an expression where we can test the projection stuff.
+    
+    * MODIFICATIONS:
+        1. The tensor (angular part) is now evaluated before the _components.
+        2. The _componet parts does not have the projection operators
+    
+    """
+    
+    def _component_OPE_central(self):
+        """
+        Central terms from the OPE term, the np states (MT=0) has two terms.
+            v^ope = pp:        f_pp^2 * v(m0)
+                    nn:        f_nn^2 * v(m0)
+                    pn: f_pp * f_nn   * v(m0) + (-)^(T+1) 2*f_c *  v(m_+-)
+        """
+        me_ang = 2 * self.S_bra * (self.S_bra + 1) - 3
+        me_rad = 0.0
+        kkk    = CentralMEParameters.constant
+            
+        int_ = self.getInteractionKeyword(self.TermEnum.c, self.PartEnum.OPE)
+        if self._SWITCH_OFF_TERMS[int_]: return 0
+        
+        integral  = self.talmiIntegral(int_, T=1, MT=self.MT)
+        integral *= self.PARAMS_FORCE_OPE[(1, self.MT)][kkk]
+        if self.MT == 0:
+            integral += (
+                self.talmiIntegral(int_, T=0, MT=self.MT) *
+                self.PARAMS_FORCE_OPE[(0, self.MT)][kkk] * ((-1)**(self.T+1)) )
+        me_rad    = integral 
+        
+        return me_ang * me_rad
+        
+    def _component_OPE_tensor(self):
+        """
+        Tensor S12 terms from the OPE term, the np states (MT=0) has two terms.
+        """
+        if self.S_bra == 0: return 0
+        me_ang = self._get_tensor_angular_me()
+        if self.isNullValue(me_ang): return 0
+        
+        me_rad = 0.0
+        kkk    = CentralMEParameters.constant
+            
+        int_ = self.getInteractionKeyword(self.TermEnum.t, self.PartEnum.OPE)
+        if self._SWITCH_OFF_TERMS[int_]: return 0
+        
+        integral  = self.talmiIntegral(int_, T=1, MT=self.MT)
+        integral *= self.PARAMS_FORCE_OPE[(1., self.MT)][kkk]
+        if self.MT == 0:
+            integral += (
+                self.talmiIntegral(int_, T=0, MT=self.MT) *
+                self.PARAMS_FORCE_OPE[(0, self.MT)][kkk] * ((-1)**(self.T+1)) )
+        me_rad    = integral 
+        
+        return me_ang * me_rad
+    
+    def _component_NN_central(self):
+        me_ang = 1
+        me_rad = 0.0
+        k_ = (self.S_bra, self.T, self.MT) if (self.T==1) else (self.S_bra, self.T)
+        
+        for x in self.SubNNTermNNEnum.members():
+            int_ = self.getInteractionKeyword(self.TermEnum.c, self.PartEnum.NN, x)
+            if self._SWITCH_OFF_TERMS[int_]: continue
+        
+            integral_rad  = self.talmiIntegral(int_, MT= self.MT)
+            integral_rad *= self.CONSTANTS_NN[int_][k_]
+            
+            me_rad += integral_rad
+        return me_ang * me_rad
+    
+    def _component_NN_tensor(self):
+        """
+        S12 term for NN short-intermediate phenomenological interaction
+            <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
+        """
+        if self.S_bra == 0: return 0
+        me_ang = self._get_tensor_angular_me()
+        if self.isNullValue(me_ang): return 0
+        
+        me_rad = 0.0
+        for x in self.SubNNTermNNEnum.members():
+            int_ = self.getInteractionKeyword(self.TermEnum.t, self.PartEnum.NN, x)
+            if self._SWITCH_OFF_TERMS[int_]: continue
+            
+            integral  = self.talmiIntegral(int_)
+            integral *= self.CONSTANTS_NN[int_][(self.S_bra, self.T)]
+            
+            me_rad  += integral
+        return me_ang * me_rad
+    
+    def _component_NN_L2(self):
+        """
+        L^2 term for NN short-intermediate phenomenological interaction
+            <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
+        """
+        if self.S_bra == 0: return 0
+        me_ang = self._get_OrbitSquared_angular_me()
+        if self.isNullValue(me_ang): return 0
+        
+        me_rad = 0.0
+        for x in self.SubNNTermNNEnum.members():
+            int_ = self.getInteractionKeyword(self.TermEnum.l2, self.PartEnum.NN, x)
+            if self._SWITCH_OFF_TERMS[int_]: continue
+            
+            integral  = self.talmiIntegral(int_)
+            integral *= self.CONSTANTS_NN[int_][(self.S_bra, self.T)]
+            
+            me_rad  += integral
+        return me_ang * me_rad 
+      
+    def _component_NN_LS(self):
+        """
+        L.S term for NN short-intermediate phenomenological interaction
+            <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
+        """
+        if self.S_bra == 0: return 0
+        me_ang = self._get_spinOrbit_angular_me()
+        if self.isNullValue(me_ang): return 0
+        
+        me_rad = 0.0
+        for x in self.SubNNTermNNEnum.members():
+            int_ = self.getInteractionKeyword(self.TermEnum.lS, self.PartEnum.NN, x)
+            if self._SWITCH_OFF_TERMS[int_]: continue
+            
+            integral  = self.talmiIntegral(int_)
+            integral *= self.CONSTANTS_NN[int_][(self.S_bra, self.T)]
+            
+            me_rad  += integral
+        return me_ang * me_rad
+    
+    def _component_NN_LS2(self):
+        """ 
+        (L.S)^2 term for NN short-intermediate phenomenological interaction
+            <v(ang/spin)> * (I_st*T^2 + (P_st + Q_st*(m*r) + T_st*(m*r)^2)*W(r))
+        """
+        if self.S_bra == 0: return 0
+        me_ang = self._get_spinOrbitSquared_angular_me()
+        if self.isNullValue(me_ang): return 0
+        
+        me_rad = 0.0
+        for x in self.SubNNTermNNEnum.members():
+            int_ = self.getInteractionKeyword(self.TermEnum.lS2, self.PartEnum.NN, x)
+            if self._SWITCH_OFF_TERMS[int_]: continue
+            
+            integral  = self.talmiIntegral(int_)
+            integral *= self.CONSTANTS_NN[int_][(self.S_bra, self.T)]
+            
+            me_rad  += integral
+        return me_ang * me_rad
+        
+    
 class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JScheme):
     """
-    Electromagnetic terms for the Argone 18 interaction:
+    Electromagnetic terms for the Argonne 18 interaction:
         R.B.Wiringa, V.G.J. Stoks, R.Schiavilla
         Accurate nucleon-nucleon potential with charge-independence breaking
         Phys. Rev. C 51.1 (1-1994)
@@ -1616,26 +1926,26 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
         cls.CONSTANTS_ELECTRO[cls.TermEnum.c1] = alpha_q
         cls.CONSTANTS_ELECTRO[cls.TermEnum.cpn]= alpha * 0.0189       ## article
         cls.CONSTANTS_ELECTRO[cls.TermEnum.c2] = - hbc * alpha_q * v18.ALPHA / v18.M_PROTON
-        cls.CONSTANTS_ELECTRO[cls.TermEnum.df] = - hbc * alpha / ((2*v18.M_PROTON)**2)
-        cls.CONSTANTS_ELECTRO[cls.TermEnum.vp] = 2 * alpha_q * alpha / (3 * np.pi)
+        cls.CONSTANTS_ELECTRO[cls.TermEnum.df] = - hbc**2 * alpha / ((2*v18.M_PROTON)**2)
+        cls.CONSTANTS_ELECTRO[cls.TermEnum.vp] = 2 * alpha_q * alpha / (3 * np.pi * hbc) 
         
         ## NOTE_ Remember, In this code, m_t(protons) = +1 (in taurus is -1)
         ## MM constants pp
-        aux = - hbc * alpha * (v18.MAGMOM_PROTON**2) / ((2 * v18.M_PROTON)**2)
+        aux = - hbc**2 * alpha * (v18.MAGMOM_PROTON**2) / ((2 * v18.M_PROTON)**2)
         cls.CONSTANTS_ELECTRO[cls.TermEnum.s] [ 1] = aux * 2 / 3
         cls.CONSTANTS_ELECTRO[cls.TermEnum.t] [ 1] = aux
-        aux = - alpha * (4*v18.MAGMOM_PROTON - 1) / (2 * v18.M_PROTON**2)
+        aux = - hbc**2 * alpha * (4*v18.MAGMOM_PROTON - 1) / (2 * v18.M_PROTON**2)
         cls.CONSTANTS_ELECTRO[cls.TermEnum.lS][ 1] = aux
         ## MM constants pn
-        aux = - hbc * alpha * ((v18.MAGMOM_PROTON * v18.MAGMOM_NEUTRON) / 
-                               (4 * v18.M_PROTON  * v18.M_NEUTRON))
+        aux = - hbc**2 * alpha * ((v18.MAGMOM_PROTON * v18.MAGMOM_NEUTRON) / 
+                                  (4 * v18.M_PROTON  * v18.M_NEUTRON))
         cls.CONSTANTS_ELECTRO[cls.TermEnum.s] [ 0] = aux * 2 / 3
         cls.CONSTANTS_ELECTRO[cls.TermEnum.t] [ 0] = aux
         m_nuc_red = 1 / ((1/v18.M_PROTON) + (1/v18.M_NEUTRON))
-        aux = - hbc * alpha * v18.MAGMOM_NEUTRON / (2 * v18.M_PROTON * m_nuc_red)
+        aux = - hbc**2 * alpha * v18.MAGMOM_NEUTRON / (2 * v18.M_PROTON * m_nuc_red)
         cls.CONSTANTS_ELECTRO[cls.TermEnum.lS][ 0] = aux
         ## MM constants nn
-        aux = - hbc * alpha * (v18.MAGMOM_NEUTRON**2) / ((2 * v18.M_NEUTRON)**2)
+        aux = - hbc**2 * alpha * (v18.MAGMOM_NEUTRON**2) / ((2 * v18.M_NEUTRON)**2)
         cls.CONSTANTS_ELECTRO[cls.TermEnum.s] [-1] = aux * 2 / 3
         cls.CONSTANTS_ELECTRO[cls.TermEnum.t] [-1] = aux
         cls.CONSTANTS_ELECTRO[cls.TermEnum.lS][-1] = 0
@@ -1664,9 +1974,6 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
         
         cls._integrals_p_max = dict([(k,-1) for k in cls._talmi_integrals.keys()])
         cls._talmi_integrals = dict([(k, list()) for k in cls._talmi_integrals.keys()])
-    
-    def _nullConditionsOnParticleLabelStates(self):
-        return True
     
     def _validKetTotalSpins(self):
         """
@@ -1705,7 +2012,7 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
     
     @classmethod
     def _integral_C1_pn(cls, p, key_):
-        poly2 = [0, 15/384, 15/384, 6/384, 4/384]
+        poly2 = [0, 15/384, 15/384, 6/384, 1/384]
         x, w  = getGeneralizedLaguerreRootsWeights(2*p)
         
         b  = cls.PARAMS_SHO  [SHO_Parameters.b_length]
@@ -1736,20 +2043,20 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
         def __funct(x, A, n, c=1):
             return (np.exp(-A*c*np.sqrt(x)) * np.power(x, (n-1)/2) )
         
-        I0 = 0.5 * (b**2) * np.exp(gamma_half_int(2*p + 1) - 
+        I0 = 0.5 * b * np.exp(gamma_half_int(2*p + 1) - 
                                    gamma_half_int(2*p + 3))
         I1, I2 = 0, 0
         for n, c_i in enumerate(poly1):
             I1 += c_i * (A**(n)) * np.dot(w, __funct(x, A, n))
         for n, c_i in enumerate(poly2):
             I2 += c_i * (A**(n)) * np.dot(w, __funct(x, A, n, c=2))
-        I = I0 + ((I2 - 2*I1) * (b**2) / (2 * np.exp(gamma_half_int(2*p + 3))) ) 
+        I = I0 + ((I2 - 2*I1) * b / (2 * np.exp(gamma_half_int(2*p + 3))) ) 
         
         cls._talmi_integrals[key_].append(I)
     
     @classmethod
     def _integral_DarwinFoldy(cls, p, key_):
-        poly2 = [0, 1/16, 1/16, 1/48]
+        poly2 = [1/16, 1/16, 1/48]
         x, w  = getGeneralizedLaguerreRootsWeights(2*p + 1)
         
         b  = cls.PARAMS_SHO  [SHO_Parameters.b_length]
@@ -1758,10 +2065,10 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
         A  = np.sqrt(2) * b / mu
         def __funct(x, A, n):
             return (np.exp(-A*np.sqrt(x)) * np.power(x, n/2) )
-        I = 0
+        I = []
         for n, c_i in enumerate(poly2):
-            if n == 0: continue
-            I += c_i * (A**n) * np.dot(w, __funct(x, A, n))
+            I.append( c_i * (A**n) * np.dot(w, __funct(x, A, n)) )
+        I = sum(I)
         I *= ( (b / mu)**3 / (np.exp(gamma_half_int(2*p + 3))) )
         
         cls._talmi_integrals[key_].append(I)
@@ -1787,11 +2094,12 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
             return (np.sqrt(XB + 2) * (2 * np.power(XB, 2) + 4 * XB + 3 ) / 
                     np.power(XB + 1, 4))
         
-        def __integral(_sqx):
-            B = mu2 / (2 * np.sqrt(2) * b *_sqx)
-            C = 0.5 * np.exp(1.5*np.log(B) - (1 / B))
+        def __integral(_sqx):        
+            B = (2 * np.sqrt(2) * b *_sqx) / mu2
+            C = 1 / (2 * np.exp(B) * np.power(B, 1.5))
             
-            I2 = np.dot(__funct(xi, B), wi)
+            I2 = np.dot(__funct(xi, 1/B), wi)
+            
             return C * I2
         
         def __funct2(_sqx, A, n):
@@ -1908,7 +2216,7 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
         for n, c_i in enumerate(poly2):
             I -= c_i * (A**n) * np.dot(w, __funct(x, A, n))
         
-        I  *= mu**3 / (2 * np.sqrt(2) * (np.exp( gamma_half_int(2*p + 3))) )
+        I  *= 1 / (2 * np.sqrt(2) * (np.exp( gamma_half_int(2*p + 3))) )
         
         cls._talmi_integrals[key_].append(I)
     
@@ -1932,7 +2240,7 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
         for n, c_i in enumerate(poly2):
             I -= c_i * (A**n) * np.dot(w, __funct(x, A, n))
         
-        I  *= mu**3 / (2 * np.sqrt(2) * (np.exp( gamma_half_int(2*p + 3))) )
+        I  *= 1 / (2 * np.sqrt(2) * (np.exp( gamma_half_int(2*p + 3))) )
         
         cls._talmi_integrals[key_].append(I)
     
@@ -1976,7 +2284,7 @@ class ElectromagneticAv18TermsInteraction_JScheme(_BaseTalmiMultinteraction_JSch
             if self._SWITCH_OFF_TERMS[self.TermEnum.c1]:  return 0
             integral = self.talmiIntegral(self.TermEnum.c1)
             return self.CONSTANTS_ELECTRO[self.TermEnum.c1] * integral
-        elif self.MT == 0:
+        elif self.MT == 0:            
             if self._SWITCH_OFF_TERMS[self.TermEnum.cpn]: return 0
             integral = self.talmiIntegral(self.TermEnum.cpn)
             return self.CONSTANTS_ELECTRO[self.TermEnum.cpn] * integral

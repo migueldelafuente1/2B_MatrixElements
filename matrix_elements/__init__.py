@@ -18,7 +18,9 @@ from .MultipoleForces import MultipoleDelta_JTScheme, MultipoleMoment_JTScheme
 from .BrinkBoeker import YukawiansM3Y_JTScheme, YukawiansM3Y_tensor_JTScheme, \
     YukawiansM3Y_SpinOrbit_JTScheme
 from matrix_elements.ArgonePotential import NucleonAv18TermsInteraction_JTScheme,\
-    NucleonAv14TermsInteraction_JTScheme, ElectromagneticAv18TermsInteraction_JScheme
+    NucleonAv14TermsInteraction_JTScheme, ElectromagneticAv18TermsInteraction_JScheme,\
+    NucleonAv18TermsInteraction_JScheme,\
+    NucleonAv18TermsInteraction_bench_Jscheme
 from matrix_elements.SkyrmeForces import ShortRangeSpinOrbit_COM_JTScheme
 from matrix_elements.MomentumForces import RelativeMomentumSquared_JTScheme,\
     TotalMomentumSquared_JTScheme
@@ -107,7 +109,9 @@ def switchMatrixElementType(force, J_scheme=False):
     elif force == ForceEnum.Argone14NuclearTerms:
         return NucleonAv14TermsInteraction_JTScheme
     elif force == ForceEnum.Argone18NuclearTerms:
-        return NucleonAv18TermsInteraction_JTScheme
+        # return NucleonAv18TermsInteraction_JTScheme
+        # return NucleonAv18TermsInteraction_JScheme  
+        return NucleonAv18TermsInteraction_bench_Jscheme
     elif force == ForceEnum.Argone18Electromagetic:
         return ElectromagneticAv18TermsInteraction_JScheme
     
