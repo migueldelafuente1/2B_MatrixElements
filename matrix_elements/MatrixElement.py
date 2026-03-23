@@ -304,6 +304,8 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
         self.exch_2bme = None
         ## Implicit MT to distinguish pp/pn/nn
         self.MT = self.bra.MT
+        self._particleIndex = (bra.sp_state_1.m_t, bra.sp_state_2.m_t,
+                               ket.sp_state_1.m_t, ket.sp_state_2.m_t, )
         
         if (bra.J != ket.J):
             print("Bra J [{}]doesn't match with ket's J [{}]".format(bra.J, ket.J))
@@ -387,9 +389,10 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
     
         if self.DEBUG_MODE:
             XLog.write('nas_me', value=self._value, norms=self.bra.norm()*self.ket.norm())
-    
+        
+        self._setPhaseExchangeForPNNP()
         # value is always M=0, M_T=0
-        self._value *= self.bra.norm() * self.ket.norm()
+        self._value *= self.bra.norm() * self.ket.norm() * self.antiSymm_phase
     
     def _LScoupled_MatrixElement(self):
         """ 
@@ -455,6 +458,18 @@ class _TwoBodyMatrixElement_JCoupled(_TwoBodyMatrixElement):
                 return (False, recoupling)
         return (True, 0.0)
     
+    def _setPhaseExchangeForPNNP(self):
+        """
+        In J scheme, pnnp-type matrix elements have a phase change with respect 
+        pnpn (Suhonen 8.55, 8.57, 8.58)
+        """
+        antiS_phase = 1
+        if not self.bra.identicalParticles:
+            if str(self.bra)[-3:-1] != str(self.ket)[-3:-1]:
+                ## (-1)**((self.ket.j1 + self.ket.j2)//2 + 1 + self.ket.J)
+                antiS_phase = (-1)**(self.J)
+        self.antiSymm_phase = antiS_phase
+    
     def _antisymmetrized_LS_element(self):
         """
         Mediator function to evaluate the direct and exchange LS m.e, 
@@ -512,36 +527,41 @@ class _TwoBodyMatrixElement_Antisym_JCoupled(_TwoBodyMatrixElement_JCoupled):
         """
         direct = self._LScoupled_MatrixElement()
         
-        phase_9j  = (self.ket.j1 + self.ket.j2)// 2 + self.J
-        phase_9j += 1 + self.S_ket + self.ket.l1 + self.ket.l2 + self.L_ket
-        
-        self.exch_2bme.S_bra = self.S_bra
-        self.exch_2bme.S_ket = self.S_ket
-        self.exch_2bme.L_bra = self.L_bra
-        self.exch_2bme.L_ket = self.L_ket
-        
-        exch = self.exch_2bme._LScoupled_MatrixElement()
-        return direct - (((-1)**(phase_9j)) * self.exchange_phase * exch)  
+        if self.bra.identicalParticles:
+            phase_9j  = (self.ket.j1 + self.ket.j2)// 2 + self.J
+            phase_9j += 1 + self.S_ket + self.ket.l1 + self.ket.l2 + self.L_ket
+            
+            self.exch_2bme.S_bra = self.S_bra
+            self.exch_2bme.S_ket = self.S_ket
+            self.exch_2bme.L_bra = self.L_bra
+            self.exch_2bme.L_ket = self.L_ket
+            
+            exch = self.exch_2bme._LScoupled_MatrixElement()
+            return direct - (((-1)**(phase_9j)) * self.exchange_phase * exch)
+        return direct 
     
     def _run(self):
         """ Calculate the explicit antisymmetric matrix element value. """
         if self.isNullMatrixElement:
             return
         
-        # construct the exchange ket
-        phase, exchanged_ket = self.ket.exchange()
-        self.exchange_phase = phase
-        self.exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        self._setPhaseExchangeForPNNP()
+        if self.bra.identicalParticles:
+            # construct the exchange ket
+            phase, exchanged_ket = self.ket.exchange()
+            self.exchange_phase = phase
+            self.exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+            
+            if self.DEBUG_MODE: XLog.write('na_me', phs=phase)
         
         if self.DEBUG_MODE: 
             XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
         
         # value is always M=0, M_T=0
         self._value =  self._LS_recoupling_ME()
-        self._value *= self.bra.norm() * self.ket.norm()
+        self._value *= self.bra.norm() * self.ket.norm() * self.antiSymm_phase
         
         if self.DEBUG_MODE: 
-            XLog.write('na_me', phs=phase)
             XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
     
     def _nullConditionForSameOrbit(self):
@@ -609,6 +629,26 @@ class _TwoBodyMatrixElement_JTCoupled(_TwoBodyMatrixElement_JCoupled):
                 self._value = 0.0
                 self._isNullMatrixElement = True
     
+    def _run(self):
+        """ Calculate the explicit antisymmetric matrix element value. """
+        if self.isNullMatrixElement:
+            return
+        
+        # construct the exchange ket
+        phase, exchanged_ket = self.ket.exchange()
+        self.exchange_phase = phase
+        self.exch_2bme = self.__class__(self.bra, exchanged_ket, run_it=False)
+        
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', p='DIRECT', ket=self.ket.shellStatesNotation)
+        
+        # value is always M=0, M_T=0
+        self._value =  self._LS_recoupling_ME()
+        self._value *= self.bra.norm() * self.ket.norm()
+        
+        if self.DEBUG_MODE: 
+            XLog.write('na_me', phs=phase)
+            XLog.write('nas', norms=self.bra.norm()*self.ket.norm(), value=self._value)
 
 
 class _TwoBodyMatrixElement_Antisym_JTCoupled(_TwoBodyMatrixElement_JTCoupled):

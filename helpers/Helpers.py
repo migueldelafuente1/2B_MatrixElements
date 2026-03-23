@@ -34,8 +34,10 @@ class ConstantsV18:
     M_PION_pm = 139.5675       # MeV/c2
     
     ALPHA     = 7.297353053e-3    
-    MAGMOM_PROTON  =   2.79285 * Constants.NUCL_MAGNETON
-    MAGMOM_NEUTRON =  -1.91304 * Constants.NUCL_MAGNETON
+    MAGMOM_PROTON  =   2.79285 #* Constants.NUCL_MAGNETON
+    MAGMOM_NEUTRON =  -1.91304 #* Constants.NUCL_MAGNETON
+    
+    ## Note: Nuclear Magnetic Moments are addimensional
 
 
 _LINE_1 = "\n====================================================================\n"

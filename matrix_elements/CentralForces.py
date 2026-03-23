@@ -140,11 +140,12 @@ class CentralForce_JTScheme(CentralForce, _TwoBodyMatrixElement_JTCoupled):
         
         (1-st without exchange)    return self.centerOfMassMatrixElementEvaluation()
         """
-        # Radial Part for Gaussian Integral
-        radial_energy = self.centerOfMassMatrixElementEvaluation()
         
         if self.DEBUG_MODE:
             XLog.write('BB', mu=self.PARAMS_FORCE[CentralMEParameters.mu_length])
+        
+        # Radial Part for Gaussian Integral
+        radial_energy = self.centerOfMassMatrixElementEvaluation()
         
         # Exchange Part
         # W + P(S)* B - P(T)* H - P(T)*P(S)* M
@@ -522,7 +523,7 @@ class Quadratic_OrbitalMomentum_JTScheme(CentralForce_JTScheme):
 class CentralGeneralizedForce(TalmiGeneralizedTransformation):
     """
     Interaction with central, also exchange operators for both R and r.
-    Extension from Central V(r) -> V(R) * U(R)
+    Extension from Central V(r) -> V(r) * U(R)
     
         * Same central parameters for usual integrations 
         * Extended parameters (optional mu lengths, cutoffs, WSaxon...) only for r

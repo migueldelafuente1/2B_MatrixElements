@@ -14,7 +14,7 @@ from helpers.Helpers import safe_3j_symbols, almostEqual, safe_clebsch_gordan,\
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
     MatrixElementException, _TwoBodyMatrixElement_Antisym_JCoupled,\
-    _standardSetUpForCentralWithExchangeOps, _TwoBodyMatrixElement_JCoupled
+    _standardSetUpForCentralWithExchangeOps
 from helpers.Enums import CouplingSchemeEnum, AttributeArgs,\
     SHO_Parameters, DensityDependentParameters, BrinkBoekerParameters,\
     CentralMEParameters
