@@ -343,6 +343,9 @@ class _MultipoleMoment_1BME(_OneBodyMatrixElement_jjscheme):
         
 class MultipoleGaussian_JTScheme(_Multipole_JTScheme):
         
+    """
+    Testing matrix element for the Multipole decomposition,
+    """
     
     @classmethod
     def setInteractionParameters(cls, *args, **kwargs):

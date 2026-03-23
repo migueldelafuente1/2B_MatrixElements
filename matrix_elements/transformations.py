@@ -22,6 +22,7 @@ from helpers.Log import XLog
 # moved there due circular import (after angular_condition method)
 from helpers.Helpers import _B_coeff_memo_accessor
 from helpers import MATPLOTLIB_INSTALLED, PANDAS_INSTALLED
+
 if PANDAS_INSTALLED:
     import pandas as pd
 
@@ -369,7 +370,23 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         raise MatrixElementException("Series to be implemented here from "
                                      "secureIter or minimalIter classes")
         return
+    
+    def _antisymmetricExchangeFactorByScheme(self):
+        """
+        The factor 2 from _deltaConditionsForCOM_Iteration() depends on the scheme:
+        * JT: It is always 2 or 0, since isospin considers identical nucleons.
+        * J : It will be 2 or 0 for pppp/nnnn, but for MT=0 it should be 1.
+            * for the case MT = 0, it is consider in the deltaConditions as True
+        """
+        if self.EXPLICIT_ANTISYMM: 
+            self.antiSymm_factor = 1
+            return
         
+        if CouplingSchemeEnum.T in self.COUPLING:
+            antiS_factor = 2
+        else:
+            antiS_factor = 2 if self.bra.identicalParticles else 1
+        self.antiSymm_factor = antiS_factor
     
     def _BrodyMoshinskyTransformation(self):
         """
@@ -383,6 +400,8 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
         sum_ = 0.0
         if self.DEBUG_MODE:
             XLog.write('talmi')
+            
+        self._antisymmetricExchangeFactorByScheme()
         for p in range(max(self.rho_bra, self.rho_ket) +1):
             if self.DEBUG_MODE:
                 XLog.write('talmi', p=p)
@@ -391,7 +410,8 @@ class _TalmiTransformationBase(_TwoBodyMatrixElement):
             if self.isNullValue(Ip): continue
             
             # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
-            series = 2 * self._interactionSeries()
+            # series = 2 * self._interactionSeries()
+            series = self.antiSymm_factor * self._interactionSeries()
             product = series * Ip
             sum_ += product
             # sum_ += self._interactionSeries() * self.talmiIntegral()
@@ -834,10 +854,12 @@ class TalmiIndependentMoshinskyTransformation(_TalmiTransformation_SecureIter):
         """
         series = 0.0
         if self.DEBUG_MODE: XLog.write('talmi')
+        self._antisymmetricExchangeFactorByScheme()
         
         constant = self._globalInteractionCoefficient()
         if not self.isNullValue(constant): 
-            series   = 2 * self._interactionSeries()
+            # series   = 2 * self._interactionSeries()
+            series   = self.antiSymm_factor * self._interactionSeries()
         
         if self.DEBUG_MODE: XLog.write('talmi', series = series, constant=constant)
             
@@ -947,18 +969,20 @@ class TalmiMultiInteractionTransformation(TalmiTransformation):
         sum_ = 0.0
         if self.DEBUG_MODE:
             XLog.write('talmi')
+            
+        self._antisymmetricExchangeFactorByScheme()
         for p in range(max(self.rho_bra, self.rho_ket) +1):
             if self.DEBUG_MODE:
                 XLog.write('talmi', p=p)
             self._p = p
             # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
-            series = 2 * self._interactionSeries()
-            product = series
-            sum_ += product
+            # series = 2 * self._interactionSeries()
+            series = self.antiSymm_factor * self._interactionSeries()
+            sum_ += series
             # sum_ += self._interactionSeries() * self.talmiIntegral()
             
             if self.DEBUG_MODE:
-                XLog.write('talmi', series = series, val=product)
+                XLog.write('talmi', series = series)
         return sum_ ## * self._globalInteractionCoefficient() !
     
     def talmiIntegral(self):
@@ -1259,6 +1283,8 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
         
         sum_ = 0.0
         if self.DEBUG_MODE: XLog.write('talmi')
+        
+        self._antisymmetricExchangeFactorByScheme()
         for p in range(max(self.rho_bra, self.rho_ket) +1):            
             self._p = p
             for q in range(max(self.rho_bra, self.rho_ket) +1):
@@ -1271,7 +1297,8 @@ class TalmiGeneralizedTransformation(_TalmiTransformation_SecureIter):
                 if self.isNullValue(Ip) or self.isNullValue(Iq): continue
                 
                 # 2* from the antisymmetrization_ (_deltaConditionsForCOM_Iteration)
-                series = 2 * self._interactionSeries()
+                # series = 2 * self._interactionSeries()
+                series = self.antiSymm_factor * self._interactionSeries()
                 product = series * Ip * Iq
                 sum_ += product
                                 

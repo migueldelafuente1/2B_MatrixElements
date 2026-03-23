@@ -10,8 +10,7 @@ from helpers.Enums import CouplingSchemeEnum, CentralMEParameters, \
 from helpers.Helpers import ConstantsV18, safe_clebsch_gordan
 
 from matrix_elements.MatrixElement import _TwoBodyMatrixElement_JTCoupled,\
-    MatrixElementException, _standardSetUpForCentralWithExchangeOps,\
-    _TwoBodyMatrixElement_JCoupled
+    MatrixElementException, _standardSetUpForCentralWithExchangeOps
 from matrix_elements.transformations import TalmiTransformation
 from helpers.Helpers import safe_racah, safe_wigner_6j
 from helpers.WaveFunctions import QN_2body_LS_Coupling
@@ -307,19 +306,6 @@ class TensorS12_JTScheme(TensorForce_JTScheme):
                        exch_sum=sum(exchange_energy), val=prod_part)
         
         return prod_part
-
-
-class ElectromagneticNonCentral_JScheme(TensorForce, _TwoBodyMatrixElement_JCoupled):
-    """
-    TODO: Terms from the Argone potential for the Magnetic-Moment.
-    constants dependent on the pp - pn - nn chanels
-    
-    Not setteable
-    
-    Components non-central terms dependent on sigma*sigma, S_ij, L*S, L*A
-    """
-    
-    pass
 
 class OPE_TPE_Force_JTScheme(TensorForce_JTScheme):
     
